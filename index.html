@@ -1291,6 +1291,9 @@
               <option value="grid">Gridlines</option>
               <option value="stripes">Diagonal Stripes</option>
               <option value="noise">Grain Noise</option>
+              <option value="circles">Corner Circles</option>
+              <option value="waves">Organic Waves</option>
+              <option value="geometric">Geometric Angles</option>
             </select>
           </div>
           <div class="control-row">
@@ -2552,6 +2555,53 @@
           const size = Math.random() * (w * 0.002) + 1;
           tempCtx.fillRect(rx, ry, size, size);
         }
+      } else if (state.patternType === 'circles') {
+        // Corner Accent Ellipses (as requested from draft.html)
+        const rad1 = w * 0.32 * (state.patternDensity / 30);
+        const rad2 = w * 0.22 * (state.patternDensity / 30);
+        
+        tempCtx.beginPath();
+        tempCtx.ellipse(w * 0.88, h * 0.08, rad1, rad1, 0, 0, Math.PI * 2);
+        tempCtx.fill();
+        
+        tempCtx.beginPath();
+        tempCtx.ellipse(w * 0.06, h * 0.96, rad2, rad2, 0, 0, Math.PI * 2);
+        tempCtx.fill();
+      } else if (state.patternType === 'waves') {
+        // Fluid waves decoration (top and bottom)
+        const amp = h * 0.1 * (state.patternDensity / 30);
+        
+        tempCtx.beginPath();
+        tempCtx.moveTo(0, h * 0.85);
+        tempCtx.bezierCurveTo(w * 0.25, h * 0.85 - amp, w * 0.75, h * 0.85 + amp, w, h * 0.8);
+        tempCtx.lineTo(w, h);
+        tempCtx.lineTo(0, h);
+        tempCtx.closePath();
+        tempCtx.fill();
+        
+        tempCtx.beginPath();
+        tempCtx.moveTo(0, 0);
+        tempCtx.lineTo(w, 0);
+        tempCtx.bezierCurveTo(w * 0.7, amp, w * 0.3, h * 0.1, 0, h * 0.15);
+        tempCtx.closePath();
+        tempCtx.fill();
+      } else if (state.patternType === 'geometric') {
+        // Sharp diagonal accent polygons
+        const sizeMult = state.patternDensity / 30;
+        
+        tempCtx.beginPath();
+        tempCtx.moveTo(w * (1 - 0.3 * sizeMult), 0);
+        tempCtx.lineTo(w, 0);
+        tempCtx.lineTo(w, h * 0.4 * sizeMult);
+        tempCtx.closePath();
+        tempCtx.fill();
+        
+        tempCtx.beginPath();
+        tempCtx.moveTo(0, h * (1 - 0.4 * sizeMult));
+        tempCtx.lineTo(0, h);
+        tempCtx.lineTo(w * 0.35 * sizeMult, h);
+        tempCtx.closePath();
+        tempCtx.fill();
       }
       tempCtx.restore();
     }
