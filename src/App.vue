@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
+import { wrapText, fitFontSize } from './utils/textHelper';
 
 /* ---------------- DATA PRESETS ---------------- */
 interface Platform {
@@ -482,49 +483,7 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: number) {
-  const paragraphs = text.split('\n');
-  const lines: string[] = [];
-  
-  for (const paragraph of paragraphs) {
-    const words = paragraph.split(/\s+/);
-    let line = '';
-    for (const w of words) {
-      if (!w) continue;
-      const test = line ? line + ' ' + w : w;
-      
-      const measureText = test.replace(/\*/g, '');
-      if (context.measureText(measureText).width > maxWidth && line) {
-        lines.push(line);
-        line = w;
-      } else {
-        line = test;
-      }
-    }
-    if (line) lines.push(line);
-    if (paragraph === '' && paragraphs.length > 1) {
-      lines.push('');
-    }
-  }
-  return lines;
-}
 
-function fitFontSize(context: CanvasRenderingContext2D, text: string, maxWidth: number, maxHeight: number, startSize: number, fontFamily: string, weight: string, lineHeightMult: number) {
-  let size = startSize;
-  context.font = `${weight} ${size}px "${fontFamily}", sans-serif`;
-  let lines = wrapText(context, text, maxWidth);
-  let totalHeight = lines.length * size * lineHeightMult;
-  
-  if (state.autoFit) {
-    while (totalHeight > maxHeight && size > 16) {
-      size -= 2;
-      context.font = `${weight} ${size}px "${fontFamily}", sans-serif`;
-      lines = wrapText(context, text, maxWidth);
-      totalHeight = lines.length * size * lineHeightMult;
-    }
-  }
-  return { size, lines };
-}
 
 function drawRichLine(
   context: CanvasRenderingContext2D,
@@ -819,7 +778,7 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
     tempCtx.fillStyle = colors.text;
     const labelMaxHeight = h * 0.22;
     const startSize = state.autoFit ? w * 0.07 : (state.titleFontSize / 1000) * w;
-    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, labelMaxHeight, startSize, font.bodyFont, '600', 1.25);
+    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, labelMaxHeight, startSize, font.bodyFont, '600', 1.25, state.autoFit);
     
     drawLines(tempCtx, fit.lines, alignX, h * 0.62, fit.size * 1.25, align, fit.size, font.bodyFont, '600', colors.accent, colors.text);
     
@@ -834,7 +793,7 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
     tempCtx.fillStyle = colors.text;
     const titleMaxHeight = h * 0.4;
     const startSize = state.autoFit ? w * 0.075 : (state.titleFontSize / 1000) * w;
-    const fitTitle = fitFontSize(tempCtx, titleText, maxTextWidth, titleMaxHeight, startSize, font.titleFont, '800', 1.15);
+    const fitTitle = fitFontSize(tempCtx, titleText, maxTextWidth, titleMaxHeight, startSize, font.titleFont, '800', 1.15, state.autoFit);
     
     const titleCenterY = h * 0.42;
     drawLines(tempCtx, fitTitle.lines, alignX, titleCenterY, fitTitle.size * 1.15, align, fitTitle.size, font.titleFont, '800', colors.accent, colors.text);
@@ -847,7 +806,7 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
       
       const bodyMaxHeight = h * 0.22;
       const bStartSize = state.autoFit ? w * 0.036 : (state.bodyFontSize / 1000) * w;
-      const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '400', 1.35);
+      const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '400', 1.35, state.autoFit);
       
       const bodyCenterY = h * 0.72;
       drawLines(tempCtx, fitBody.lines, alignX, bodyCenterY, fitBody.size * 1.35, align, fitBody.size, font.bodyFont, '400', colors.accent, colors.text);
@@ -857,7 +816,7 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
   } else if (state.template === 'simple') {
     tempCtx.fillStyle = colors.text;
     const startSize = state.autoFit ? w * 0.09 : (state.titleFontSize / 1000) * w;
-    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.5, startSize, font.titleFont, '800', 1.15);
+    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.5, startSize, font.titleFont, '800', 1.15, state.autoFit);
     drawLines(tempCtx, fit.lines, alignX, h * 0.5, fit.size * 1.15, align, fit.size, font.titleFont, '800', colors.accent, colors.text);
 
   } else {
@@ -877,7 +836,7 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
     // Quote Title Content
     tempCtx.fillStyle = colors.text;
     const startSize = state.autoFit ? w * 0.08 : (state.titleFontSize / 1000) * w;
-    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.45, startSize, font.titleFont, '700', 1.2);
+    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.45, startSize, font.titleFont, '700', 1.2, state.autoFit);
     drawLines(tempCtx, fit.lines, quoteAlignX, h * 0.5, fit.size * 1.2, quoteAlign, fit.size, font.titleFont, '700', colors.accent, colors.text);
 
     // Quote Author / Body below (with line wrapping auto fit support)
@@ -886,7 +845,7 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
       
       const bodyMaxHeight = h * 0.15;
       const bStartSize = state.autoFit ? w * 0.03 : (state.bodyFontSize / 1000) * w;
-      const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '600', 1.3);
+      const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '600', 1.3, state.autoFit);
       
       const authorTextLines = fitBody.lines.map((line, idx) => idx === 0 ? `— ${line}` : `  ${line}`);
       drawLines(tempCtx, authorTextLines, quoteAlignX, h * 0.78, fitBody.size * 1.3, quoteAlign, fitBody.size, font.bodyFont, '600', colors.accent, colors.text);

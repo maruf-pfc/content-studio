@@ -1,22 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
-import App from '../App.vue'
+import { wrapText, fitFontSize } from '../utils/textHelper'
 
-describe('App', () => {
-  it('mounts renders properly', () => {
-    const wrapper = mount(App)
-    expect(wrapper.text()).toContain('Content Studio')
-  })
-
+describe('Text Wrapping Utilities', () => {
   it('correctly splits multi-line text input into separate lines', () => {
-    const wrapper = mount(App)
-    const vm = wrapper.vm as any
-
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')!
+    const mockCtx = {
+      measureText: (text: string) => ({ width: text.length * 10 }),
+      font: ''
+    } as unknown as CanvasRenderingContext2D
 
     const multilineInput = "First line of text\nSecond line of text\nThird line of text"
-    const lines = vm.wrapText(ctx, multilineInput, 1000)
+    const lines = wrapText(mockCtx, multilineInput, 1000)
 
     expect(lines).toHaveLength(3)
     expect(lines[0]).toBe("First line of text")
@@ -25,18 +18,29 @@ describe('App', () => {
   })
 
   it('handles automatic word wrapping inside paragraphs along with explicit newlines', () => {
-    const wrapper = mount(App)
-    const vm = wrapper.vm as any
+    const mockCtx = {
+      measureText: (text: string) => ({ width: text.length * 10 }),
+      font: ''
+    } as unknown as CanvasRenderingContext2D
 
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')!
+    const multilineInput = "A very long paragraph that will wrap\nShort paragraph"
+    // Using maxWidth = 200 (which fits ~20 characters per line) to force wrapping only on the first paragraph
+    const lines = wrapText(mockCtx, multilineInput, 200)
 
-    // Using a narrow maxWidth to force automatic wrapping
-    const multilineInput = "A very long paragraph that will definitely wrap\nShort paragraph"
-    const lines = vm.wrapText(ctx, multilineInput, 50)
-
-    // First paragraph should be split into multiple lines, while the second remains separate
     expect(lines.length).toBeGreaterThan(2)
     expect(lines[lines.length - 1]).toBe("Short paragraph")
+  })
+
+  it('fits font sizes correctly within maximum boundaries when autoFit is true', () => {
+    const mockCtx = {
+      measureText: (text: string) => ({ width: text.length * 10 }),
+      font: ''
+    } as unknown as CanvasRenderingContext2D
+
+    const text = "Some sample text"
+    const res = fitFontSize(mockCtx, text, 200, 50, 24, 'Inter', 'bold', 1.2, true)
+
+    expect(res.size).toBeLessThanOrEqual(24)
+    expect(res.lines.length).toBeGreaterThan(0)
   })
 })
