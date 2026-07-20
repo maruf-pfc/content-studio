@@ -1,1188 +1,499 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Content Studio — Premium Graphic Generator</title>
-  <!-- Modern Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,800;1,400&family=Inter:wght@400;500;600;700&family=Syne:wght@700;800&family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Studio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700;900&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;600&family=Space+Grotesk:wght@600&family=Syne:wght@700;800&display=swap');
+
+  :root {
+    --bg: #14121A;
+    --panel: #1C1926;
+    --panel-2: #221E30;
+    --line: #332E44;
+    --accent: #7C5CFC;
+    --accent-2: #FF6B4A;
+    --text: #F5F3FF;
+    --text-dim: #8B879C;
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+    --disp: 'Trebuchet MS', 'Arial Black', sans-serif;
+    --body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
   
-  <style>
-    :root {
-      --bg: #090710;
-      --panel: rgba(20, 16, 35, 0.7);
-      --panel-border: rgba(124, 92, 252, 0.15);
-      --panel-hover: rgba(124, 92, 252, 0.25);
-      --panel-2: #161225;
-      --line: #292440;
-      
-      --accent: #7C5CFC;
-      --accent-glow: rgba(124, 92, 252, 0.4);
-      --accent-coral: #FF6B4A;
-      --accent-coral-glow: rgba(255, 107, 74, 0.4);
-      
-      --text: #F5F3FF;
-      --text-dim: #9D99B3;
-      --text-muted: #5E5A75;
-      
-      --mono: 'JetBrains Mono', 'Courier New', monospace;
-      --disp: 'Outfit', 'Syne', sans-serif;
-      --body: 'Plus Jakarta Sans', 'Inter', sans-serif;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      scrollbar-width: thin;
-      scrollbar-color: var(--line) transparent;
-    }
-
-    /* Custom Scrollbars */
-    *::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    *::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    *::-webkit-scrollbar-thumb {
-      background-color: var(--line);
-      border-radius: 20px;
-    }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--body);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
-      background-image: 
-        radial-gradient(circle at 10% 20%, rgba(124, 92, 252, 0.08) 0%, transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(255, 107, 74, 0.06) 0%, transparent 45%);
-    }
-
-    .app {
-      display: grid;
-      grid-template-columns: 420px 1fr;
-      min-height: 100vh;
-    }
-
-    @media (max-width: 1100px) {
-      .app {
-        grid-template-columns: 1fr;
-      }
-      .canvas-area {
-        order: -1;
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        background: rgba(9, 7, 16, 0.95);
-        backdrop-filter: blur(12px);
-        border-bottom: 1px solid var(--line);
-        padding: 20px !important;
-        height: auto !important;
-      }
-    }
-
-    /* ---- Sidebar Controls ---- */
-    .sidebar {
-      background: var(--panel);
-      backdrop-filter: blur(16px);
-      border-right: 1px solid var(--panel-border);
-      padding: 24px;
-      overflow-y: auto;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-      box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
-    }
-
-    @media (max-width: 1100px) {
-      .sidebar {
-        height: auto;
-        overflow-y: visible;
-      }
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .brand-mark {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, var(--accent), var(--accent-coral));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 20px var(--accent-glow);
-    }
-    
-    .brand-mark svg {
-      width: 22px;
-      height: 22px;
-      fill: #fff;
-    }
-
-    .brand-title-wrap {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .brand-name {
-      font-family: var(--disp);
-      font-weight: 800;
-      font-size: 19px;
-      letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #fff, var(--text-dim));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .brand-sub {
-      font-family: var(--mono);
-      font-size: 9.5px;
-      color: var(--accent-coral);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      font-weight: bold;
-    }
-
-    .section {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .section-label {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-    }
-
-    .section-label::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--line);
-      margin-left: 8px;
-    }
-
-    /* ---- Form Controls ---- */
-    .field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    label.field-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-dim);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    input[type=text], select, textarea {
-      width: 100%;
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      color: var(--text);
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-size: 13.5px;
-      font-family: var(--body);
-      transition: all 0.2s;
-    }
-
-    input[type=text]:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 10px rgba(124, 92, 252, 0.2);
-      background: rgba(22, 18, 37, 0.9);
-    }
-
-    textarea {
-      resize: vertical;
-      line-height: 1.5;
-    }
-
-    /* Platform & Ratio Grid */
-    .platform-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-
-    .platform-btn {
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 12px 6px;
-      cursor: pointer;
-      color: var(--text-dim);
-      font-size: 11px;
-      font-family: var(--mono);
-      font-weight: 600;
-      text-align: center;
-      transition: all 0.2s;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .platform-btn svg {
-      width: 20px;
-      height: 20px;
-      fill: currentColor;
-    }
-
-    .platform-btn:hover {
-      border-color: var(--panel-hover);
-      color: var(--text);
-    }
-
-    .platform-btn.active {
-      border-color: var(--accent);
-      color: #fff;
-      background: rgba(124, 92, 252, 0.15);
-      box-shadow: inset 0 0 12px rgba(124, 92, 252, 0.1);
-    }
-
-    .ratio-row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .ratio-chip {
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      padding: 6px 14px;
-      font-size: 11.5px;
-      font-family: var(--mono);
-      cursor: pointer;
-      color: var(--text-dim);
-      transition: all 0.2s;
-    }
-
-    .ratio-chip:hover {
-      border-color: var(--accent);
-      color: var(--text);
-    }
-
-    .ratio-chip.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-      box-shadow: 0 0 12px var(--accent-glow);
-    }
-
-    /* Template Grid */
-    .template-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
-
-    .tpl-btn {
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 12px;
-      cursor: pointer;
-      font-size: 11px;
-      color: var(--text-dim);
-      text-align: left;
-      transition: all 0.2s;
-    }
-
-    .tpl-btn strong {
-      display: block;
-      font-size: 13px;
-      color: var(--text);
-      margin-bottom: 2px;
-      font-family: var(--disp);
-    }
-
-    .tpl-btn:hover {
-      border-color: var(--accent-coral);
-    }
-
-    .tpl-btn.active {
-      border-color: var(--accent-coral);
-      background: rgba(255, 107, 74, 0.12);
-      box-shadow: inset 0 0 10px rgba(255, 107, 74, 0.05);
-    }
-
-    /* Themes & Colors */
-    .theme-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-
-    .theme-swatch {
-      height: 60px;
-      border-radius: 10px;
-      cursor: pointer;
-      border: 2px solid transparent;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.2s;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    }
-
-    .theme-swatch::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, var(--swatch-bg), var(--swatch-accent));
-    }
-
-    .theme-swatch.active {
-      border-color: var(--text);
-      transform: scale(1.03);
-    }
-
-    .theme-swatch span {
-      position: absolute;
-      bottom: 4px;
-      left: 6px;
-      font-family: var(--mono);
-      font-size: 9px;
-      background: rgba(0, 0, 0, 0.65);
-      padding: 1.5px 5px;
-      border-radius: 4px;
-      color: #fff;
-      backdrop-filter: blur(2px);
-    }
-
-    /* Customizer Tabs */
-    .customizer-box {
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .tabs-header {
-      display: flex;
-      border-bottom: 1px solid var(--line);
-      gap: 12px;
-    }
-
-    .tab-btn {
-      background: none;
-      border: none;
-      color: var(--text-dim);
-      font-family: var(--mono);
-      font-size: 11px;
-      padding: 6px 0 10px 0;
-      cursor: pointer;
-      position: relative;
-      transition: color 0.2s;
-    }
-
-    .tab-btn:hover {
-      color: var(--text);
-    }
-
-    .tab-btn.active {
-      color: var(--accent-coral);
-    }
-
-    .tab-btn.active::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: var(--accent-coral);
-    }
-
-    .tab-content {
-      display: none;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .tab-content.active {
-      display: flex;
-    }
-
-    /* Align & Sliders */
-    .align-row {
-      display: flex;
-      gap: 6px;
-    }
-
-    .align-btn {
-      flex: 1;
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px 0;
-      cursor: pointer;
-      color: var(--text-dim);
-      font-size: 15px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-    }
-
-    .align-btn:hover {
-      border-color: var(--accent);
-    }
-
-    .align-btn.active {
-      border-color: var(--accent);
-      color: var(--text);
-      background: rgba(124, 92, 252, 0.12);
-    }
-
-    .control-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    /* Modern range slider */
-    input[type=range] {
-      -webkit-appearance: none;
-      width: 100%;
-      height: 5px;
-      background: var(--line);
-      border-radius: 5px;
-      outline: none;
-      transition: background 0.3s;
-    }
-
-    input[type=range]::-webkit-canvas-run-out {
-      background: var(--line);
-    }
-
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: var(--accent-coral);
-      cursor: pointer;
-      box-shadow: 0 0 10px var(--accent-coral-glow);
-      transition: transform 0.1s;
-    }
-
-    input[type=range]::-webkit-slider-thumb:hover {
-      transform: scale(1.2);
-    }
-
-    /* Switch Component */
-    .switch {
-      width: 44px;
-      height: 24px;
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      position: relative;
-      cursor: pointer;
-      transition: all 0.2s;
-      flex-shrink: 0;
-    }
-
-    .switch.on {
-      background: var(--accent);
-      border-color: var(--accent);
-      box-shadow: 0 0 10px var(--accent-glow);
-    }
-
-    .switch::after {
-      content: '';
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 16px;
-      height: 16px;
-      background: #fff;
-      border-radius: 50%;
-      transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-    }
-
-    .switch.on::after {
-      left: 23px;
-    }
-
-    /* Custom File Input Styling */
-    .file-upload-wrapper {
-      position: relative;
-      width: 100%;
-    }
-
-    .file-upload-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      padding: 10px 14px;
-      background: var(--panel-2);
-      border: 1px dashed var(--line);
-      border-radius: 8px;
-      color: var(--text-dim);
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .file-upload-btn:hover {
-      border-color: var(--accent-coral);
-      color: var(--text);
-      background: rgba(255, 107, 74, 0.03);
-    }
-
-    .file-upload-wrapper input[type=file] {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      cursor: pointer;
-    }
-
-    /* Remove file button */
-    .file-remove-btn {
-      background: none;
-      border: none;
-      color: var(--accent-coral);
-      font-size: 11px;
-      cursor: pointer;
-      font-family: var(--mono);
-      display: none;
-    }
-
-    /* Drafts System & Memory */
-    .draft-input-wrap {
-      display: flex;
-      gap: 8px;
-    }
-
-    .draft-list {
-      max-height: 150px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 6px;
-    }
-
-    .draft-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px;
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      font-size: 12px;
-    }
-
-    .draft-name {
-      font-weight: 500;
-      cursor: pointer;
-      color: var(--text-dim);
-      transition: color 0.15s;
-      flex: 1;
-    }
-
-    .draft-name:hover {
-      color: var(--text);
-    }
-
-    .draft-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .draft-del-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: color 0.15s;
-    }
-
-    .draft-del-btn:hover {
-      color: var(--accent-coral);
-    }
-
-    .recent-colors {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-    }
-
-    .recent-color-swatch {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      cursor: pointer;
-      border: 1px solid var(--line);
-      transition: transform 0.15s;
-    }
-
-    .recent-color-swatch:hover {
-      transform: scale(1.15);
-    }
-
-    /* Hashtags */
-    .hashtag-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 8px;
-    }
-
-    .hchip {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      padding: 4px 10px;
-      border-radius: 16px;
-      cursor: pointer;
-      color: var(--text-dim);
-      transition: all 0.2s;
-    }
-
-    .hchip:hover {
-      border-color: var(--accent-coral);
-      color: var(--text);
-      background: rgba(255, 107, 74, 0.05);
-    }
-
-    .char-count {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--text-dim);
-      text-align: right;
-      margin-top: 4px;
-    }
-
-    .char-count.warn {
-      color: var(--accent-coral);
-      font-weight: 700;
-    }
-
-    /* ---- Canvas Area ---- */
-    .canvas-area {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px;
-      gap: 28px;
-      height: 100vh;
-      overflow-y: auto;
-      position: relative;
-    }
-
-    .frame-wrap {
-      position: relative;
-      filter: drop-shadow(0 25px 50px rgba(0, 0, 0, 0.6));
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-    }
-
-    /* Realistic device chromes */
-    .device-chrome-wrap {
-      position: relative;
-      border-radius: 24px;
-      padding: 8px;
-      background: #110e1a;
-      border: 4px solid #2d2642;
-      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Browser Mockup Chrome */
-    .chrome-browser-header {
-      height: 38px;
-      background: #1d182e;
-      border-radius: 12px 12px 0 0;
-      border-bottom: 1px solid var(--line);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 16px;
-      width: 100%;
-    }
-
-    .chrome-browser-header .dots {
-      display: flex;
-      gap: 6px;
-    }
-
-    .chrome-browser-header .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-    }
-
-    .chrome-browser-header .dot.red { background: #FF5F56; }
-    .chrome-browser-header .dot.yellow { background: #FFBD2E; }
-    .chrome-browser-header .dot.green { background: #27C93F; }
-
-    .chrome-browser-header .address-bar {
-      flex: 1;
-      height: 22px;
-      background: #131020;
-      border-radius: 6px;
-      border: 1px solid var(--line);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: var(--mono);
-      font-size: 9.5px;
-      color: var(--text-dim);
-    }
-
-    /* Phone Mockup Chrome */
-    .chrome-phone-header {
-      height: 36px;
-      width: 100%;
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 24px;
-      color: rgba(255,255,255,0.9);
-      font-size: 11px;
-      font-weight: 600;
-      z-index: 5;
-      font-family: var(--body);
-      pointer-events: none;
-    }
-
-    .chrome-phone-notch {
-      width: 110px;
-      height: 20px;
-      background: #000;
-      border-radius: 0 0 12px 12px;
-      position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 6;
-      pointer-events: none;
-    }
-
-    .chrome-phone-home-indicator {
-      height: 5px;
-      width: 120px;
-      background: rgba(255, 255, 255, 0.7);
-      border-radius: 10px;
-      position: absolute;
-      bottom: 8px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 5;
-      pointer-events: none;
-    }
-
-    /* Mock Social Feed Card Chrome */
-    .chrome-feed-card {
-      background: #120e21;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      width: 100%;
-    }
-
-    .feed-card-header {
-      padding: 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: #19142d;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .feed-card-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--accent-coral));
-    }
-
-    .feed-card-meta {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .feed-card-name {
-      font-size: 12.5px;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .feed-card-sub {
-      font-size: 10px;
-      color: var(--text-dim);
-    }
-
-    .feed-card-footer {
-      padding: 12px;
-      background: #19142d;
-      border-top: 1px solid var(--line);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .feed-card-actions {
-      display: flex;
-      justify-content: space-between;
-      font-size: 18px;
-      color: var(--text-dim);
-    }
-
-    .feed-card-actions-left {
-      display: flex;
-      gap: 12px;
-    }
-
-    .feed-card-likes {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    /* Main preview canvas elements */
-    canvas {
-      display: block;
-      max-width: 100%;
-      height: auto;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    }
-
-    .canvas-phone-styled {
-      border-radius: 18px;
-    }
-
-    /* Actions Panel */
-    .actions-panel {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      width: 100%;
-      max-width: 520px;
-    }
-
-    .actions-buttons {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-      width: 100%;
-    }
-
-    .btn {
-      font-family: var(--body);
-      font-weight: 600;
-      font-size: 13.5px;
-      padding: 12px 20px;
-      border-radius: 10px;
-      border: 1px solid var(--line);
-      cursor: pointer;
-      background: var(--panel-2);
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s;
-      flex: 1;
-      min-width: 140px;
-    }
-
-    .btn:hover {
-      border-color: var(--accent);
-      background: rgba(124, 92, 252, 0.05);
-    }
-
-    .btn:active {
-      transform: scale(0.97);
-    }
-
-    .btn.primary {
-      background: linear-gradient(135deg, var(--accent), #5d3dcf);
-      border: none;
-      box-shadow: 0 4px 15px rgba(124, 92, 252, 0.3);
-    }
-
-    .btn.primary:hover {
-      box-shadow: 0 4px 20px rgba(124, 92, 252, 0.5);
-      background: linear-gradient(135deg, #8a6efc, #6c4ee0);
-    }
-
-    .btn.secondary {
-      background: linear-gradient(135deg, var(--accent-coral), #e05331);
-      border: none;
-      color: #fff;
-      box-shadow: 0 4px 15px rgba(255, 107, 74, 0.25);
-    }
-
-    .btn.secondary:hover {
-      box-shadow: 0 4px 20px rgba(255, 107, 74, 0.45);
-      background: linear-gradient(135deg, #ff8469, #ec5d3b);
-    }
-
-    .btn.ghost {
-      background: transparent;
-      border: 1px solid var(--panel-border);
-      color: var(--text-dim);
-    }
-
-    .btn.ghost:hover {
-      border-color: var(--text);
-      color: var(--text);
-    }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      box-shadow: none !important;
-    }
-
-    /* Caption Preview Box */
-    .caption-preview {
-      width: 100%;
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-    }
-
-    .caption-preview .lbl {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .caption-preview .txt {
-      font-size: 13.5px;
-      line-height: 1.6;
-      color: var(--text);
-      white-space: pre-wrap;
-      max-height: 180px;
-      overflow-y: auto;
-    }
-
-    .caption-preview .hash {
-      color: var(--accent-coral);
-    }
-
-    /* Toast system */
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: #fff;
-      color: #0b0914;
-      padding: 12px 24px;
-      border-radius: 30px;
-      font-size: 13.5px;
-      font-weight: 600;
-      opacity: 0;
-      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      pointer-events: none;
-      z-index: 1000;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    /* Batch Export Modal styling */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(5, 4, 9, 0.85);
-      backdrop-filter: blur(8px);
-      z-index: 100;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-
-    .modal-overlay.show {
-      display: flex;
-      opacity: 1;
-    }
-
-    .modal-container {
-      background: #110e1c;
-      border: 1px solid var(--panel-border);
-      border-radius: 20px;
-      width: 100%;
-      max-width: 960px;
-      max-height: 85vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.6);
-      transform: scale(0.95);
-      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    .modal-overlay.show .modal-container {
-      transform: scale(1);
-    }
-
-    .modal-header {
-      padding: 20px 24px;
-      border-bottom: 1px solid var(--line);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .modal-title {
-      font-family: var(--disp);
-      font-size: 20px;
-      font-weight: 800;
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--text-dim);
-      font-size: 24px;
-      cursor: pointer;
-      transition: color 0.15s;
-    }
-
-    .modal-close:hover {
-      color: var(--accent-coral);
-    }
-
-    .modal-body {
-      padding: 24px;
-      overflow-y: auto;
-      flex: 1;
-    }
-
-    .batch-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
-    }
-
-    .batch-card {
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      position: relative;
-    }
-
-    .batch-card-title {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--text-dim);
-      text-align: center;
-    }
-
-    .batch-canvas-wrap {
-      width: 100%;
-      height: 180px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #090710;
-      border-radius: 8px;
-      overflow: hidden;
-      border: 1px solid var(--line);
-    }
-
-    .batch-canvas-wrap canvas {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-
-    .modal-footer {
-      padding: 20px 24px;
-      border-top: 1px solid var(--line);
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-    }
-  </style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+  }
+  
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    min-height: 100vh;
+  }
+  
+  @media (max-width: 1024px) {
+    .app { grid-template-columns: 1fr; }
+    .canvas-area { order: -1; }
+  }
+
+  /* ---- Sidebar ---- */
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    padding: 28px 24px 60px;
+    overflow-y: auto;
+    height: 100vh;
+  }
+  
+  @media (max-width: 1024px) {
+    .sidebar { height: auto; }
+  }
+
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 28px;
+  }
+  
+  .brand-mark {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--disp); font-weight: 900; font-size: 16px;
+    flex-shrink: 0;
+  }
+  
+  .brand-name { font-family: var(--disp); font-weight: 900; font-size: 17px; letter-spacing: -0.02em; }
+  .brand-sub { font-family: var(--mono); font-size: 10px; color: var(--text-dim); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .section { margin-bottom: 26px; }
+  
+  .section-label {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+  label.field-label { display: block; font-size: 12px; color: var(--text-dim); margin: 12px 0 6px; }
+  
+  input[type=text], textarea, select {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--line);
+    color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 13.5px;
+    font-family: var(--body); resize: vertical;
+  }
+  
+  textarea { min-height: 64px; line-height: 1.4; }
+  
+  input[type=text]:focus, textarea:focus, select:focus {
+    outline: none; border-color: var(--accent);
+  }
+  
+  .char-count { font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-align: right; margin-top: 4px; }
+  .char-count.warn { color: var(--accent-2); }
+
+  /* Platform grid */
+  .platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  
+  .platform-btn {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 4px; cursor: pointer; color: var(--text-dim); font-size: 10.5px;
+    font-family: var(--mono); text-align: center; transition: all .12s;
+  }
+  
+  .platform-btn .pico { font-size: 16px; display: block; margin-bottom: 4px; }
+  .platform-btn.active { border-color: var(--accent); color: var(--text); background: rgba(124, 92, 252, 0.14); }
+  .platform-btn:hover { border-color: var(--accent); }
+
+  .ratio-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  
+  .ratio-chip {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px;
+    padding: 6px 12px; font-size: 11.5px; font-family: var(--mono); cursor: pointer; color: var(--text-dim);
+  }
+  
+  .ratio-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  
+  .tpl-btn {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px; cursor: pointer; font-size: 12px; color: var(--text-dim); text-align: left;
+  }
+  
+  .tpl-btn strong { display: block; font-size: 12.5px; color: var(--text); margin-bottom: 2px; font-family: var(--body); }
+  .tpl-btn.active { border-color: var(--accent-2); background: rgba(255, 107, 74, 0.10); }
+
+  .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  
+  .theme-swatch {
+    height: 52px; border-radius: 8px; cursor: pointer; border: 2px solid transparent;
+    position: relative; overflow: hidden;
+  }
+  
+  .theme-swatch.active { border-color: var(--text); }
+  
+  .theme-swatch span {
+    position: absolute; bottom: 4px; left: 6px; font-family: var(--mono); font-size: 9px;
+    background: rgba(0, 0, 0, 0.4); padding: 1px 5px; border-radius: 4px; color: #fff;
+  }
+
+  .align-row { display: flex; gap: 6px; }
+  
+  .align-btn {
+    flex: 1; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
+    padding: 8px 0; cursor: pointer; color: var(--text-dim); font-size: 14px; text-align: center;
+  }
+  
+  .align-btn.active { border-color: var(--accent); color: var(--text); }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+  .toggle-row .field-label { margin: 0; }
+  
+  .switch {
+    width: 38px; height: 22px; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 20px; position: relative; cursor: pointer; flex-shrink: 0;
+  }
+  
+  .switch.on { background: var(--accent); border-color: var(--accent); }
+  
+  .switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+    background: #fff; border-radius: 50%; transition: left .15s;
+  }
+  
+  .switch.on::after { left: 18px; }
+
+  .hashtag-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  
+  .hchip {
+    font-family: var(--mono); font-size: 10.5px; background: var(--panel-2);
+    border: 1px solid var(--line); padding: 4px 9px; border-radius: 14px; cursor: pointer; color: var(--text-dim);
+  }
+  
+  .hchip:hover { border-color: var(--accent-2); color: var(--text); }
+
+  .color-row { display: flex; gap: 8px; margin-top: 8px; }
+  
+  .color-row input[type=color] {
+    width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line);
+    background: none; cursor: pointer; padding: 0;
+  }
+
+  .recent-colors-grid {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;
+  }
+  .recent-color-dot {
+    width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line);
+    cursor: pointer; transition: transform 0.15s;
+  }
+  .recent-color-dot:hover {
+    transform: scale(1.15);
+    border-color: var(--accent);
+  }
+
+  /* Range Inputs customization */
+  input[type=range] {
+    -webkit-appearance: none;
+    background: var(--panel-2);
+    height: 6px;
+    border-radius: 4px;
+    outline: none;
+    border: 1px solid var(--line);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  /* ---- Canvas Area ---- */
+  .canvas-area {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 40px 24px 60px; gap: 24px;
+    overflow-y: auto;
+    height: 100vh;
+  }
+  
+  .frame-wrap {
+    position: relative;
+    filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.45));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 460px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  
+  .device-chrome-wrap {
+    position: relative;
+    border-radius: 24px;
+    padding: 8px;
+    background: #110e1a;
+    border: 4px solid #2d2642;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Realistic device chromes styling */
+  .chrome-phone-header {
+    height: 36px;
+    width: 100%;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 11px;
+    font-weight: 600;
+    z-index: 5;
+    pointer-events: none;
+  }
+  
+  .chrome-phone-notch {
+    width: 110px;
+    height: 20px;
+    background: #000;
+    border-radius: 0 0 12px 12px;
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    pointer-events: none;
+  }
+  
+  .chrome-phone-home-indicator {
+    height: 5px;
+    width: 120px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 10px;
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  .chrome-browser-header {
+    height: 38px;
+    background: #1d182e;
+    border-radius: 12px 12px 0 0;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    width: 100%;
+  }
+  
+  .chrome-browser-header .dots {
+    display: flex;
+    gap: 6px;
+  }
+  .chrome-browser-header .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .chrome-browser-header .dot.red { background: #FF5F56; }
+  .chrome-browser-header .dot.yellow { background: #FFBD2E; }
+  .chrome-browser-header .dot.green { background: #27C93F; }
+  
+  .chrome-browser-header .address-bar {
+    flex: 1;
+    height: 22px;
+    background: #131020;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--text-dim);
+  }
+
+  .chrome-feed-card {
+    background: #110e20;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .feed-card-header {
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #19142d;
+    border-bottom: 1px solid var(--line);
+  }
+  .feed-card-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .feed-card-meta {
+    display: flex;
+    flex-direction: column;
+  }
+  .feed-card-name { font-size: 12.5px; font-weight: 700; color: var(--text); }
+  .feed-card-sub { font-size: 10px; color: var(--text-dim); }
+  
+  .feed-card-footer {
+    padding: 12px;
+    background: #19142d;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .feed-card-actions {
+    display: flex;
+    justify-content: space-between;
+    font-size: 18px;
+    color: var(--text-dim);
+  }
+  .feed-card-actions-left {
+    display: flex;
+    gap: 12px;
+  }
+  .feed-card-likes { font-size: 12px; font-weight: 700; color: var(--text); }
+
+  canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  }
+  .canvas-phone-styled { border-radius: 18px; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  
+  .btn {
+    font-family: var(--body); font-weight: 600; font-size: 13px; padding: 10px 16px;
+    border-radius: 8px; border: 1px solid var(--line); cursor: pointer; background: var(--panel);
+    color: var(--text); display: flex; align-items: center; gap: 8px; transition: all .15s;
+  }
+  .btn:hover { border-color: var(--accent); background: rgba(124, 92, 252, 0.05); }
+  .btn:active { transform: scale(0.97); }
+  .btn.primary { background: linear-gradient(135deg, var(--accent), #6a4de0); border: none; }
+  .btn.secondary { background: var(--accent-2); border: none; color: #1a0f0a; }
+  .btn.secondary:hover { background: #ff8266; }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #fff; color: #111; padding: 10px 20px; border-radius: 24px; font-size: 13px;
+    font-weight: 600; opacity: 0; transition: all .25s; pointer-events: none; z-index: 999;
+    display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .caption-preview {
+    width: 100%; max-width: 520px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px 18px;
+  }
+  .caption-preview .lbl { font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+  .caption-preview .txt { font-size: 13px; line-height: 1.55; color: var(--text); white-space: pre-wrap; }
+  .caption-preview .hash { color: var(--accent); }
+
+  .dims-label { font-family: var(--mono); font-size: 11px; color: var(--text-dim); text-align: center; }
+
+  /* Draft Items Styling */
+  .draft-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--panel-2); border: 1px solid var(--line);
+    padding: 6px 10px; border-radius: 6px; font-size: 12px;
+  }
+  .draft-name { cursor: pointer; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .draft-name:hover { color: var(--accent); }
+  .draft-del-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; padding: 2px; }
+  .draft-del-btn:hover { color: var(--accent-2); }
+
+  /* Modal Overlay (Batch Previews) */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(8, 6, 12, 0.85); backdrop-filter: blur(8px);
+    z-index: 1000; display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    padding: 20px;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: auto; }
+  
+  .modal-container {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 16px; width: 100%; max-width: 960px; max-height: 90vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.6);
+  }
+  
+  .modal-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-title { font-family: var(--disp); font-weight: 900; font-size: 18px; }
+  .modal-close { background: none; border: none; color: var(--text-dim); font-size: 24px; cursor: pointer; }
+  .modal-close:hover { color: var(--text); }
+  
+  .modal-body {
+    padding: 24px; overflow-y: auto; flex: 1;
+  }
+  
+  .batch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+  }
+  
+  .batch-card {
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px; display: flex; flex-direction: column;
+    align-items: center; gap: 12px;
+  }
+  .batch-card-title { font-family: var(--mono); font-size: 11px; color: var(--text-dim); text-align: center; }
+  .batch-canvas-wrap {
+    width: 100%; height: 180px; display: flex; align-items: center; justify-content: center;
+    background: #090710; border-radius: 8px; overflow: hidden; border: 1px solid var(--line);
+  }
+  .batch-canvas-wrap canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
+  
+  .modal-footer {
+    padding: 16px 24px; border-top: 1px solid var(--line);
+    display: flex; justify-content: flex-end; gap: 12px;
+  }
+</style>
 </head>
 <body>
 
@@ -1190,345 +501,215 @@
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="brand">
-      <div class="brand-mark">
-        <svg viewBox="0 0 24 24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
-        </svg>
-      </div>
-      <div class="brand-title-wrap">
+      <div class="brand-mark">T</div>
+      <div>
         <div class="brand-name">Content Studio</div>
-        <div class="brand-sub">Platform Engine</div>
+        <div class="brand-sub">Telepathic Thoughts</div>
       </div>
     </div>
 
-    <!-- 1. Platforms -->
+    <!-- 1. Platform & Ratio -->
     <div class="section">
-      <div class="section-label">1. Social Platform</div>
+      <div class="section-label">Platform</div>
       <div class="platform-grid" id="platformGrid"></div>
     </div>
 
-    <!-- 2. Ratios -->
     <div class="section">
-      <div class="section-label">2. Dimension Aspect</div>
+      <div class="section-label">Image Ratio</div>
       <div class="ratio-row" id="ratioRow"></div>
-      <div class="control-row">
-        <span style="font-size: 11px; color: var(--text-dim);" id="dimsLabel">1080 × 1080px</span>
-        <span style="font-size: 11px; color: var(--accent-coral);" id="platformNameLabel">Instagram</span>
-      </div>
+      <div class="dims-label" id="dimsLabel" style="text-align:left; margin-top:8px;"></div>
     </div>
 
-    <!-- 3. Templates -->
+    <!-- 2. Template & Fonts -->
     <div class="section">
-      <div class="section-label">3. Design Layout</div>
+      <div class="section-label">Layout Template</div>
       <div class="template-grid" id="templateGrid"></div>
     </div>
 
-    <!-- 4. Typography & Font Pairings -->
     <div class="section">
-      <div class="section-label">4. Font Pairings</div>
-      <select id="fontPairingSelect"></select>
-    </div>
-
-    <!-- 5. Appearance & Styling Customizer -->
-    <div class="section">
-      <div class="section-label">5. Visual Theme & Style</div>
-      <div class="theme-grid" id="themeGrid"></div>
-      
-      <!-- Customizer Tabs -->
-      <div class="customizer-box">
-        <div class="tabs-header">
-          <button class="tab-btn active" data-tab="tab-solid">Solid</button>
-          <button class="tab-btn" data-tab="tab-gradient">Gradient</button>
-          <button class="tab-btn" data-tab="tab-pattern">Pattern</button>
-        </div>
-        
-        <!-- Tab: Solid -->
-        <div class="tab-content active" id="tab-solid">
-          <div class="control-row">
-            <span style="font-size: 12px; color: var(--text-dim);">Background</span>
-            <input type="color" id="customBg" value="#14121A" style="width:36px; height:24px; border:none; border-radius:4px; cursor:pointer; background:none; padding:0;">
-          </div>
-          <div class="control-row">
-            <span style="font-size: 12px; color: var(--text-dim);">Accent Highlight</span>
-            <input type="color" id="customAccent" value="#7C5CFC" style="width:36px; height:24px; border:none; border-radius:4px; cursor:pointer; background:none; padding:0;">
-          </div>
-          <div class="control-row">
-            <span style="font-size: 12px; color: var(--text-dim);">Primary Text</span>
-            <input type="color" id="customTextColor" value="#F5F3FF" style="width:36px; height:24px; border:none; border-radius:4px; cursor:pointer; background:none; padding:0;">
-          </div>
-        </div>
-        
-        <!-- Tab: Gradient -->
-        <div class="tab-content" id="tab-gradient">
-          <div class="control-row">
-            <span style="font-size: 12px; color: var(--text-dim);">Gradient Style</span>
-            <select id="gradType" style="padding: 6px 10px; font-size:12px; width:120px;">
-              <option value="linear">Linear</option>
-              <option value="radial">Radial</option>
-            </select>
-          </div>
-          <div class="control-row" id="gradAngleRow">
-            <span style="font-size: 12px; color: var(--text-dim);">Angle (deg)</span>
-            <input type="range" id="gradAngle" min="0" max="360" value="135" style="width:120px;">
-          </div>
-          <div class="control-row">
-            <span style="font-size: 12px; color: var(--text-dim);">Color Stop 1</span>
-            <input type="color" id="gradColor1" value="#14121A" style="width:36px; height:24px; border:none; border-radius:4px; cursor:pointer; background:none; padding:0;">
-          </div>
-          <div class="control-row">
-            <span style="font-size: 12px; color: var(--text-dim);">Color Stop 2</span>
-            <input type="color" id="gradColor2" value="#221E30" style="width:36px; height:24px; border:none; border-radius:4px; cursor:pointer; background:none; padding:0;">
-          </div>
-        </div>
-        
-        <!-- Tab: Pattern -->
-        <div class="tab-content" id="tab-pattern">
-          <div class="control-row">
-            <span style="font-size: 12px; color: var(--text-dim);">Overlay Pattern</span>
-            <select id="patternType" style="padding: 6px 10px; font-size:12px; width:120px;">
-              <option value="none">None</option>
-              <option value="dots">Dotted Grid</option>
-              <option value="grid">Gridlines</option>
-              <option value="stripes">Diagonal Stripes</option>
-              <option value="noise">Grain Noise</option>
-              <option value="circles">Corner Circles</option>
-              <option value="waves">Organic Waves</option>
-              <option value="geometric">Geometric Angles</option>
-            </select>
-          </div>
-          <div class="control-row">
-            <span style="font-size: 12px; color: var(--text-dim);">Pattern Opacity</span>
-            <input type="range" id="patternOpacity" min="0" max="100" value="15" style="width:120px;">
-          </div>
-          <div class="control-row">
-            <span style="font-size: 12px; color: var(--text-dim);">Pattern Size / Density</span>
-            <input type="range" id="patternDensity" min="10" max="100" value="30" style="width:120px;">
-          </div>
-        </div>
+      <div class="section-label">Typography</div>
+      <label class="field-label">Font Pairing</label>
+      <select id="fontPairing">
+        <option value="outfit_plus">Outfit & Plus Jakarta</option>
+        <option value="syne_space">Syne & Space Grotesk</option>
+        <option value="playfair_inter">Playfair & Inter</option>
+        <option value="jetbrains_mono">JetBrains Mono</option>
+        <option value="trebuchet_sans">Trebuchet & System Sans</option>
+        <option value="georgia_serif">Georgia & Serif</option>
+      </select>
+      <label class="field-label">Alignment</label>
+      <div class="align-row" id="alignRow">
+        <div class="align-btn" data-align="left">⯇</div>
+        <div class="align-btn active" data-align="center">☰</div>
+        <div class="align-btn" data-align="right">⯈</div>
       </div>
-
-      <!-- Recent colors memory swatches -->
-      <div class="field-group">
-        <label class="field-label">Recent Palette Colors</label>
-        <div class="recent-colors" id="recentColors"></div>
-      </div>
-    </div>
-
-    <!-- 6. Background Image & Logo Layers -->
-    <div class="section">
-      <div class="section-label">6. Background & Logo layers</div>
-      
-      <!-- Background Image -->
-      <div class="field-group">
-        <label class="field-label">
-          <span>Background Image Layer</span>
-          <button class="file-remove-btn" id="btnRemoveBgImage">Remove</button>
-        </label>
-        <div class="file-upload-wrapper">
-          <div class="file-upload-btn" id="lblBgUpload">
-            <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
-            <span>Upload Photo...</span>
-          </div>
-          <input type="file" id="bgImageFile" accept="image/*">
-        </div>
-        <div id="bgImageControls" style="display:none; flex-direction:column; gap:8px; margin-top:4px;">
-          <div class="control-row">
-            <span style="font-size: 11px; color: var(--text-dim);">Image Scale</span>
-            <input type="range" id="bgImageScale" min="10" max="300" value="100" style="width:120px;">
-          </div>
-          <div class="control-row">
-            <span style="font-size: 11px; color: var(--text-dim);">Image Opacity</span>
-            <input type="range" id="bgImageOpacity" min="0" max="100" value="40" style="width:120px;">
-          </div>
-          <div class="control-row">
-            <span style="font-size: 11px; color: var(--text-dim);">Image Blur</span>
-            <input type="range" id="bgImageBlur" min="0" max="30" value="0" style="width:120px;">
-          </div>
-          <div class="control-row">
-            <span style="font-size: 11px; color: var(--text-dim);">Blend Mode</span>
-            <select id="bgImageBlend" style="padding: 4px 6px; font-size:11px; width:120px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg-surface); color: var(--text-main); outline:none;">
-              <option value="normal">Normal</option>
-              <option value="multiply">Multiply</option>
-              <option value="screen">Screen</option>
-              <option value="overlay">Overlay</option>
-              <option value="darken">Darken</option>
-              <option value="lighten">Lighten</option>
-              <option value="color-dodge">Color Dodge</option>
-              <option value="color-burn">Color Burn</option>
-              <option value="difference">Difference</option>
-              <option value="luminosity">Luminosity</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Logo Layer -->
-      <div class="field-group" style="margin-top: 8px;">
-        <label class="field-label">
-          <span>Logo / Brand Watermark Overlay</span>
-          <button class="file-remove-btn" id="btnRemoveLogo">Remove</button>
-        </label>
-        <div class="file-upload-wrapper">
-          <div class="file-upload-btn" id="lblLogoUpload">
-            <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 16H6c-.55 0-1-.45-1-1V6c0-.55.45-1 1-1h12c.55 0 1 .45 1 1v12c0 .55-.45 1-1 1zm-4.5-9.5c0-.83-.67-1.5-1.5-1.5H9c-.83 0-1.5.67-1.5 1.5v5c0 .83.67 1.5 1.5 1.5h3c.83 0 1.5-.67 1.5-1.5v-5zm-1.5 5H9v-5h3v5z"/></svg>
-            <span>Upload Logo PNG...</span>
-          </div>
-          <input type="file" id="logoFile" accept="image/*">
-        </div>
-        <div id="logoControls" style="display:none; flex-direction:column; gap:8px; margin-top:4px;">
-          <div class="control-row">
-            <span style="font-size: 11px; color: var(--text-dim);">Logo Size</span>
-            <input type="range" id="logoScale" min="5" max="100" value="20" style="width:120px;">
-          </div>
-          <div class="control-row">
-            <span style="font-size: 11px; color: var(--text-dim);">Logo Opacity</span>
-            <input type="range" id="logoOpacity" min="10" max="100" value="80" style="width:120px;">
-          </div>
-          <div class="control-row">
-            <span style="font-size: 11px; color: var(--text-dim);">Logo Position</span>
-            <select id="logoPosition" style="padding: 4px 8px; font-size:11px; width:120px;">
-              <option value="top-left">Top Left</option>
-              <option value="top-right">Top Right</option>
-              <option value="bottom-left">Bottom Left</option>
-              <option value="bottom-right" selected>Bottom Right</option>
-              <option value="center">Center</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 7. Content -->
-    <div class="section">
-      <div class="section-label">7. Content Settings</div>
-      
-      <div class="field-group">
-        <label class="field-label">Title / Hook Text</label>
-        <textarea id="inputTitle" placeholder="e.g. 5 steps to start a web development studio">5 steps to design landing pages that convert like crazy</textarea>
-      </div>
-
-      <div class="field-group">
-        <label class="field-label">Body / Subtext (Optional)</label>
-        <textarea id="inputBody" placeholder="e.g. Supporting explanation, list details, or quote author">Step 1: Focus on the hero header. Step 2: Establish trust factors early. Step 3: Add obvious CTA.</textarea>
-      </div>
-
-      <div class="field-group">
-        <label class="field-label">Caption Text (For the post itself)</label>
-        <textarea id="inputCaption" placeholder="Write caption text copy here...">Struggling with low conversion rates on your website? Try auditing your landing pages against these five foundational guidelines. High converting pages align key headers with user queries instantly! 🚀</textarea>
-        <div class="char-count" id="charCount">0 characters</div>
-      </div>
-
-      <div class="field-group">
-        <label class="field-label">Hashtags</label>
-        <textarea id="inputHashtags" placeholder="#DesignStudio #Marketing">#ContentMarketing #DesignStudio #WebDesign #GrowthHacking #UXDesign</textarea>
-        <div class="hashtag-chips" id="hashtagChips"></div>
-      </div>
-    </div>
-
-    <!-- 8. Graphics Styling Options -->
-    <div class="section">
-      <div class="section-label">8. Card Settings</div>
-      
-      <div class="field-group">
-        <label class="field-label">Text Alignment</label>
-        <div class="align-row" id="alignRow">
-          <button class="align-btn" data-align="left">⯇ Left</button>
-          <button class="align-btn active" data-align="center">☰ Center</button>
-          <button class="align-btn" data-align="right">Right ⯈</button>
-        </div>
-      </div>
-
-      <div class="control-row">
-        <label class="field-label">Auto-fit font size</label>
+      <div class="toggle-row">
+        <label class="field-label">Auto-fit text size</label>
         <div class="switch on" id="autoFitSwitch"></div>
       </div>
+    </div>
 
-      <!-- Size sliders if auto-fit is disabled -->
-      <div id="manualFontSizes" style="display:none; flex-direction:column; gap:8px; margin-top:4px;">
-        <div class="control-row">
-          <span style="font-size: 11px; color: var(--text-dim);">Title Font Size</span>
-          <input type="range" id="titleFontSize" min="20" max="120" value="50" style="width:120px;">
-        </div>
-        <div class="control-row">
-          <span style="font-size: 11px; color: var(--text-dim);">Body Font Size</span>
-          <input type="range" id="bodyFontSize" min="12" max="60" value="24" style="width:120px;">
-        </div>
+    <!-- 3. Theme & Pattern -->
+    <div class="section">
+      <div class="section-label">Theme</div>
+      <div class="theme-grid" id="themeGrid"></div>
+      <div class="color-row">
+        <input type="color" id="customAccent" title="Custom accent color">
+        <input type="color" id="customBg" title="Custom background color">
+        <span style="font-size:11px; color:var(--text-dim); align-self:center;">Fine-tune colors</span>
       </div>
-
-      <div class="control-row">
-        <label class="field-label">Content Padding (%)</label>
-        <input type="range" id="contentPadding" min="4" max="20" value="9" style="width:120px;">
-      </div>
-
-      <div class="control-row">
-        <label class="field-label">Watermark / Handle overlay</label>
-        <div class="switch on" id="watermarkSwitch"></div>
-      </div>
+      <div class="recent-colors-grid" id="recentColorsGrid"></div>
       
-      <div id="watermarkTextWrap" class="field-group">
-        <input type="text" id="watermarkText" value="@DesignStudioLive" placeholder="@handle">
+      <label class="field-label">Overlay Pattern</label>
+      <select id="patternType">
+        <option value="none">None</option>
+        <option value="circles" selected>Corner Circles</option>
+        <option value="dots">Dotted Grid</option>
+        <option value="grid">Gridlines</option>
+        <option value="stripes">Diagonal Stripes</option>
+        <option value="noise">Grain Noise</option>
+        <option value="waves">Organic Waves</option>
+        <option value="geometric">Geometric Angles</option>
+      </select>
+      
+      <div style="margin-top:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:11px; color:var(--text-dim);">Pattern Opacity</span>
+          <input type="range" id="patternOpacity" min="0" max="100" value="12" style="width:120px;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:11px; color:var(--text-dim);">Pattern Density</span>
+          <input type="range" id="patternDensity" min="5" max="100" value="30" style="width:120px;">
+        </div>
       </div>
     </div>
 
-    <!-- 9. Draft Management -->
+    <!-- 4. Media Layer Overlays -->
     <div class="section">
-      <div class="section-label">9. Drafts & Templates Manager</div>
-      <div class="field-group">
-        <div class="draft-input-wrap">
-          <input type="text" id="draftNameInput" placeholder="Draft Name" style="flex:1; padding: 8px 12px; font-size:12.5px;">
-          <button class="btn primary" id="btnSaveDraft" style="flex:none; padding:8px 12px; min-width:auto; font-size:12.5px;">Save</button>
-        </div>
-        <div class="draft-list" id="draftList"></div>
+      <div class="section-label">Media Overlays</div>
+      <label class="field-label">Background Photo</label>
+      <div style="display:flex; gap:8px;">
+        <input type="file" id="bgFile" accept="image/*" style="display:none;">
+        <button class="btn" onclick="document.getElementById('bgFile').click()" style="padding:6px 12px; font-size:12px; flex:1; justify-content:center;">Upload Photo</button>
+        <button class="btn" id="btnRemoveBgImage" style="padding:6px 12px; font-size:12px; display:none;">Remove</button>
       </div>
+      <div id="bgControls" style="display:none; margin-top:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Scale</span>
+          <input type="range" id="bgImageScale" min="10" max="200" value="100" style="width:120px;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Opacity</span>
+          <input type="range" id="bgImageOpacity" min="0" max="100" value="40" style="width:120px;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Blur</span>
+          <input type="range" id="bgImageBlur" min="0" max="30" value="0" style="width:120px;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Blend Mode</span>
+          <select id="bgImageBlend" style="padding: 4px 6px; font-size:11px; width:120px;">
+            <option value="normal">Normal</option>
+            <option value="multiply">Multiply</option>
+            <option value="screen">Screen</option>
+            <option value="overlay">Overlay</option>
+            <option value="darken">Darken</option>
+            <option value="lighten">Lighten</option>
+            <option value="color-dodge">Color Dodge</option>
+            <option value="color-burn">Color Burn</option>
+            <option value="difference">Difference</option>
+            <option value="luminosity">Luminosity</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="field-label" style="margin-top:12px;">Brand Logo Overlay</label>
+      <div style="display:flex; gap:8px;">
+        <input type="file" id="logoFile" accept="image/*" style="display:none;">
+        <button class="btn" onclick="document.getElementById('logoFile').click()" style="padding:6px 12px; font-size:12px; flex:1; justify-content:center;">Upload Logo</button>
+        <button class="btn" id="btnRemoveLogo" style="padding:6px 12px; font-size:12px; display:none;">Remove</button>
+      </div>
+      <div id="logoControls" style="display:none; margin-top:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Scale</span>
+          <input type="range" id="logoScale" min="5" max="100" value="20" style="width:120px;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Opacity</span>
+          <input type="range" id="logoOpacity" min="0" max="100" value="80" style="width:120px;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Position</span>
+          <select id="logoPosition" style="padding: 4px 6px; font-size:11px; width:120px;">
+            <option value="top-left">Top Left</option>
+            <option value="top-right">Top Right</option>
+            <option value="bottom-left">Bottom Left</option>
+            <option value="bottom-right" selected>Bottom Right</option>
+            <option value="center">Center</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Content Input -->
+    <div class="section">
+      <div class="section-label">Content</div>
+      <label class="field-label">Title / Hook</label>
+      <textarea id="inputTitle" placeholder="যা মনে আছে সেটাই বলি">যা মনে আছে সেটাই বলি</textarea>
+
+      <label class="field-label">Body / Subtext (optional)</label>
+      <textarea id="inputBody" placeholder="Supporting line or leave blank"></textarea>
+
+      <label class="field-label">Caption (for post)</label>
+      <textarea id="inputCaption" placeholder="Write caption...">We just know 🧠</textarea>
+      <div class="char-count" id="captionLengthStatus">0/2200</div>
+
+      <label class="field-label">Hashtags</label>
+      <textarea id="inputHashtags" placeholder="#Hashtags">#TelepathicThoughts #TelepathicBD #BangladeshMemes #RelatableMemes</textarea>
+      <div class="hashtag-chips" id="hashtagChips"></div>
+    </div>
+
+    <!-- 6. Watermark -->
+    <div class="section">
+      <div class="section-label">Watermark</div>
+      <div class="toggle-row">
+        <label class="field-label">Show page handle</label>
+        <div class="switch on" id="watermarkSwitch"></div>
+      </div>
+      <input type="text" id="watermarkText" value="@TelepathicThoughtsBD" style="margin-top:8px;">
+    </div>
+
+    <!-- 7. Saved Drafts -->
+    <div class="section">
+      <div class="section-label">Saved Drafts</div>
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <input type="text" id="draftName" placeholder="Draft name..." style="flex:1; padding:6px 10px; font-size:12px;">
+        <button class="btn" id="btnSaveDraft" style="padding:6px 12px; font-size:12px;">Save</button>
+      </div>
+      <div id="draftList"></div>
     </div>
   </div>
 
   <!-- CANVAS AREA -->
   <div class="canvas-area">
-    <!-- device framing wrapper -->
     <div class="frame-wrap" id="frameWrap">
       <div class="device-chrome-wrap" id="deviceChromeWrap">
-        <!-- Rendered Chrome content inside JS based on ratios -->
         <canvas id="mainCanvas"></canvas>
       </div>
     </div>
+    <div class="dims-label" id="canvasDims"></div>
 
-    <div class="actions-panel">
-      <!-- Dimensions info -->
-      <span style="font-size: 11px; color: var(--text-dim); text-align: center;" id="canvasDims">1080 × 1080px  ·  1:1  ·  Instagram</span>
+    <div class="actions">
+      <button class="btn primary" id="btnDownload">⬇ Download PNG</button>
+      <button class="btn" id="btnCopyImage">⧉ Copy Image</button>
+      <button class="btn secondary" id="btnCopyCaption">📋 Copy Caption + Hashtags</button>
+    </div>
+    
+    <button class="btn ghost" id="btnOpenBatchModal" style="width:100%; max-width:520px; justify-content:center;">⚡ Multi-Format Batch Export Previews</button>
 
-      <!-- Primary controls -->
-      <div class="actions-buttons">
-        <button class="btn primary" id="btnDownload">
-          <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
-          Download PNG
-        </button>
-        <button class="btn" id="btnCopyImage">
-          <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-          Copy Image
-        </button>
-        <button class="btn secondary" id="btnCopyCaption">
-          <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-          Copy Caption
-        </button>
-      </div>
-
-      <!-- Batch Export Button -->
-      <div class="actions-buttons" style="margin-top:-6px;">
-        <button class="btn ghost" id="btnOpenBatchModal" style="flex:1;">
-          <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
-          Multi-Format Batch Export Previews
-        </button>
-      </div>
-
-      <!-- Post Caption Preview -->
-      <div class="caption-preview">
-        <div class="lbl">
-          <span>Post Caption Copy</span>
-          <span id="captionLengthStatus">0/2200</span>
-        </div>
-        <div class="txt" id="captionPreviewText"></div>
-      </div>
+    <div class="caption-preview">
+      <div class="lbl">Ready-to-paste caption</div>
+      <div class="txt" id="captionPreviewText"></div>
     </div>
   </div>
 </div>
@@ -1541,8 +722,8 @@
       <button class="modal-close" id="btnCloseBatchModal">&times;</button>
     </div>
     <div class="modal-body">
-      <p style="margin-bottom: 20px; font-size:13.5px; color: var(--text-dim); line-height: 1.5;">
-        Generate the same graphic layout optimized across all ratios. Check how the design looks on other layouts, and export them.
+      <p style="margin-bottom: 20px; font-size:13px; color: var(--text-dim); line-height: 1.5;">
+        Generate and verify your graphic across all key social media formats before exporting.
       </p>
       <div class="batch-grid" id="batchGrid"></div>
     </div>
@@ -1557,1607 +738,1285 @@
 
 <!-- JAVASCRIPT STATE & LOGIC -->
 <script>
-  /* ---------------- CONSTANTS & DATA ---------------- */
-  const PLATFORMS = [
-    { 
-      id: 'instagram', 
-      label: 'Instagram', 
-      icon: `<svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051C.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>`, 
-      ratios: ['1:1', '4:5', '9:16'], 
-      charLimit: 2200 
-    },
-    { 
-      id: 'facebook', 
-      label: 'Facebook', 
-      icon: `<svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`, 
-      ratios: ['1:1', '9:16'], 
-      charLimit: 63206 
-    },
-    { 
-      id: 'linkedin', 
-      label: 'LinkedIn', 
-      icon: `<svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>`, 
-      ratios: ['1:1', '1.91:1'], 
-      charLimit: 3000 
-    },
-    { 
-      id: 'youtube', 
-      label: 'YouTube', 
-      icon: `<svg viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.518 3.545 12 3.545 12 3.545s-7.518 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11C4.482 20.455 12 20.455 12 20.455s7.518 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`, 
-      ratios: ['16:9'], 
-      charLimit: 5000 
-    },
-    { 
-      id: 'tiktok', 
-      label: 'TikTok', 
-      icon: `<svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.17-2.86-.6-4.05-1.5-.1 1.77-.1 3.55-.1 5.32 0 2.22-.59 4.54-2.24 6.07A7.525 7.525 0 0 1 10.5 22.18c-3.95-.35-7.14-3.79-7.01-7.77.14-3.52 3.02-6.57 6.54-6.81.02.13.06.25.09.38.3.82.72 1.61 1.25 2.3-2.12.35-3.83 2.18-3.94 4.31-.13 2.44 1.72 4.67 4.16 4.88 2.03.18 4.04-1.07 4.7-2.97.29-.81.34-1.69.33-2.54 0-3.92-.01-7.83 0-11.75.01-.86.29-1.78.93-2.39.63-.61 1.48-.9 2.34-.91z"/></svg>`, 
-      ratios: ['9:16'], 
-      charLimit: 2200 
-    },
-    { 
-      id: 'twitter', 
-      label: 'X / Twitter', 
-      icon: `<svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`, 
-      ratios: ['16:9', '1:1'], 
-      charLimit: 280 
-    }
-  ];
+/* ---------------- DATA PRESETS ---------------- */
+const PLATFORMS = [
+  { id: 'instagram', label: 'Instagram', icon: '◪', ratios: ['1:1', '4:5', '9:16'], maxChars: 2200 },
+  { id: 'facebook', label: 'Facebook', icon: '▣', ratios: ['1:1', '9:16'], maxChars: 63206 },
+  { id: 'linkedin', label: 'LinkedIn', icon: '▤', ratios: ['1:1', '1.91:1'], maxChars: 3000 },
+  { id: 'youtube', label: 'YouTube', icon: '▶', ratios: ['16:9'], maxChars: 5000 },
+  { id: 'tiktok', label: 'TikTok', icon: '♪', ratios: ['9:16'], maxChars: 2200 },
+  { id: 'twitter', label: 'X / Twitter', icon: '𝕏', ratios: ['16:9', '1:1'], maxChars: 280 }
+];
 
-  const RATIO_DIMS = {
-    '1:1': [1080, 1080],
-    '4:5': [1080, 1350],
-    '9:16': [1080, 1920],
-    '16:9': [1280, 720],
-    '1.91:1': [1200, 627]
-  };
+const RATIO_DIMS = {
+  '1:1': [1080, 1080],
+  '4:5': [1080, 1350],
+  '9:16': [1080, 1920],
+  '16:9': [1280, 720],
+  '1.91:1': [1200, 627]
+};
 
-  const TEMPLATES = [
-    { id: 'quote', name: 'Quote Card', desc: 'Centered quotation marks' },
-    { id: 'tip', name: 'Tip / List', desc: 'Headline + bullet summary' },
-    { id: 'stat', name: 'Stat Highlight', desc: 'Giant number layout' },
-    { id: 'simple', name: 'Minimal', desc: 'Clean typography only' }
-  ];
+const TEMPLATES = [
+  { id: 'quote', name: 'Quote Card', desc: 'Centered quote style' },
+  { id: 'tip', name: 'Tip / List', desc: 'Headline + body lines' },
+  { id: 'stat', name: 'Stat Highlight', desc: 'Giant numeric callout' },
+  { id: 'simple', name: 'Minimal', desc: 'Clean statement layout' }
+];
 
-  const THEMES = [
-    { id: 'midnight', name: 'Midnight', bg: '#120E22', accent: '#7C5CFC', text: '#F5F3FF', secondary: '#E0D8FF', fontPair: 'outfit_plus', mode: 'dark' },
-    { id: 'coral', name: 'Coral Sun', bg: '#1C0F0D', accent: '#FF6B4A', text: '#FFF2EF', secondary: '#FFC3B5', fontPair: 'outfit_plus', mode: 'dark' },
-    { id: 'neon', name: 'Cyber Neon', bg: '#080B07', accent: '#B6FF3C', text: '#F5FFE6', secondary: '#D4FFA6', fontPair: 'syne_space', mode: 'dark' },
-    { id: 'pastel', name: 'Pastel Rose', bg: '#FDF2F4', accent: '#FFA3B8', text: '#3B2329', secondary: '#78515A', fontPair: 'outfit_plus', mode: 'light' },
-    { id: 'cream', name: 'Editorial', bg: '#F7F2E8', accent: '#C25E3B', text: '#2E2620', secondary: '#5A4D45', fontPair: 'playfair_inter', mode: 'light' },
-    { id: 'mono', name: 'Bold Mono', bg: '#000000', accent: '#FFFFFF', text: '#FFFFFF', secondary: '#CCCCCC', fontPair: 'jetbrains_mono', mode: 'dark' }
-  ];
+const THEMES = [
+  { id: 'midnight', name: 'Midnight Violet', bg: '#14121A', bg2: '#221E30', text: '#F5F3FF', accent: '#7C5CFC', fontPair: 'outfit_plus', mode: 'dark' },
+  { id: 'cream', name: 'Cream Editorial', bg: '#F4EFE6', bg2: '#EAE1D0', text: '#241F1A', accent: '#C1552E', fontPair: 'georgia_serif', mode: 'light' },
+  { id: 'neon', name: 'Neon Night', bg: '#0A0A0A', bg2: '#151515', text: '#F2FFEA', accent: '#B6FF3C', fontPair: 'syne_space', mode: 'dark' },
+  { id: 'pastel', name: 'Soft Pastel', bg: '#FDEFF4', bg2: '#F6E4EE', text: '#3B2A34', accent: '#FF8FAB', fontPair: 'outfit_plus', mode: 'light' },
+  { id: 'mono', name: 'Bold Mono', bg: '#0E0E0E', bg2: '#1a1a1a', text: '#FFFFFF', accent: '#FFFFFF', fontPair: 'jetbrains_mono', mode: 'dark' },
+  { id: 'ocean', name: 'Ocean Gradient', bg: '#062B3F', bg2: '#0A4A66', text: '#EAF7FF', accent: '#4FD1C5', fontPair: 'syne_space', mode: 'dark' }
+];
 
-  const FONT_PAIRINGS = [
-    { id: 'outfit_plus', name: 'Outfit & Plus Jakarta', titleFont: 'Outfit', bodyFont: 'Plus Jakarta Sans' },
-    { id: 'syne_space', name: 'Syne & Space Grotesk', titleFont: 'Syne', bodyFont: 'Space Grotesk' },
-    { id: 'playfair_inter', name: 'Playfair & Inter', titleFont: 'Playfair Display', bodyFont: 'Inter' },
-    { id: 'jetbrains_mono', name: 'JetBrains Mono', titleFont: 'JetBrains Mono', bodyFont: 'JetBrains Mono' },
-    { id: 'outfit_inter', name: 'Outfit & Inter', titleFont: 'Outfit', bodyFont: 'Inter' }
-  ];
+const FONT_PAIRINGS = [
+  { id: 'outfit_plus', name: 'Outfit & Plus Jakarta', titleFont: 'Outfit', bodyFont: 'Plus Jakarta Sans' },
+  { id: 'syne_space', name: 'Syne & Space Grotesk', titleFont: 'Syne', bodyFont: 'Space Grotesk' },
+  { id: 'playfair_inter', name: 'Playfair & Inter', titleFont: 'Playfair Display', bodyFont: 'Inter' },
+  { id: 'jetbrains_mono', name: 'JetBrains Mono', titleFont: 'JetBrains Mono', bodyFont: 'JetBrains Mono' },
+  { id: 'trebuchet_sans', name: 'Trebuchet & System Sans', titleFont: 'Trebuchet MS', bodyFont: '-apple-system' },
+  { id: 'georgia_serif', name: 'Georgia & Serif', titleFont: 'Georgia', bodyFont: 'Georgia' }
+];
 
-  const HASHTAG_PRESETS = [
-    '#DesignStudio', '#SocialMedia', '#MarketingTips', '#CreatorEconomy', 
-    '#GraphicDesign', '#ContentCreation', '#SaaSMarketing', '#Branding', 
-    '#RelatableContent', '#Inspiration', '#GrowthHacking', '#UXDesign'
-  ];
+const HASHTAG_PRESETS = [
+  '#TelepathicThoughts', '#TelepathicBD', '#RelatableMemes', '#BangladeshMemes',
+  '#DhakaVibes', '#SameThoughts', '#CreatorEconomy', '#SocialMedia', '#TipsAndTricks'
+];
 
-  /* ---------------- STATE MACHINE ---------------- */
-  let state = {
-    platform: 'instagram',
-    ratio: '1:1',
-    template: 'quote',
-    theme: 'midnight',
-    fontPairing: 'outfit_plus',
-    bgType: 'solid', // solid, gradient, pattern
-    customBg: '#120E22',
-    customAccent: '#7C5CFC',
-    customTextColor: '#F5F3FF',
-    gradType: 'linear',
-    gradAngle: 135,
-    gradColor1: '#120E22',
-    gradColor2: '#221E30',
-    patternType: 'none',
-    patternOpacity: 15,
-    patternDensity: 30,
-    align: 'center',
-    autoFit: true,
-    titleFontSize: 50,
-    bodyFontSize: 24,
-    contentPadding: 9,
-    watermark: true,
-    watermarkText: '@DesignStudioLive',
-    
-    // Media uploads
-    bgImage: null,
-    bgImageScale: 100,
-    bgImageOpacity: 40,
-    bgImageBlur: 0,
-    bgImageBlend: 'normal',
-    
-    logoImage: null,
-    logoScale: 20,
-    logoOpacity: 80,
-    logoPosition: 'bottom-right',
-
-    // Recent colors
-    recentColors: ['#7C5CFC', '#FF6B4A', '#B6FF3C', '#FFA3B8', '#C25E3B', '#FFFFFF', '#120E22', '#FDF2F4']
-  };
-
-  /* ---------------- CORE CANVAS ELEMENTS ---------------- */
-  const canvas = document.getElementById('mainCanvas');
-  const ctx = canvas.getContext('2d');
-
-  /* ---------------- INITIALIZATION & UI POPULATION ---------------- */
+/* ---------------- STATE ---------------- */
+let state = {
+  platform: 'instagram',
+  ratio: '1:1',
+  template: 'quote',
+  theme: 'midnight',
+  fontPairing: 'outfit_plus',
+  align: 'center',
+  autoFit: true,
+  watermark: true,
+  watermarkText: '@TelepathicThoughtsBD',
   
-  // Platform Grid
-  const platformGrid = document.getElementById('platformGrid');
-  PLATFORMS.forEach(p => {
-    const btn = document.createElement('button');
-    btn.className = 'platform-btn' + (p.id === state.platform ? ' active' : '');
-    btn.innerHTML = `${p.icon} <span>${p.label}</span>`;
-    btn.dataset.id = p.id;
-    btn.onclick = () => {
-      state.platform = p.id;
-      // switch to first ratio preset
-      state.ratio = p.ratios[0];
-      updatePlatformUI();
+  customAccent: null,
+  customBg: null,
+  
+  patternType: 'circles',
+  patternOpacity: 12,
+  patternDensity: 30,
+  
+  bgImage: null,
+  bgImageScale: 100,
+  bgImageOpacity: 40,
+  bgImageBlur: 0,
+  bgImageBlend: 'normal',
+  
+  logoImage: null,
+  logoScale: 20,
+  logoOpacity: 80,
+  logoPosition: 'bottom-right',
+  
+  recentColors: ['#7C5CFC', '#FF6B4A', '#B6FF3C', '#FFA3B8', '#C1552E', '#FFFFFF', '#14121A']
+};
+
+/* ---------------- INITIALIZATION & UI POPULATION ---------------- */
+const platformGrid = document.getElementById('platformGrid');
+const ratioRow = document.getElementById('ratioRow');
+const templateGrid = document.getElementById('templateGrid');
+const themeGrid = document.getElementById('themeGrid');
+const fontPairingSelect = document.getElementById('fontPairing');
+const patternTypeSelect = document.getElementById('patternType');
+const patternOpacityRange = document.getElementById('patternOpacity');
+const patternDensityRange = document.getElementById('patternDensity');
+const recentColorsGrid = document.getElementById('recentColorsGrid');
+
+// Set platform choices
+PLATFORMS.forEach(p => {
+  const btn = document.createElement('div');
+  btn.className = `platform-btn ${p.id === state.platform ? 'active' : ''}`;
+  btn.innerHTML = `<span class="pico">${p.icon}</span>${p.label}`;
+  btn.dataset.id = p.id;
+  btn.onclick = () => {
+    state.platform = p.id;
+    state.ratio = p.ratios[0];
+    updatePlatformUI();
+    updateRatioUI();
+    updateCaptionPreview();
+    render();
+  };
+  platformGrid.appendChild(btn);
+});
+
+function updatePlatformUI() {
+  [...platformGrid.children].forEach(c => {
+    c.classList.toggle('active', c.dataset.id === state.platform);
+  });
+}
+
+function updateRatioUI() {
+  ratioRow.innerHTML = '';
+  const plat = PLATFORMS.find(p => p.id === state.platform);
+  plat.ratios.forEach(r => {
+    const chip = document.createElement('div');
+    chip.className = `ratio-chip ${r === state.ratio ? 'active' : ''}`;
+    chip.textContent = r;
+    chip.onclick = () => {
+      state.ratio = r;
       updateRatioUI();
       render();
     };
-    platformGrid.appendChild(btn);
+    ratioRow.appendChild(chip);
   });
+  
+  const dims = RATIO_DIMS[state.ratio];
+  document.getElementById('dimsLabel').textContent = `${dims[0]} × ${dims[1]}px  ·  ${plat.label}`;
+}
 
-  function updatePlatformUI() {
-    [...platformGrid.children].forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.id === state.platform);
-    });
-    const curPlatform = PLATFORMS.find(p => p.id === state.platform);
-    document.getElementById('platformNameLabel').textContent = curPlatform.label;
-  }
-
-  // Ratio Chips Row
-  const ratioRow = document.getElementById('ratioRow');
-  function updateRatioUI() {
-    ratioRow.innerHTML = '';
-    const curPlatform = PLATFORMS.find(p => p.id === state.platform);
-    curPlatform.ratios.forEach(r => {
-      const chip = document.createElement('div');
-      chip.className = 'ratio-chip' + (r === state.ratio ? ' active' : '');
-      chip.textContent = r;
-      chip.onclick = () => {
-        state.ratio = r;
-        [...ratioRow.children].forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        render();
-      };
-      ratioRow.appendChild(chip);
-    });
-  }
-
-  // Design Templates Grid
-  const templateGrid = document.getElementById('templateGrid');
-  TEMPLATES.forEach(t => {
-    const btn = document.createElement('div');
-    btn.className = 'tpl-btn' + (t.id === state.template ? ' active' : '');
-    btn.innerHTML = `<strong>${t.name}</strong>${t.desc}`;
-    btn.dataset.id = t.id;
-    btn.onclick = () => {
-      state.template = t.id;
-      [...templateGrid.children].forEach(c => c.classList.remove('active'));
-      btn.classList.add('active');
-      render();
-    };
-    templateGrid.appendChild(btn);
-  });
-
-  // Font Pairings Select options
-  const fontPairingSelect = document.getElementById('fontPairingSelect');
-  FONT_PAIRINGS.forEach(fp => {
-    const opt = document.createElement('option');
-    opt.value = fp.id;
-    opt.textContent = fp.name;
-    fontPairingSelect.appendChild(opt);
-  });
-  fontPairingSelect.value = state.fontPairing;
-  fontPairingSelect.onchange = (e) => {
-    state.fontPairing = e.target.value;
+// Set templates choices
+TEMPLATES.forEach(t => {
+  const btn = document.createElement('div');
+  btn.className = `tpl-btn ${t.id === state.template ? 'active' : ''}`;
+  btn.innerHTML = `<strong>${t.name}</strong>${t.desc}`;
+  btn.dataset.id = t.id;
+  btn.onclick = () => {
+    state.template = t.id;
+    [...templateGrid.children].forEach(c => c.classList.toggle('active', c.dataset.id === t.id));
     render();
   };
+  templateGrid.appendChild(btn);
+});
 
-  // Theme presets Swatch Grid
-  const themeGrid = document.getElementById('themeGrid');
-  THEMES.forEach(t => {
-    const swatch = document.createElement('div');
-    swatch.className = 'theme-swatch' + (t.id === state.theme ? ' active' : '');
-    swatch.style.setProperty('--swatch-bg', t.bg);
-    swatch.style.setProperty('--swatch-accent', t.accent);
-    swatch.innerHTML = `<span>${t.name}</span>`;
-    swatch.dataset.id = t.id;
-    swatch.onclick = () => {
-      state.theme = t.id;
-      [...themeGrid.children].forEach(c => c.classList.remove('active'));
-      swatch.classList.add('active');
-      
-      // Load Theme variables to custom state
-      state.customBg = t.bg;
-      state.customAccent = t.accent;
-      state.customTextColor = t.text;
-      state.fontPairing = t.fontPair;
-      
-      document.getElementById('customBg').value = t.bg;
-      document.getElementById('customAccent').value = t.accent;
-      document.getElementById('customTextColor').value = t.text;
-      fontPairingSelect.value = t.fontPair;
+// Set themes choices
+THEMES.forEach(th => {
+  const sw = document.createElement('div');
+  sw.className = `theme-swatch ${th.id === state.theme ? 'active' : ''}`;
+  sw.style.background = `linear-gradient(135deg, ${th.bg}, ${th.accent})`;
+  sw.innerHTML = `<span>${th.name}</span>`;
+  sw.dataset.id = th.id;
+  sw.onclick = () => {
+    state.theme = th.id;
+    state.customAccent = null;
+    state.customBg = null;
+    state.fontPairing = th.fontPair;
+    fontPairingSelect.value = th.fontPair;
+    
+    document.getElementById('customBg').value = th.bg;
+    document.getElementById('customAccent').value = th.accent;
+    
+    [...themeGrid.children].forEach(c => c.classList.toggle('active', c.dataset.id === th.id));
+    render();
+  };
+  themeGrid.appendChild(sw);
+});
 
-      // Reset to solid bg as default theme color
-      switchBgTab('tab-solid');
-      state.bgType = 'solid';
-      
-      render();
-    };
-    themeGrid.appendChild(swatch);
-  });
+// Font pairing dropdown change
+fontPairingSelect.onchange = (e) => {
+  state.fontPairing = e.target.value;
+  render();
+};
 
-  /* ---------------- TABS INTERACTIVE MECHANICS ---------------- */
-  const customizerTabs = document.querySelectorAll('.tab-btn');
-  customizerTabs.forEach(tab => {
-    tab.onclick = () => {
-      const targetTab = tab.dataset.tab;
-      switchBgTab(targetTab);
-      
-      if (targetTab === 'tab-solid') state.bgType = 'solid';
-      else if (targetTab === 'tab-gradient') state.bgType = 'gradient';
-      else if (targetTab === 'tab-pattern') state.bgType = 'pattern';
-      
-      render();
-    };
-  });
+// Colors change listeners
+document.getElementById('customBg').oninput = (e) => {
+  state.customBg = e.target.value;
+  trackColorHistory(e.target.value);
+  render();
+};
+document.getElementById('customAccent').oninput = (e) => {
+  state.customAccent = e.target.value;
+  trackColorHistory(e.target.value);
+  render();
+};
 
-  function switchBgTab(targetId) {
-    customizerTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === targetId));
-    document.querySelectorAll('.tab-content').forEach(c => {
-      c.classList.toggle('active', c.id === targetId);
-    });
-  }
-
-  /* ---------------- RECENT COLORS AND SWATCHES ---------------- */
-  const recentColorsContainer = document.getElementById('recentColors');
-  
-  function updateRecentColorsUI() {
-    recentColorsContainer.innerHTML = '';
-    state.recentColors.slice(0, 10).forEach(color => {
-      const sw = document.createElement('div');
-      sw.className = 'recent-color-swatch';
-      sw.style.backgroundColor = color;
-      sw.title = `Apply ${color}`;
-      sw.onclick = () => {
-        // Apply color to background or accent depending on active color customizer tab
-        const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
-        if (activeTab === 'tab-solid') {
-          state.customBg = color;
-          document.getElementById('customBg').value = color;
-        } else if (activeTab === 'tab-gradient') {
-          state.gradColor1 = color;
-          document.getElementById('gradColor1').value = color;
-        }
-        render();
-      };
-      recentColorsContainer.appendChild(sw);
-    });
-  }
-
-  function addRecentColor(color) {
-    if (!color) return;
-    color = color.toUpperCase();
-    state.recentColors = state.recentColors.filter(c => c !== color);
+function trackColorHistory(color) {
+  if (!state.recentColors.includes(color)) {
     state.recentColors.unshift(color);
-    if (state.recentColors.length > 12) state.recentColors.pop();
+    if (state.recentColors.length > 8) state.recentColors.pop();
     updateRecentColorsUI();
     localStorage.setItem('studio_recent_colors', JSON.stringify(state.recentColors));
   }
+}
 
-  // Load colors from storage if exists
-  const localColors = localStorage.getItem('studio_recent_colors');
-  if (localColors) {
-    state.recentColors = JSON.parse(localColors);
-  }
-  updateRecentColorsUI();
-
-  /* ---------------- CUSTOM COLOR INPUTS BINDING ---------------- */
-  document.getElementById('customBg').onchange = (e) => {
-    state.customBg = e.target.value;
-    addRecentColor(e.target.value);
-    render();
-  };
-  document.getElementById('customBg').oninput = (e) => {
-    state.customBg = e.target.value;
-    render();
-  };
-  
-  document.getElementById('customAccent').onchange = (e) => {
-    state.customAccent = e.target.value;
-    addRecentColor(e.target.value);
-    render();
-  };
-  document.getElementById('customAccent').oninput = (e) => {
-    state.customAccent = e.target.value;
-    render();
-  };
-
-  document.getElementById('customTextColor').onchange = (e) => {
-    state.customTextColor = e.target.value;
-    addRecentColor(e.target.value);
-    render();
-  };
-  document.getElementById('customTextColor').oninput = (e) => {
-    state.customTextColor = e.target.value;
-    render();
-  };
-
-  /* ---------------- GRADIENT CONTROLS BINDING ---------------- */
-  const gradTypeSelect = document.getElementById('gradType');
-  const gradAngleInput = document.getElementById('gradAngle');
-  const gradColor1Input = document.getElementById('gradColor1');
-  const gradColor2Input = document.getElementById('gradColor2');
-  const gradAngleRow = document.getElementById('gradAngleRow');
-
-  gradTypeSelect.onchange = (e) => {
-    state.gradType = e.target.value;
-    gradAngleRow.style.display = e.target.value === 'radial' ? 'none' : 'flex';
-    render();
-  };
-  gradAngleInput.oninput = (e) => {
-    state.gradAngle = parseInt(e.target.value);
-    render();
-  };
-  gradColor1Input.onchange = (e) => {
-    state.gradColor1 = e.target.value;
-    addRecentColor(e.target.value);
-    render();
-  };
-  gradColor1Input.oninput = (e) => {
-    state.gradColor1 = e.target.value;
-    render();
-  };
-  gradColor2Input.onchange = (e) => {
-    state.gradColor2 = e.target.value;
-    addRecentColor(e.target.value);
-    render();
-  };
-  gradColor2Input.oninput = (e) => {
-    state.gradColor2 = e.target.value;
-    render();
-  };
-
-  /* ---------------- PATTERN CONTROLS BINDING ---------------- */
-  const patternTypeSelect = document.getElementById('patternType');
-  const patternOpacityRange = document.getElementById('patternOpacity');
-  const patternDensityRange = document.getElementById('patternDensity');
-
-  patternTypeSelect.onchange = (e) => {
-    state.patternType = e.target.value;
-    render();
-  };
-  patternOpacityRange.oninput = (e) => {
-    state.patternOpacity = parseInt(e.target.value);
-    render();
-  };
-  patternDensityRange.oninput = (e) => {
-    state.patternDensity = parseInt(e.target.value);
-    render();
-  };
-
-  /* ---------------- PHOTO BACKGROUND LAYER CONTROLS ---------------- */
-  const bgImageInput = document.getElementById('bgImageFile');
-  const bgControlsDiv = document.getElementById('bgImageControls');
-  const btnRemoveBgImage = document.getElementById('btnRemoveBgImage');
-  const lblBgUpload = document.getElementById('lblBgUpload');
-
-  bgImageInput.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        state.bgImage = img;
-        bgControlsDiv.style.display = 'flex';
-        btnRemoveBgImage.style.display = 'inline-block';
-        lblBgUpload.querySelector('span').textContent = 'Photo uploaded ✓';
-        render();
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
-
-  btnRemoveBgImage.onclick = () => {
-    state.bgImage = null;
-    bgImageInput.value = '';
-    bgControlsDiv.style.display = 'none';
-    btnRemoveBgImage.style.display = 'none';
-    lblBgUpload.querySelector('span').textContent = 'Upload Photo...';
-    render();
-  };
-
-  document.getElementById('bgImageScale').oninput = (e) => {
-    state.bgImageScale = parseInt(e.target.value);
-    render();
-  };
-  document.getElementById('bgImageOpacity').oninput = (e) => {
-    state.bgImageOpacity = parseInt(e.target.value);
-    render();
-  };
-  document.getElementById('bgImageBlur').oninput = (e) => {
-    state.bgImageBlur = parseInt(e.target.value);
-    render();
-  };
-  document.getElementById('bgImageBlend').onchange = (e) => {
-    state.bgImageBlend = e.target.value;
-    render();
-  };
-
-  /* ---------------- LOGO LAYER CONTROLS ---------------- */
-  const logoInput = document.getElementById('logoFile');
-  const logoControlsDiv = document.getElementById('logoControls');
-  const btnRemoveLogo = document.getElementById('btnRemoveLogo');
-  const lblLogoUpload = document.getElementById('lblLogoUpload');
-
-  logoInput.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        state.logoImage = img;
-        logoControlsDiv.style.display = 'flex';
-        btnRemoveLogo.style.display = 'inline-block';
-        lblLogoUpload.querySelector('span').textContent = 'Logo loaded ✓';
-        render();
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
-
-  btnRemoveLogo.onclick = () => {
-    state.logoImage = null;
-    logoInput.value = '';
-    logoControlsDiv.style.display = 'none';
-    btnRemoveLogo.style.display = 'none';
-    lblLogoUpload.querySelector('span').textContent = 'Upload Logo PNG...';
-    render();
-  };
-
-  document.getElementById('logoScale').oninput = (e) => {
-    state.logoScale = parseInt(e.target.value);
-    render();
-  };
-  document.getElementById('logoOpacity').oninput = (e) => {
-    state.logoOpacity = parseInt(e.target.value);
-    render();
-  };
-  document.getElementById('logoPosition').onchange = (e) => {
-    state.logoPosition = e.target.value;
-    render();
-  };
-
-  /* ---------------- TEXT CONTENT & ALIGN BINDINGS ---------------- */
-  const inputTitle = document.getElementById('inputTitle');
-  const inputBody = document.getElementById('inputBody');
-  const inputCaption = document.getElementById('inputCaption');
-  const inputHashtags = document.getElementById('inputHashtags');
-  const watermarkText = document.getElementById('watermarkText');
-
-  [inputTitle, inputBody, watermarkText].forEach(el => {
-    el.addEventListener('input', render);
-  });
-
-  // Text Alignment Buttons
-  const alignButtons = document.querySelectorAll('.align-btn');
-  alignButtons.forEach(btn => {
-    btn.onclick = () => {
-      state.align = btn.dataset.align;
-      alignButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+function updateRecentColorsUI() {
+  recentColorsGrid.innerHTML = '';
+  state.recentColors.forEach(col => {
+    const dot = document.createElement('div');
+    dot.className = 'recent-color-dot';
+    dot.style.backgroundColor = col;
+    dot.onclick = () => {
+      state.customAccent = col;
+      document.getElementById('customAccent').value = col;
       render();
     };
+    recentColorsGrid.appendChild(dot);
   });
+}
 
-  // Auto Fit size controls
-  const autoFitSwitch = document.getElementById('autoFitSwitch');
-  const manualFontSizes = document.getElementById('manualFontSizes');
-  autoFitSwitch.onclick = () => {
-    state.autoFit = !state.autoFit;
-    autoFitSwitch.classList.toggle('on', state.autoFit);
-    manualFontSizes.style.display = state.autoFit ? 'none' : 'flex';
+// Load color memory
+const cachedColors = localStorage.getItem('studio_recent_colors');
+if (cachedColors) {
+  state.recentColors = JSON.parse(cachedColors);
+}
+updateRecentColorsUI();
+
+// Pattern change listeners
+patternTypeSelect.onchange = (e) => {
+  state.patternType = e.target.value;
+  render();
+};
+patternOpacityRange.oninput = (e) => {
+  state.patternOpacity = parseInt(e.target.value);
+  render();
+};
+patternDensityRange.oninput = (e) => {
+  state.patternDensity = parseInt(e.target.value);
+  render();
+};
+
+// Alignment selection
+const alignButtons = document.querySelectorAll('.align-btn');
+alignButtons.forEach(btn => {
+  btn.onclick = () => {
+    state.align = btn.dataset.align;
+    alignButtons.forEach(b => b.classList.toggle('active', b === btn));
     render();
   };
+});
 
-  document.getElementById('titleFontSize').oninput = (e) => {
-    state.titleFontSize = parseInt(e.target.value);
-    render();
-  };
-  document.getElementById('bodyFontSize').oninput = (e) => {
-    state.bodyFontSize = parseInt(e.target.value);
-    render();
-  };
+// Auto fit and Watermark Switches
+const autoFitSwitch = document.getElementById('autoFitSwitch');
+autoFitSwitch.onclick = () => {
+  state.autoFit = !state.autoFit;
+  autoFitSwitch.classList.toggle('on', state.autoFit);
+  render();
+};
 
-  document.getElementById('contentPadding').oninput = (e) => {
-    state.contentPadding = parseInt(e.target.value);
-    render();
-  };
+const watermarkSwitch = document.getElementById('watermarkSwitch');
+watermarkSwitch.onclick = () => {
+  state.watermark = !state.watermark;
+  watermarkSwitch.classList.toggle('on', state.watermark);
+  render();
+};
 
-  // Watermark Handle Switch
-  const watermarkSwitch = document.getElementById('watermarkSwitch');
-  const watermarkTextWrap = document.getElementById('watermarkTextWrap');
-  watermarkSwitch.onclick = () => {
-    state.watermark = !state.watermark;
-    watermarkSwitch.classList.toggle('on', state.watermark);
-    watermarkTextWrap.style.display = state.watermark ? 'flex' : 'none';
-    render();
-  };
+/* ---------------- MEDIA LAYER EVENT BINDINGS ---------------- */
+const bgInput = document.getElementById('bgFile');
+const bgControlsDiv = document.getElementById('bgControls');
+const btnRemoveBgImage = document.getElementById('btnRemoveBgImage');
 
-  /* ---------------- CAPTION COPY AND HASHTAG QUICK-ADD CHIPS ---------------- */
-  const hashtagChipsContainer = document.getElementById('hashtagChips');
-  HASHTAG_PRESETS.forEach(tag => {
-    const chip = document.createElement('div');
-    chip.className = 'hchip';
-    chip.textContent = tag;
-    chip.onclick = () => {
-      const curVal = inputHashtags.value.trim();
-      const tagsArray = curVal ? curVal.split(/\s+/) : [];
-      if (!tagsArray.includes(tag)) {
-        tagsArray.push(tag);
-        inputHashtags.value = tagsArray.join(' ');
-        updateCaptionPreview();
-      }
+bgInput.onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      state.bgImage = img;
+      bgControlsDiv.style.display = 'block';
+      btnRemoveBgImage.style.display = 'inline-block';
+      render();
     };
-    hashtagChipsContainer.appendChild(chip);
-  });
-
-  inputCaption.addEventListener('input', updateCaptionPreview);
-  inputHashtags.addEventListener('input', updateCaptionPreview);
-
-  function updateCaptionPreview() {
-    const p = PLATFORMS.find(x => x.id === state.platform);
-    const limit = p ? p.charLimit : 2200;
-    
-    const captionText = inputCaption.value;
-    const hashtagsText = inputHashtags.value.trim();
-    
-    // Assemble
-    const fullText = hashtagsText ? `${captionText}\n\n${hashtagsText}` : captionText;
-    
-    // Update char counter
-    const length = fullText.length;
-    const counterEl = document.getElementById('captionLengthStatus');
-    counterEl.textContent = `${length}/${limit}`;
-    counterEl.classList.toggle('warn', length > limit);
-    
-    // Text preview
-    const previewEl = document.getElementById('captionPreviewText');
-    const escapedText = escapeHTML(captionText);
-    const escapedHashtags = escapeHTML(hashtagsText);
-    
-    previewEl.innerHTML = escapedText + (escapedHashtags ? `\n\n<span class="hash">${escapedHashtags}</span>` : '');
-  }
-
-  function escapeHTML(str) {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
-  /* ---------------- DRAFTS SYSTEM ---------------- */
-  const draftNameInput = document.getElementById('draftNameInput');
-  const btnSaveDraft = document.getElementById('btnSaveDraft');
-  const draftList = document.getElementById('draftList');
-
-  btnSaveDraft.onclick = () => {
-    const name = draftNameInput.value.trim();
-    if (!name) {
-      showToast('Enter a name for the draft');
-      return;
-    }
-    
-    const drafts = getDrafts();
-    // Serialize state
-    const savedState = {
-      platform: state.platform,
-      ratio: state.ratio,
-      template: state.template,
-      theme: state.theme,
-      fontPairing: state.fontPairing,
-      bgType: state.bgType,
-      customBg: state.customBg,
-      customAccent: state.customAccent,
-      customTextColor: state.customTextColor,
-      gradType: state.gradType,
-      gradAngle: state.gradAngle,
-      gradColor1: state.gradColor1,
-      gradColor2: state.gradColor2,
-      patternType: state.patternType,
-      patternOpacity: state.patternOpacity,
-      patternDensity: state.patternDensity,
-      align: state.align,
-      autoFit: state.autoFit,
-      titleFontSize: state.titleFontSize,
-      bodyFontSize: state.bodyFontSize,
-      contentPadding: state.contentPadding,
-      watermark: state.watermark,
-      watermarkText: watermarkText.value,
-      
-      // Media customization parameters (no image contents)
-      bgImageScale: state.bgImageScale,
-      bgImageOpacity: state.bgImageOpacity,
-      bgImageBlur: state.bgImageBlur,
-      bgImageBlend: state.bgImageBlend,
-      logoScale: state.logoScale,
-      logoOpacity: state.logoOpacity,
-      logoPosition: state.logoPosition,
-      
-      titleText: inputTitle.value,
-      bodyText: inputBody.value,
-      captionText: inputCaption.value,
-      hashtagsText: inputHashtags.value
-    };
-
-    drafts[name] = savedState;
-    localStorage.setItem('studio_drafts', JSON.stringify(drafts));
-    draftNameInput.value = '';
-    updateDraftsUI();
-    showToast(`Draft "${name}" saved!`);
+    img.src = event.target.result;
   };
+  reader.readAsDataURL(file);
+};
 
-  function getDrafts() {
-    const drafts = localStorage.getItem('studio_drafts');
-    return drafts ? JSON.parse(drafts) : {};
-  }
+btnRemoveBgImage.onclick = () => {
+  state.bgImage = null;
+  bgInput.value = '';
+  bgControlsDiv.style.display = 'none';
+  btnRemoveBgImage.style.display = 'none';
+  render();
+};
 
-  function updateDraftsUI() {
-    draftList.innerHTML = '';
-    const drafts = getDrafts();
-    const keys = Object.keys(drafts);
-    
-    if (keys.length === 0) {
-      draftList.innerHTML = '<div style="font-size:11.5px; color:var(--text-muted); text-align:center; padding:10px;">No drafts saved yet</div>';
-      return;
-    }
-    
-    keys.forEach(k => {
-      const item = document.createElement('div');
-      item.className = 'draft-item';
-      
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'draft-name';
-      nameSpan.textContent = k;
-      nameSpan.onclick = () => {
-        loadDraft(k);
-      };
-      
-      const delBtn = document.createElement('button');
-      delBtn.className = 'draft-del-btn';
-      delBtn.innerHTML = `
-        <svg style="width:14px; height:14px;" viewBox="0 0 24 24">
-          <path fill="currentColor" d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14V4zM6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12z"/>
-        </svg>
-      `;
-      delBtn.onclick = () => {
-        deleteDraft(k);
-      };
-      
-      item.appendChild(nameSpan);
-      item.appendChild(delBtn);
-      draftList.appendChild(item);
-    });
-  }
+document.getElementById('bgImageScale').oninput = (e) => {
+  state.bgImageScale = parseInt(e.target.value);
+  render();
+};
+document.getElementById('bgImageOpacity').oninput = (e) => {
+  state.bgImageOpacity = parseInt(e.target.value);
+  render();
+};
+document.getElementById('bgImageBlur').oninput = (e) => {
+  state.bgImageBlur = parseInt(e.target.value);
+  render();
+};
+document.getElementById('bgImageBlend').onchange = (e) => {
+  state.bgImageBlend = e.target.value;
+  render();
+};
 
-  function loadDraft(name) {
-    const drafts = getDrafts();
-    const d = drafts[name];
-    if (!d) return;
+const logoInput = document.getElementById('logoFile');
+const logoControlsDiv = document.getElementById('logoControls');
+const btnRemoveLogo = document.getElementById('btnRemoveLogo');
 
-    state.platform = d.platform || 'instagram';
-    state.ratio = d.ratio || '1:1';
-    state.template = d.template || 'quote';
-    state.theme = d.theme || 'midnight';
-    state.fontPairing = d.fontPairing || 'outfit_plus';
-    state.bgType = d.bgType || 'solid';
-    state.customBg = d.customBg || '#120E22';
-    state.customAccent = d.customAccent || '#7C5CFC';
-    state.customTextColor = d.customTextColor || '#F5F3FF';
-    state.gradType = d.gradType || 'linear';
-    state.gradAngle = d.gradAngle || 135;
-    state.gradColor1 = d.gradColor1 || '#120E22';
-    state.gradColor2 = d.gradColor2 || '#221E30';
-    state.patternType = d.patternType || 'none';
-    state.patternOpacity = d.patternOpacity !== undefined ? d.patternOpacity : 15;
-    state.patternDensity = d.patternDensity !== undefined ? d.patternDensity : 30;
-    state.align = d.align || 'center';
-    state.autoFit = d.autoFit !== undefined ? d.autoFit : true;
-    state.titleFontSize = d.titleFontSize || 50;
-    state.bodyFontSize = d.bodyFontSize || 24;
-    state.contentPadding = d.contentPadding || 9;
-    state.watermark = d.watermark !== undefined ? d.watermark : true;
-    
-    // Media settings
-    state.bgImageScale = d.bgImageScale !== undefined ? d.bgImageScale : 100;
-    state.bgImageOpacity = d.bgImageOpacity !== undefined ? d.bgImageOpacity : 40;
-    state.bgImageBlur = d.bgImageBlur !== undefined ? d.bgImageBlur : 0;
-    state.bgImageBlend = d.bgImageBlend || 'normal';
-    state.logoScale = d.logoScale !== undefined ? d.logoScale : 20;
-    state.logoOpacity = d.logoOpacity !== undefined ? d.logoOpacity : 80;
-    state.logoPosition = d.logoPosition || 'bottom-right';
+logoInput.onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      state.logoImage = img;
+      logoControlsDiv.style.display = 'block';
+      btnRemoveLogo.style.display = 'inline-block';
+      render();
+    };
+    img.src = event.target.result;
+  };
+  reader.readAsDataURL(file);
+};
 
-    // UI fields loading
-    watermarkText.value = d.watermarkText || '@DesignStudioLive';
-    inputTitle.value = d.titleText || '';
-    inputBody.value = d.bodyText || '';
-    inputCaption.value = d.captionText || '';
-    inputHashtags.value = d.hashtagsText || '';
+btnRemoveLogo.onclick = () => {
+  state.logoImage = null;
+  logoInput.value = '';
+  logoControlsDiv.style.display = 'none';
+  btnRemoveLogo.style.display = 'none';
+  render();
+};
 
-    // Color pickers values sync
-    document.getElementById('customBg').value = state.customBg;
-    document.getElementById('customAccent').value = state.customAccent;
-    document.getElementById('customTextColor').value = state.customTextColor;
-    
-    gradTypeSelect.value = state.gradType;
-    gradAngleInput.value = state.gradAngle;
-    gradColor1Input.value = state.gradColor1;
-    gradColor2Input.value = state.gradColor2;
-    gradAngleRow.style.display = state.gradType === 'radial' ? 'none' : 'flex';
-    
-    patternTypeSelect.value = state.patternType;
-    patternOpacityRange.value = state.patternOpacity;
-    patternDensityRange.value = state.patternDensity;
+document.getElementById('logoScale').oninput = (e) => {
+  state.logoScale = parseInt(e.target.value);
+  render();
+};
+document.getElementById('logoOpacity').oninput = (e) => {
+  state.logoOpacity = parseInt(e.target.value);
+  render();
+};
+document.getElementById('logoPosition').onchange = (e) => {
+  state.logoPosition = e.target.value;
+  render();
+};
 
-    // Font pairing select sync
-    fontPairingSelect.value = state.fontPairing;
+/* ---------------- INPUTS SYNC & TEXTS ---------------- */
+const inputTitle = document.getElementById('inputTitle');
+const inputBody = document.getElementById('inputBody');
+const inputCaption = document.getElementById('inputCaption');
+const inputHashtags = document.getElementById('inputHashtags');
+const watermarkText = document.getElementById('watermarkText');
 
-    // Media controls sync
-    document.getElementById('bgImageScale').value = state.bgImageScale;
-    document.getElementById('bgImageOpacity').value = state.bgImageOpacity;
-    document.getElementById('bgImageBlur').value = state.bgImageBlur;
-    document.getElementById('bgImageBlend').value = state.bgImageBlend;
-    document.getElementById('logoScale').value = state.logoScale;
-    document.getElementById('logoOpacity').value = state.logoOpacity;
-    document.getElementById('logoPosition').value = state.logoPosition;
+[inputTitle, inputBody].forEach(el => el.oninput = () => render());
+watermarkText.oninput = () => render();
 
-    // Alignment state sync
-    alignButtons.forEach(b => {
-      b.classList.toggle('active', b.dataset.align === state.align);
-    });
-
-    // Auto-fit switch state sync
-    autoFitSwitch.classList.toggle('on', state.autoFit);
-    manualFontSizes.style.display = state.autoFit ? 'none' : 'flex';
-    document.getElementById('titleFontSize').value = state.titleFontSize;
-    document.getElementById('bodyFontSize').value = state.bodyFontSize;
-    document.getElementById('contentPadding').value = state.contentPadding;
-
-    // Watermark switch state sync
-    watermarkSwitch.classList.toggle('on', state.watermark);
-    watermarkTextWrap.style.display = state.watermark ? 'flex' : 'none';
-
-    // Tabs update
-    if (state.bgType === 'solid') switchBgTab('tab-solid');
-    else if (state.bgType === 'gradient') switchBgTab('tab-gradient');
-    else if (state.bgType === 'pattern') switchBgTab('tab-pattern');
-
-    // Remove file references to keep it simple, or reset them
-    btnRemoveBgImage.click();
-    btnRemoveLogo.click();
-
-    updatePlatformUI();
-    updateRatioUI();
-    
-    // Sync template button active classes
-    [...templateGrid.children].forEach(c => {
-      c.classList.toggle('active', c.dataset.id === state.template);
-    });
-
-    // Sync theme swatch active classes
-    [...themeGrid.children].forEach(c => {
-      c.classList.toggle('active', c.dataset.id === state.theme);
-    });
-
-    updateCaptionPreview();
-    render();
-    showToast(`Loaded draft "${name}"`);
-  }
-
-  function deleteDraft(name) {
-    const drafts = getDrafts();
-    if (drafts[name]) {
-      delete drafts[name];
-      localStorage.setItem('studio_drafts', JSON.stringify(drafts));
-      updateDraftsUI();
-      showToast(`Draft "${name}" deleted`);
-    }
-  }
-
-  updateDraftsUI();
-
-  /* ---------------- GRAPHICS RENDERING PIPELINE ---------------- */
+// Caption warning limits check
+function updateCaptionLengthStatus() {
+  const curPlat = PLATFORMS.find(p => p.id === state.platform);
+  const max = curPlat ? curPlat.maxChars : 2200;
+  const len = inputCaption.value.length;
   
-  function getThemeColors() {
-    return {
-      bg: state.customBg,
-      accent: state.customAccent,
-      text: state.customTextColor
-    };
-  }
+  const statusEl = document.getElementById('captionLengthStatus');
+  statusEl.textContent = `${len}/${max}`;
+  statusEl.classList.toggle('warn', len > max);
+}
 
-  function getFontPairing() {
-    return FONT_PAIRINGS.find(fp => fp.id === state.fontPairing) || FONT_PAIRINGS[0];
-  }
+inputCaption.oninput = () => {
+  updateCaptionLengthStatus();
+  updateCaptionPreview();
+};
+inputHashtags.oninput = () => updateCaptionPreview();
 
-  function wrapText(context, text, maxWidth) {
-    const words = text.split(/\s+/);
-    const lines = [];
-    let line = '';
-    
-    for (const w of words) {
-      const test = line ? line + ' ' + w : w;
-      if (context.measureText(test).width > maxWidth && line) {
-        lines.push(line);
-        line = w;
-      } else {
-        line = test;
-      }
-    }
-    if (line) lines.push(line);
-    return lines;
-  }
-
-  function fitFontSize(context, text, maxWidth, maxHeight, startSize, fontFamily, weight, lineHeightMult) {
-    let size = startSize;
-    context.font = `${weight} ${size}px "${fontFamily}", sans-serif`;
-    let lines = wrapText(context, text, maxWidth);
-    
-    if (!state.autoFit) {
-      return { size: startSize, lines };
-    }
-    
-    // Auto-fit loop
-    while (size > 18) {
-      context.font = `${weight} ${size}px "${fontFamily}", sans-serif`;
-      lines = wrapText(context, text, maxWidth);
-      const totalHeight = lines.length * size * lineHeightMult;
-      if (totalHeight <= maxHeight) {
-        return { size, lines };
-      }
-      size -= 2;
-    }
-    
-    context.font = `${weight} ${size}px "${fontFamily}", sans-serif`;
-    return { size, lines };
-  }
-
-  function renderGraphic(targetCanvas, targetRatio, targetPlatform, isThumbnail = false) {
-    const tempCtx = targetCanvas.getContext('2d');
-    const [w, h] = RATIO_DIMS[targetRatio] || [1080, 1080];
-    
-    targetCanvas.width = w;
-    targetCanvas.height = h;
-
-    const colors = getThemeColors();
-    const font = getFontPairing();
-    const titleText = inputTitle.value.trim() || 'Double-click to edit your catchphrase';
-    const bodyText = inputBody.value.trim();
-    
-    const pad = w * (state.contentPadding / 100);
-
-    // 1. Draw Background Type (Solid or Gradient)
-    if (state.bgType === 'gradient') {
-      let grad;
-      if (state.gradType === 'radial') {
-        grad = tempCtx.createRadialGradient(w/2, h/2, w*0.1, w/2, h/2, w*0.8);
-      } else {
-        // Convert angle (degrees) to coordinates
-        const angleRad = (state.gradAngle * Math.PI) / 180;
-        const x1 = w/2 - Math.cos(angleRad) * w/2;
-        const y1 = h/2 - Math.sin(angleRad) * h/2;
-        const x2 = w/2 + Math.cos(angleRad) * w/2;
-        const y2 = h/2 + Math.sin(angleRad) * h/2;
-        grad = tempCtx.createLinearGradient(x1, y1, x2, y2);
-      }
-      grad.addColorStop(0, state.gradColor1);
-      grad.addColorStop(1, state.gradColor2);
-      tempCtx.fillStyle = grad;
-    } else {
-      tempCtx.fillStyle = colors.bg;
-    }
-    tempCtx.fillRect(0, 0, w, h);
-
-    // 2. Draw Background Image Layer
-    if (state.bgImage) {
-      tempCtx.save();
-      tempCtx.globalCompositeOperation = state.bgImageBlend || 'source-over';
-      if (state.bgImageBlur > 0) {
-        tempCtx.filter = `blur(${state.bgImageBlur}px)`;
-      }
-      tempCtx.globalAlpha = state.bgImageOpacity / 100;
-      
-      const imgW = state.bgImage.width;
-      const imgH = state.bgImage.height;
-      const scale = state.bgImageScale / 100;
-      
-      // Calculate aspect crop
-      const canvasRatio = w / h;
-      const imgRatio = imgW / imgH;
-      
-      let renderW, renderH;
-      if (imgRatio > canvasRatio) {
-        // Image is wider
-        renderH = h * scale;
-        renderW = renderH * imgRatio;
-      } else {
-        // Image is taller
-        renderW = w * scale;
-        renderH = renderW / imgRatio;
-      }
-      
-      const rx = (w - renderW) / 2;
-      const ry = (h - renderH) / 2;
-      
-      tempCtx.drawImage(state.bgImage, rx, ry, renderW, renderH);
-      tempCtx.restore();
-    }
-
-    // 3. Draw Pattern Overlay
-    if (state.patternType !== 'none') {
-      tempCtx.save();
-      tempCtx.globalAlpha = state.patternOpacity / 100;
-      tempCtx.fillStyle = colors.accent;
-      tempCtx.strokeStyle = colors.accent;
-      
-      const spacing = state.patternDensity * (w / 1000) * 1.5; // Scale spacing with resolution
-      
-      if (state.patternType === 'dots') {
-        for (let x = spacing / 2; x < w; x += spacing) {
-          for (let y = spacing / 2; y < h; y += spacing) {
-            tempCtx.beginPath();
-            tempCtx.arc(x, y, w * 0.0025, 0, Math.PI * 2);
-            tempCtx.fill();
-          }
-        }
-      } else if (state.patternType === 'grid') {
-        tempCtx.lineWidth = w * 0.001;
-        tempCtx.beginPath();
-        for (let x = 0; x < w; x += spacing) {
-          tempCtx.moveTo(x, 0);
-          tempCtx.lineTo(x, h);
-        }
-        for (let y = 0; y < h; y += spacing) {
-          tempCtx.moveTo(0, y);
-          tempCtx.lineTo(w, y);
-        }
-        tempCtx.stroke();
-      } else if (state.patternType === 'stripes') {
-        tempCtx.lineWidth = w * 0.0015;
-        tempCtx.beginPath();
-        for (let offset = -h; offset < w; offset += spacing) {
-          tempCtx.moveTo(offset, 0);
-          tempCtx.lineTo(offset + h, h);
-        }
-        tempCtx.stroke();
-      } else if (state.patternType === 'noise') {
-        const count = (w * h) * 0.0008 * (state.patternDensity / 30);
-        for (let i = 0; i < count; i++) {
-          const rx = Math.random() * w;
-          const ry = Math.random() * h;
-          const size = Math.random() * (w * 0.002) + 1;
-          tempCtx.fillRect(rx, ry, size, size);
-        }
-      } else if (state.patternType === 'circles') {
-        // Corner Accent Ellipses (as requested from draft.html)
-        const rad1 = w * 0.32 * (state.patternDensity / 30);
-        const rad2 = w * 0.22 * (state.patternDensity / 30);
-        
-        tempCtx.beginPath();
-        tempCtx.ellipse(w * 0.88, h * 0.08, rad1, rad1, 0, 0, Math.PI * 2);
-        tempCtx.fill();
-        
-        tempCtx.beginPath();
-        tempCtx.ellipse(w * 0.06, h * 0.96, rad2, rad2, 0, 0, Math.PI * 2);
-        tempCtx.fill();
-      } else if (state.patternType === 'waves') {
-        // Fluid waves decoration (top and bottom)
-        const amp = h * 0.1 * (state.patternDensity / 30);
-        
-        tempCtx.beginPath();
-        tempCtx.moveTo(0, h * 0.85);
-        tempCtx.bezierCurveTo(w * 0.25, h * 0.85 - amp, w * 0.75, h * 0.85 + amp, w, h * 0.8);
-        tempCtx.lineTo(w, h);
-        tempCtx.lineTo(0, h);
-        tempCtx.closePath();
-        tempCtx.fill();
-        
-        tempCtx.beginPath();
-        tempCtx.moveTo(0, 0);
-        tempCtx.lineTo(w, 0);
-        tempCtx.bezierCurveTo(w * 0.7, amp, w * 0.3, h * 0.1, 0, h * 0.15);
-        tempCtx.closePath();
-        tempCtx.fill();
-      } else if (state.patternType === 'geometric') {
-        // Sharp diagonal accent polygons
-        const sizeMult = state.patternDensity / 30;
-        
-        tempCtx.beginPath();
-        tempCtx.moveTo(w * (1 - 0.3 * sizeMult), 0);
-        tempCtx.lineTo(w, 0);
-        tempCtx.lineTo(w, h * 0.4 * sizeMult);
-        tempCtx.closePath();
-        tempCtx.fill();
-        
-        tempCtx.beginPath();
-        tempCtx.moveTo(0, h * (1 - 0.4 * sizeMult));
-        tempCtx.lineTo(0, h);
-        tempCtx.lineTo(w * 0.35 * sizeMult, h);
-        tempCtx.closePath();
-        tempCtx.fill();
-      }
-      tempCtx.restore();
-    }
-
-    // 4. Setup Alignment coordinates
-    const align = state.align;
-    tempCtx.textAlign = align;
-    tempCtx.textBaseline = 'middle';
-    
-    let alignX = w / 2;
-    if (align === 'left') alignX = pad;
-    else if (align === 'right') alignX = w - pad;
-    
-    const maxTextWidth = w - pad * 2;
-    
-    // 5. Draw templates layout
-    if (state.template === 'stat') {
-      // Statistic template layout
-      const parts = titleText.split(' ');
-      const heroText = parts[0] || '10X';
-      const secondaryLabel = parts.slice(1).join(' ') || 'Growth in design efficiency';
-      
-      // Giant stat number
-      tempCtx.fillStyle = colors.accent;
-      const heroSize = w * 0.22;
-      tempCtx.font = `900 ${heroSize}px "${font.titleFont}", sans-serif`;
-      tempCtx.fillText(heroText, alignX, h * 0.38);
-      
-      // Supporting label
-      tempCtx.fillStyle = colors.text;
-      const labelMaxHeight = h * 0.35;
-      const startSize = state.autoFit ? w * 0.055 : state.bodyFontSize;
-      const fit = fitFontSize(tempCtx, secondaryLabel, maxTextWidth, labelMaxHeight, startSize, font.bodyFont, '600', 1.35);
-      
-      drawLines(tempCtx, fit.lines, alignX, h * 0.65, fit.size * 1.35, align);
-      
-    } else if (state.template === 'tip') {
-      // Tip card template layout
-      tempCtx.save();
-      // Draw Tip capsule
-      const tipText = 'PRO TIP';
-      tempCtx.font = `900 ${w * 0.026}px "${font.bodyFont}", sans-serif`;
-      const txtWidth = tempCtx.measureText(tipText).width;
-      const capW = txtWidth + w * 0.04;
-      const capH = w * 0.06;
-      
-      let capX = w / 2 - capW / 2;
-      if (align === 'left') capX = pad;
-      else if (align === 'right') capX = w - pad - capW;
-      
-      const capY = h * 0.13;
-      
-      // Capsule border/bg
-      tempCtx.strokeStyle = colors.accent;
-      tempCtx.lineWidth = w * 0.002;
-      tempCtx.fillStyle = hexToRgba(colors.accent, 0.1);
-      roundRect(tempCtx, capX, capY - capH/2, capW, capH, w * 0.03, true, true);
-      
-      // Capsule text
-      tempCtx.fillStyle = colors.accent;
-      tempCtx.fillText(tipText, capX + capW/2, capY);
-      tempCtx.restore();
-
-      // Heading Title
-      tempCtx.fillStyle = colors.text;
-      const titleMaxHeight = h * 0.38;
-      const startSize = state.autoFit ? w * 0.065 : state.titleFontSize;
-      const fitTitle = fitFontSize(tempCtx, titleText, maxTextWidth, titleMaxHeight, startSize, font.titleFont, '800', 1.25);
-      
-      const titleCenterY = h * 0.44;
-      drawLines(tempCtx, fitTitle.lines, alignX, titleCenterY, fitTitle.size * 1.25, align);
-
-      // Body text below
-      if (bodyText) {
-        tempCtx.fillStyle = colors.text;
-        tempCtx.save();
-        tempCtx.globalAlpha = 0.8;
-        
-        const bodyMaxHeight = h * 0.25;
-        const bStartSize = state.autoFit ? w * 0.035 : state.bodyFontSize;
-        const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '400', 1.45);
-        
-        const bodyCenterY = h * 0.74;
-        drawLines(tempCtx, fitBody.lines, alignX, bodyCenterY, fitBody.size * 1.45, align);
-        tempCtx.restore();
-      }
-
-    } else if (state.template === 'simple') {
-      // Minimal template layout
-      tempCtx.fillStyle = colors.text;
-      const startSize = state.autoFit ? w * 0.078 : state.titleFontSize;
-      const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.65, startSize, font.titleFont, '800', 1.3);
-      drawLines(tempCtx, fit.lines, alignX, h * 0.5, fit.size * 1.3, align);
-
-    } else {
-      // Quote layout (Default)
-      tempCtx.save();
-      // Giant quotation marks
-      tempCtx.fillStyle = colors.accent;
-      tempCtx.font = `800 ${w * 0.16}px Georgia, serif`;
-      
-      let quoteX = w / 2;
-      if (align === 'left') quoteX = pad + w * 0.03;
-      else if (align === 'right') quoteX = w - pad - w * 0.03;
-      
-      tempCtx.fillText('“', quoteX, h * 0.22);
-      tempCtx.restore();
-
-      // Quote Title Content
-      tempCtx.fillStyle = colors.text;
-      const startSize = state.autoFit ? w * 0.068 : state.titleFontSize;
-      const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.42, startSize, font.titleFont, '700', 1.3);
-      drawLines(tempCtx, fit.lines, alignX, h * 0.48, fit.size * 1.3, align);
-
-      // Quote Author / Body below
-      if (bodyText) {
-        tempCtx.fillStyle = colors.accent;
-        tempCtx.font = `600 ${w * 0.032}px "${font.bodyFont}", sans-serif`;
-        let authorText = bodyText.startsWith('—') || bodyText.startsWith('-') ? bodyText : `— ${bodyText}`;
-        tempCtx.fillText(authorText, alignX, h * 0.77);
-      }
-    }
-
-    // 6. Draw Logo Layer (if preset and not batch preview)
-    if (state.logoImage && !isThumbnail) {
-      tempCtx.save();
-      tempCtx.globalAlpha = state.logoOpacity / 100;
-      const logoW = state.logoImage.width;
-      const logoH = state.logoImage.height;
-      const targetW = w * (state.logoScale / 100);
-      const targetH = (logoH / logoW) * targetW;
-      
-      const margin = w * 0.05;
-      let lx = 0, ly = 0;
-      
-      switch (state.logoPosition) {
-        case 'top-left': lx = margin; ly = margin; break;
-        case 'top-right': lx = w - targetW - margin; ly = margin; break;
-        case 'bottom-left': lx = margin; ly = h - targetH - margin; break;
-        case 'bottom-right': lx = w - targetW - margin; ly = h - targetH - margin; break;
-        case 'center': lx = (w - targetW) / 2; ly = (h - targetH) / 2; break;
-      }
-      tempCtx.drawImage(state.logoImage, lx, ly, targetW, targetH);
-      tempCtx.restore();
-    }
-
-    // 7. Draw Handle Watermark Text
-    if (state.watermark && !isThumbnail) {
-      tempCtx.save();
-      tempCtx.textAlign = 'center';
-      tempCtx.textBaseline = 'middle';
-      tempCtx.fillStyle = colors.text;
-      tempCtx.globalAlpha = 0.5;
-      
-      const wmText = watermarkText.value.trim() || '@DesignStudioLive';
-      tempCtx.font = `600 ${w * 0.024}px "${font.bodyFont}", sans-serif`;
-      
-      tempCtx.fillText(wmText, w / 2, h - pad * 0.65);
-      tempCtx.restore();
-    }
-  }
-
-  function render() {
-    renderGraphic(canvas, state.ratio, state.platform, false);
-    
-    // Update dimension descriptors
-    const [w, h] = RATIO_DIMS[state.ratio];
-    document.getElementById('dimsLabel').textContent = `${w} × ${h}px`;
-    document.getElementById('canvasDims').textContent = `${w} × ${h}px  ·  ${state.ratio}  ·  ${PLATFORMS.find(p=>p.id===state.platform).label}`;
-    
-    // Trigger device frame adjustments (Phase 3)
-    updateDeviceChromes(w, h);
-  }
-
-  function updateDeviceChromes(w, h) {
-    const wrap = document.getElementById('deviceChromeWrap');
-    if (!wrap) return;
-    
-    // Keep canvas reference
-    const mainCanvas = document.getElementById('mainCanvas');
-    const frameWrap = document.getElementById('frameWrap');
-    
-    // Determine frame archetype based on aspect ratio
-    const isPhone = state.ratio === '9:16';
-    const isBrowser = state.ratio === '16:9' || state.ratio === '1.91:1';
-    const isFeedCard = state.ratio === '1:1' || state.ratio === '4:5';
-    
-    // Reset wrapper & canvas styling
-    wrap.className = '';
-    wrap.innerHTML = '';
-    mainCanvas.className = '';
-    wrap.style = '';
-    
-    if (isPhone) {
-      if (frameWrap) {
-        frameWrap.style.width = '100%';
-        frameWrap.style.maxWidth = '340px';
-      }
-      wrap.className = 'device-chrome-wrap';
-      wrap.style.width = '100%';
-      wrap.style.boxSizing = 'border-box';
-      wrap.style.padding = '46px 12px 32px 12px';
-      wrap.style.borderRadius = '34px';
-      wrap.style.border = '12px solid #1a162b';
-      wrap.style.background = '#090710';
-      wrap.style.position = 'relative';
-      wrap.style.boxShadow = 'inset 0 0 20px rgba(0,0,0,0.8), 0 25px 60px rgba(0,0,0,0.5)';
-      
-      // Notch cutout
-      const notch = document.createElement('div');
-      notch.className = 'chrome-phone-notch';
-      
-      // Top status indicators
-      const header = document.createElement('div');
-      header.className = 'chrome-phone-header';
-      header.innerHTML = `
-        <div>09:41</div>
-        <div style="display:flex; gap: 6px; align-items:center;">
-          <!-- Signal Icon -->
-          <svg style="width:12px; height:12px;" viewBox="0 0 24 24"><path fill="currentColor" d="M2 22h20V2z"/></svg>
-          <!-- Wifi Icon -->
-          <svg style="width:12px; height:12px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c3.9-3.89 10.21-3.89 14.1 0l1.9-1.9C21.6 15.93 22 13.97 22 12c0-4.97-4.03-9-9-9z"/></svg>
-          <!-- Battery Icon -->
-          <svg style="width:14px; height:14px;" viewBox="0 0 24 24"><path fill="currentColor" d="M17 5H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2m4 4h2v6h-2V9z"/></svg>
-        </div>
-      `;
-      
-      // Home indicator pill
-      const homeIndicator = document.createElement('div');
-      homeIndicator.className = 'chrome-phone-home-indicator';
-      
-      wrap.appendChild(notch);
-      wrap.appendChild(header);
-      wrap.appendChild(mainCanvas);
-      wrap.appendChild(homeIndicator);
-      
-      mainCanvas.classList.add('canvas-phone-styled');
-      
-    } else if (isBrowser) {
-      if (frameWrap) {
-        frameWrap.style.width = '100%';
-        frameWrap.style.maxWidth = '640px';
-      }
-      wrap.className = 'device-chrome-wrap';
-      wrap.style.width = '100%';
-      wrap.style.boxSizing = 'border-box';
-      wrap.style.padding = '0';
-      wrap.style.borderRadius = '14px';
-      wrap.style.border = '2px solid var(--line)';
-      wrap.style.background = '#120e22';
-      wrap.style.overflow = 'hidden';
-      wrap.style.display = 'flex';
-      wrap.style.flexDirection = 'column';
-      wrap.style.boxShadow = '0 25px 60px rgba(0,0,0,0.5)';
-      
-      const browserHeader = document.createElement('div');
-      browserHeader.className = 'chrome-browser-header';
-      
-      const dots = document.createElement('div');
-      dots.className = 'dots';
-      dots.innerHTML = `
-        <div class="dot red"></div>
-        <div class="dot yellow"></div>
-        <div class="dot green"></div>
-      `;
-      
-      const addressBar = document.createElement('div');
-      addressBar.className = 'address-bar';
-      const curPlatform = PLATFORMS.find(p => p.id === state.platform);
-      addressBar.textContent = `contentstudio.live/${curPlatform ? curPlatform.id : 'web'}/${state.ratio}`;
-      
-      browserHeader.appendChild(dots);
-      browserHeader.appendChild(addressBar);
-      
-      wrap.appendChild(browserHeader);
-      wrap.appendChild(mainCanvas);
-      
-    } else if (isFeedCard) {
-      if (frameWrap) {
-        frameWrap.style.width = '100%';
-        frameWrap.style.maxWidth = '460px';
-      }
-      wrap.className = 'chrome-feed-card';
-      wrap.style.width = '100%';
-      wrap.style.boxSizing = 'border-box';
-      wrap.style.padding = '0';
-      wrap.style.border = '1px solid var(--line)';
-      wrap.style.borderRadius = '16px';
-      wrap.style.background = '#110e20';
-      wrap.style.overflow = 'hidden';
-      wrap.style.boxShadow = '0 25px 60px rgba(0,0,0,0.5)';
-      
-      // Instagram-like Card Header
-      const feedHeader = document.createElement('div');
-      feedHeader.className = 'feed-card-header';
-      
-      const avatar = document.createElement('div');
-      avatar.className = 'feed-card-avatar';
-      
-      const meta = document.createElement('div');
-      meta.className = 'feed-card-meta';
-      const handle = watermarkText.value.trim() || '@DesignStudioLive';
-      const p = PLATFORMS.find(x => x.id === state.platform);
-      
-      meta.innerHTML = `
-        <div class="feed-card-name">${handle}</div>
-        <div class="feed-card-sub">${p ? p.label : 'Sponsored'}</div>
-      `;
-      
-      const menuIcon = document.createElement('div');
-      menuIcon.style.marginLeft = 'auto';
-      menuIcon.style.color = 'var(--text-dim)';
-      menuIcon.style.cursor = 'pointer';
-      menuIcon.innerHTML = `
-        <svg style="width:20px; height:20px;" viewBox="0 0 24 24">
-          <path fill="currentColor" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-        </svg>
-      `;
-      
-      feedHeader.appendChild(avatar);
-      feedHeader.appendChild(meta);
-      feedHeader.appendChild(menuIcon);
-      
-      // Footer actions
-      const feedFooter = document.createElement('div');
-      feedFooter.className = 'feed-card-footer';
-      
-      const actions = document.createElement('div');
-      actions.className = 'feed-card-actions';
-      
-      const actionsLeft = document.createElement('div');
-      actionsLeft.className = 'feed-card-actions-left';
-      actionsLeft.innerHTML = `
-        <!-- Heart -->
-        <svg style="width:20px; height:20px; color: var(--accent-coral);" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-        <!-- Comment -->
-        <svg style="width:20px; height:20px;" viewBox="0 0 24 24"><path fill="currentColor" d="M9 22a1 1 0 0 1-1-1v-3H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5l-4 4H9z"/></svg>
-        <!-- Share -->
-        <svg style="width:20px; height:20px;" viewBox="0 0 24 24"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-      `;
-      
-      const bookmark = document.createElement('div');
-      bookmark.innerHTML = `
-        <svg style="width:20px; height:20px;" viewBox="0 0 24 24"><path fill="currentColor" d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
-      `;
-      
-      actions.appendChild(actionsLeft);
-      actions.appendChild(bookmark);
-      
-      const likes = document.createElement('div');
-      likes.className = 'feed-card-likes';
-      likes.textContent = '1,245 likes';
-      
-      feedFooter.appendChild(actions);
-      feedFooter.appendChild(likes);
-      
-      wrap.appendChild(feedHeader);
-      wrap.appendChild(mainCanvas);
-      wrap.appendChild(feedFooter);
-    } else {
-      if (frameWrap) {
-        frameWrap.style.width = '100%';
-        frameWrap.style.maxWidth = '520px';
-      }
-      // Direct placement fallback
-      wrap.appendChild(mainCanvas);
-    }
-  }
-
-  function drawLines(context, lines, x, centerY, lineHeight, align) {
-    const totalHeight = lines.length * lineHeight;
-    let y = centerY - (totalHeight / 2) + (lineHeight / 2);
-    
-    for (const line of lines) {
-      context.textAlign = align;
-      context.fillText(line, x, y);
-      y += lineHeight;
-    }
-  }
-
-  /* ---------------- CANVAS DRAW UTILITIES ---------------- */
-  function hexToRgba(hex, alpha) {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-
-  function roundRect(ctx, x, y, width, height, radius, fill = false, stroke = true) {
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-    if (fill) ctx.fill();
-    if (stroke) ctx.stroke();
-  }
-
-  /* ---------------- ACTIONS & EXPORT FUNCTIONS ---------------- */
-  const toast = document.getElementById('toast');
-  function showToast(msg) {
-    toast.innerHTML = `<svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> <span>${msg}</span>`;
-    toast.classList.add('show');
-    setTimeout(() => {
-      toast.classList.remove('show');
-    }, 2500);
-  }
-
-  // 1. Download PNG
-  document.getElementById('btnDownload').onclick = () => {
-    const link = document.createElement('a');
-    link.download = `content-studio-${state.platform}-${state.ratio}-${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    showToast('PNG Graphic Downloaded!');
-  };
-
-  // 2. Copy Image to Clipboard
-  document.getElementById('btnCopyImage').onclick = async () => {
-    try {
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          showToast('Failed to create image blob');
-          return;
-        }
-        await navigator.clipboard.write([
-          new ClipboardItem({ 'image/png': blob })
-        ]);
-        showToast('Image copied to clipboard!');
-      }, 'image/png');
-    } catch (err) {
-      showToast('Clipboard copy unsupported — please download');
-      console.error(err);
+// Hashtags presetting chips
+const hashtagChips = document.getElementById('hashtagChips');
+HASHTAG_PRESETS.forEach(tag => {
+  const chip = document.createElement('div');
+  chip.className = 'hchip';
+  chip.textContent = tag;
+  chip.onclick = () => {
+    const cur = inputHashtags.value.trim();
+    if (!cur.includes(tag)) {
+      inputHashtags.value = (cur ? cur + ' ' : '') + tag;
+      updateCaptionPreview();
     }
   };
+  hashtagChips.appendChild(chip);
+});
 
-  // 3. Copy Caption + Hashtags text
-  document.getElementById('btnCopyCaption').onclick = async () => {
-    const cap = inputCaption.value;
-    const tags = inputHashtags.value.trim();
-    const full = tags ? `${cap}\n\n${tags}` : cap;
+const captionPreviewText = document.getElementById('captionPreviewText');
+function updateCaptionPreview() {
+  const cap = inputCaption.value.trim();
+  const tags = inputHashtags.value.trim();
+  const full = tags ? `${cap}\n\n${tags}` : cap;
+  
+  const escapedCap = cap.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const escapedTags = tags.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  
+  captionPreviewText.innerHTML = escapedCap + (tags ? `\n\n<span class="hash">${escapedTags}</span>` : '');
+}
+
+/* ---------------- LOCAL DRAFTS SAVING ---------------- */
+const draftNameInput = document.getElementById('draftName');
+const btnSaveDraft = document.getElementById('btnSaveDraft');
+const draftList = document.getElementById('draftList');
+
+btnSaveDraft.onclick = () => {
+  const name = draftNameInput.value.trim();
+  if (!name) {
+    showToast('Enter a draft name first!');
+    return;
+  }
+  
+  const drafts = getDrafts();
+  const savedState = {
+    platform: state.platform,
+    ratio: state.ratio,
+    template: state.template,
+    theme: state.theme,
+    fontPairing: state.fontPairing,
+    customAccent: state.customAccent,
+    customBg: state.customBg,
+    patternType: state.patternType,
+    patternOpacity: state.patternOpacity,
+    patternDensity: state.patternDensity,
+    align: state.align,
+    autoFit: state.autoFit,
+    watermark: state.watermark,
+    watermarkText: watermarkText.value,
     
-    try {
-      await navigator.clipboard.writeText(full);
-      showToast('Caption + hashtags copied!');
-    } catch (err) {
-      showToast('Failed to copy text — copy manually');
-    }
+    bgImageScale: state.bgImageScale,
+    bgImageOpacity: state.bgImageOpacity,
+    bgImageBlur: state.bgImageBlur,
+    bgImageBlend: state.bgImageBlend,
+    logoScale: state.logoScale,
+    logoOpacity: state.logoOpacity,
+    logoPosition: state.logoPosition,
+    
+    titleText: inputTitle.value,
+    bodyText: inputBody.value,
+    captionText: inputCaption.value,
+    hashtagsText: inputHashtags.value
   };
+  
+  drafts[name] = savedState;
+  localStorage.setItem('studio_drafts', JSON.stringify(drafts));
+  draftNameInput.value = '';
+  updateDraftsUI();
+  showToast(`Draft "${name}" saved ✓`);
+};
 
-  /* ---------------- BATCH EXPORT MODAL LOGIC ---------------- */
-  const batchModal = document.getElementById('batchModal');
-  const btnOpenBatchModal = document.getElementById('btnOpenBatchModal');
-  const btnCloseBatchModal = document.getElementById('btnCloseBatchModal');
-  const btnCloseBatchModal2 = document.getElementById('btnCloseBatchModal2');
-  const btnDownloadAllBatch = document.getElementById('btnDownloadAllBatch');
-  const batchGrid = document.getElementById('batchGrid');
+function getDrafts() {
+  const drafts = localStorage.getItem('studio_drafts');
+  return drafts ? JSON.parse(drafts) : {};
+}
 
-  // Open batch modal
-  btnOpenBatchModal.onclick = () => {
-    batchGrid.innerHTML = '';
-    batchModal.classList.add('show');
+function updateDraftsUI() {
+  draftList.innerHTML = '';
+  const drafts = getDrafts();
+  const keys = Object.keys(drafts);
+  
+  if (keys.length === 0) {
+    draftList.innerHTML = '<div style="font-size:11px; color:var(--text-dim); text-align:center; padding:8px;">No saved drafts</div>';
+    return;
+  }
+  
+  keys.forEach(k => {
+    const item = document.createElement('div');
+    item.className = 'draft-item';
     
-    // Generate all ratio options
-    const ratiosToGenerate = Object.keys(RATIO_DIMS);
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'draft-name';
+    nameSpan.textContent = k;
+    nameSpan.onclick = () => loadDraft(k);
     
-    ratiosToGenerate.forEach(ratio => {
-      const dimensions = RATIO_DIMS[ratio];
-      
-      const card = document.createElement('div');
-      card.className = 'batch-card';
-      
-      const title = document.createElement('div');
-      title.className = 'batch-card-title';
-      title.textContent = `${ratio} Ratio (${dimensions[0]}x${dimensions[1]}px)`;
-      
-      const canvasWrap = document.createElement('div');
-      canvasWrap.className = 'batch-canvas-wrap';
-      
-      const tempCanvas = document.createElement('canvas');
-      // Draw graphic onto it - setting isThumbnail to true ensures logos/watermarks are omitted for thumbnail clean look
-      renderGraphic(tempCanvas, ratio, state.platform, true);
-      
-      canvasWrap.appendChild(tempCanvas);
-      card.appendChild(title);
-      card.appendChild(canvasWrap);
-      
-      // Individual Download Button
-      const dwnBtn = document.createElement('button');
-      dwnBtn.className = 'btn secondary';
-      dwnBtn.style.width = '100%';
-      dwnBtn.style.fontSize = '11px';
-      dwnBtn.style.padding = '6px 10px';
-      dwnBtn.textContent = 'Download format';
-      dwnBtn.onclick = () => {
-        const link = document.createElement('a');
-        link.download = `content-studio-${state.platform}-${ratio}-${Date.now()}.png`;
-        // Redraw canvas with full resolution details (logo and watermark included) for final download
-        const downloadCanvas = document.createElement('canvas');
-        renderGraphic(downloadCanvas, ratio, state.platform, false);
-        link.href = downloadCanvas.toDataURL('image/png');
-        link.click();
-        showToast(`Downloaded ${ratio} Format!`);
-      };
-      card.appendChild(dwnBtn);
-      
-      batchGrid.appendChild(card);
-    });
-  };
-
-  // Close batch modal
-  const closeBatch = () => {
-    batchModal.classList.remove('show');
-  };
-  btnCloseBatchModal.onclick = closeBatch;
-  btnCloseBatchModal2.onclick = closeBatch;
-
-  // Download all formats sequentially
-  btnDownloadAllBatch.onclick = () => {
-    const cards = batchGrid.querySelectorAll('.batch-card');
-    if (cards.length === 0) return;
+    const delBtn = document.createElement('button');
+    delBtn.className = 'draft-del-btn';
+    delBtn.innerHTML = `
+      <svg style="width:14px; height:14px;" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14V4zM6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12z"/>
+      </svg>
+    `;
+    delBtn.onclick = () => deleteDraft(k);
     
-    let delay = 0;
-    cards.forEach((card) => {
-      const ratioTitle = card.querySelector('.batch-card-title').textContent;
-      const ratio = ratioTitle.split(' ')[0]; // E.g. "1:1"
-      
-      setTimeout(() => {
-        const link = document.createElement('a');
-        link.download = `content-studio-${state.platform}-${ratio}-${Date.now()}.png`;
-        const downloadCanvas = document.createElement('canvas');
-        renderGraphic(downloadCanvas, ratio, state.platform, false);
-        link.href = downloadCanvas.toDataURL('image/png');
-        link.click();
-      }, delay);
-      
-      delay += 350; // Delay to prevent browser thread collision or pop-up blocker issues
-    });
-    
-    showToast('Triggered downloading all formats!');
-  };
+    item.appendChild(nameSpan);
+    item.appendChild(delBtn);
+    draftList.appendChild(item);
+  });
+}
 
-  /* ---------------- AUTO-RUN INITIALS ---------------- */
+function deleteDraft(name) {
+  const drafts = getDrafts();
+  delete drafts[name];
+  localStorage.setItem('studio_drafts', JSON.stringify(drafts));
+  updateDraftsUI();
+  showToast(`Draft "${name}" deleted`);
+}
+
+function loadDraft(name) {
+  const drafts = getDrafts();
+  const d = drafts[name];
+  if (!d) return;
+  
+  state.platform = d.platform || 'instagram';
+  state.ratio = d.ratio || '1:1';
+  state.template = d.template || 'quote';
+  state.theme = d.theme || 'midnight';
+  state.fontPairing = d.fontPairing || 'outfit_plus';
+  state.customAccent = d.customAccent;
+  state.customBg = d.customBg;
+  state.patternType = d.patternType || 'circles';
+  state.patternOpacity = d.patternOpacity !== undefined ? d.patternOpacity : 12;
+  state.patternDensity = d.patternDensity !== undefined ? d.patternDensity : 30;
+  state.align = d.align || 'center';
+  state.autoFit = d.autoFit !== undefined ? d.autoFit : true;
+  state.watermark = d.watermark !== undefined ? d.watermark : true;
+  
+  state.bgImageScale = d.bgImageScale !== undefined ? d.bgImageScale : 100;
+  state.bgImageOpacity = d.bgImageOpacity !== undefined ? d.bgImageOpacity : 40;
+  state.bgImageBlur = d.bgImageBlur !== undefined ? d.bgImageBlur : 0;
+  state.bgImageBlend = d.bgImageBlend || 'normal';
+  state.logoScale = d.logoScale !== undefined ? d.logoScale : 20;
+  state.logoOpacity = d.logoOpacity !== undefined ? d.logoOpacity : 80;
+  state.logoPosition = d.logoPosition || 'bottom-right';
+  
+  watermarkText.value = d.watermarkText || '@TelepathicThoughtsBD';
+  inputTitle.value = d.titleText || '';
+  inputBody.value = d.bodyText || '';
+  inputCaption.value = d.captionText || '';
+  inputHashtags.value = d.hashtagsText || '';
+  
+  // Sync form controls
+  fontPairingSelect.value = state.fontPairing;
+  patternTypeSelect.value = state.patternType;
+  patternOpacityRange.value = state.patternOpacity;
+  patternDensityRange.value = state.patternDensity;
+  
+  document.getElementById('bgImageScale').value = state.bgImageScale;
+  document.getElementById('bgImageOpacity').value = state.bgImageOpacity;
+  document.getElementById('bgImageBlur').value = state.bgImageBlur;
+  document.getElementById('bgImageBlend').value = state.bgImageBlend;
+  
+  document.getElementById('logoScale').value = state.logoScale;
+  document.getElementById('logoOpacity').value = state.logoOpacity;
+  document.getElementById('logoPosition').value = state.logoPosition;
+  
+  if (state.customBg) document.getElementById('customBg').value = state.customBg;
+  if (state.customAccent) document.getElementById('customAccent').value = state.customAccent;
+  
+  alignButtons.forEach(b => b.classList.toggle('active', b.dataset.align === state.align));
+  autoFitSwitch.classList.toggle('on', state.autoFit);
+  watermarkSwitch.classList.toggle('on', state.watermark);
+  
+  // Clear file references to keep simple
+  btnRemoveBgImage.click();
+  btnRemoveLogo.click();
+  
   updatePlatformUI();
   updateRatioUI();
+  updateCaptionLengthStatus();
   updateCaptionPreview();
   render();
+  
+  // Sync template button visual active classes
+  [...templateGrid.children].forEach(c => c.classList.toggle('active', c.dataset.id === state.template));
+  // Sync theme swatch visual active classes
+  [...themeGrid.children].forEach(c => c.classList.toggle('active', c.dataset.id === state.theme));
+  
+  showToast(`Loaded draft "${name}"`);
+}
 
-  // Handle window resize to keep canvas fitting nicely
-  window.addEventListener('resize', render);
+updateDraftsUI();
+
+/* ---------------- CANVAS RENDERING ENGINE ---------------- */
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+const frameWrap = document.getElementById('frameWrap');
+const canvasDims = document.getElementById('canvasDims');
+
+function getThemeDetails() {
+  const th = { ...THEMES.find(t => t.id === state.theme) };
+  if (state.customAccent) th.accent = state.customAccent;
+  if (state.customBg) th.bg = state.customBg;
+  return th;
+}
+
+function getActiveFontPair() {
+  return FONT_PAIRINGS.find(f => f.id === state.fontPairing) || FONT_PAIRINGS[0];
+}
+
+// Word wrapping utility
+function wrapText(context, text, maxWidth) {
+  const words = text.split(/\s+/);
+  const lines = [];
+  let currentLine = '';
+  
+  for (const word of words) {
+    const testLine = currentLine ? currentLine + ' ' + word : word;
+    if (context.measureText(testLine).width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
+// Fit Font sizing utility
+function fitFontSize(context, text, maxWidth, maxHeight, startSize, fontFamily, weight, lineHeightMult) {
+  let size = startSize;
+  context.font = `${weight} ${size}px "${fontFamily}", sans-serif`;
+  let lines = wrapText(context, text, maxWidth);
+  let totalHeight = lines.length * size * lineHeightMult;
+  
+  while (totalHeight > maxHeight && size > 20) {
+    size -= 2;
+    context.font = `${weight} ${size}px "${fontFamily}", sans-serif`;
+    lines = wrapText(context, text, maxWidth);
+    totalHeight = lines.length * size * lineHeightMult;
+  }
+  return { size, lines };
+}
+
+// Primary drawing routine (can be outputted to main canvas or temporary ones for batch thumbnail rendering)
+function renderGraphic(tempCanvas, ratio, platformId, isThumbnail = false) {
+  const dims = RATIO_DIMS[ratio] || [1080, 1080];
+  const w = dims[0];
+  const h = dims[1];
+  tempCanvas.width = w;
+  tempCanvas.height = h;
+  
+  const tempCtx = tempCanvas.getContext('2d');
+  const colors = getThemeDetails();
+  const font = getActiveFontPair();
+  const titleText = inputTitle.value.trim() || 'Your title/hook goes here';
+  const bodyText = inputBody.value.trim();
+  const pad = w * 0.09;
+  
+  // 1. Draw Background
+  if (colors.mode === 'dark' && state.theme === 'ocean') {
+    const grad = tempCtx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, colors.bg);
+    grad.addColorStop(1, colors.bg2 || '#0A4A66');
+    tempCtx.fillStyle = grad;
+  } else {
+    tempCtx.fillStyle = colors.bg;
+  }
+  tempCtx.fillRect(0, 0, w, h);
+
+  // 2. Draw Background Image Layer
+  if (state.bgImage) {
+    tempCtx.save();
+    tempCtx.globalCompositeOperation = state.bgImageBlend || 'source-over';
+    if (state.bgImageBlur > 0) {
+      tempCtx.filter = `blur(${state.bgImageBlur}px)`;
+    }
+    tempCtx.globalAlpha = state.bgImageOpacity / 100;
+    
+    const imgW = state.bgImage.width;
+    const imgH = state.bgImage.height;
+    const scale = state.bgImageScale / 100;
+    
+    const canvasRatio = w / h;
+    const imgRatio = imgW / imgH;
+    
+    let renderW, renderH;
+    if (imgRatio > canvasRatio) {
+      renderH = h * scale;
+      renderW = renderH * imgRatio;
+    } else {
+      renderW = w * scale;
+      renderH = renderW / imgRatio;
+    }
+    
+    const rx = (w - renderW) / 2;
+    const ry = (h - renderH) / 2;
+    tempCtx.drawImage(state.bgImage, rx, ry, renderW, renderH);
+    tempCtx.restore();
+  }
+
+  // 3. Draw Pattern Overlay
+  if (state.patternType !== 'none') {
+    tempCtx.save();
+    tempCtx.globalAlpha = state.patternOpacity / 100;
+    tempCtx.fillStyle = colors.accent;
+    tempCtx.strokeStyle = colors.accent;
+    
+    const spacing = state.patternDensity * (w / 1000) * 1.5;
+    
+    if (state.patternType === 'dots') {
+      for (let x = spacing / 2; x < w; x += spacing) {
+        for (let y = spacing / 2; y < h; y += spacing) {
+          tempCtx.beginPath();
+          tempCtx.arc(x, y, w * 0.0025, 0, Math.PI * 2);
+          tempCtx.fill();
+        }
+      }
+    } else if (state.patternType === 'grid') {
+      tempCtx.lineWidth = w * 0.001;
+      tempCtx.beginPath();
+      for (let x = 0; x < w; x += spacing) {
+        tempCtx.moveTo(x, 0);
+        tempCtx.lineTo(x, h);
+      }
+      for (let y = 0; y < h; y += spacing) {
+        tempCtx.moveTo(0, y);
+        tempCtx.lineTo(w, y);
+      }
+      tempCtx.stroke();
+    } else if (state.patternType === 'stripes') {
+      tempCtx.lineWidth = w * 0.0015;
+      tempCtx.beginPath();
+      for (let offset = -h; offset < w; offset += spacing) {
+        tempCtx.moveTo(offset, 0);
+        tempCtx.lineTo(offset + h, h);
+      }
+      tempCtx.stroke();
+    } else if (state.patternType === 'noise') {
+      const count = (w * h) * 0.0008 * (state.patternDensity / 30);
+      for (let i = 0; i < count; i++) {
+        const rx = Math.random() * w;
+        const ry = Math.random() * h;
+        const size = Math.random() * (w * 0.002) + 1;
+        tempCtx.fillRect(rx, ry, size, size);
+      }
+    } else if (state.patternType === 'circles') {
+      // Corner Circles (Default background geometric shapes as requested from draft.html)
+      const rad1 = w * 0.32 * (state.patternDensity / 30);
+      const rad2 = w * 0.22 * (state.patternDensity / 30);
+      
+      tempCtx.beginPath();
+      tempCtx.ellipse(w * 0.88, h * 0.08, rad1, rad1, 0, 0, Math.PI * 2);
+      tempCtx.fill();
+      
+      tempCtx.beginPath();
+      tempCtx.ellipse(w * 0.06, h * 0.96, rad2, rad2, 0, 0, Math.PI * 2);
+      tempCtx.fill();
+    } else if (state.patternType === 'waves') {
+      const amp = h * 0.1 * (state.patternDensity / 30);
+      
+      tempCtx.beginPath();
+      tempCtx.moveTo(0, h * 0.85);
+      tempCtx.bezierCurveTo(w * 0.25, h * 0.85 - amp, w * 0.75, h * 0.85 + amp, w, h * 0.8);
+      tempCtx.lineTo(w, h);
+      tempCtx.lineTo(0, h);
+      tempCtx.closePath();
+      tempCtx.fill();
+      
+      tempCtx.beginPath();
+      tempCtx.moveTo(0, 0);
+      tempCtx.lineTo(w, 0);
+      tempCtx.bezierCurveTo(w * 0.7, amp, w * 0.3, h * 0.1, 0, h * 0.15);
+      tempCtx.closePath();
+      tempCtx.fill();
+    } else if (state.patternType === 'geometric') {
+      const sizeMult = state.patternDensity / 30;
+      
+      tempCtx.beginPath();
+      tempCtx.moveTo(w * (1 - 0.3 * sizeMult), 0);
+      tempCtx.lineTo(w, 0);
+      tempCtx.lineTo(w, h * 0.4 * sizeMult);
+      tempCtx.closePath();
+      tempCtx.fill();
+      
+      tempCtx.beginPath();
+      tempCtx.moveTo(0, h * (1 - 0.4 * sizeMult));
+      tempCtx.lineTo(0, h);
+      tempCtx.lineTo(w * 0.35 * sizeMult, h);
+      tempCtx.closePath();
+      tempCtx.fill();
+    }
+    tempCtx.restore();
+  }
+
+  // 4. Setup Alignment coordinates
+  const align = state.align;
+  tempCtx.textAlign = align;
+  tempCtx.textBaseline = 'middle';
+  
+  let alignX = w / 2;
+  if (align === 'left') alignX = pad;
+  else if (align === 'right') alignX = w - pad;
+  
+  const maxTextWidth = w - pad * 2;
+  
+  // 5. Draw templates layout
+  if (state.template === 'stat') {
+    const parts = titleText.split(' ');
+    const heroText = parts[0] || '10X';
+    const secondaryLabel = parts.slice(1).join(' ') || 'Growth in design efficiency';
+    
+    // Giant stat number
+    tempCtx.fillStyle = colors.accent;
+    const heroSize = w * 0.28;
+    tempCtx.font = `900 ${heroSize}px "${font.titleFont}", sans-serif`;
+    tempCtx.fillText(heroText, alignX, h * 0.42);
+    
+    // Supporting label
+    tempCtx.fillStyle = colors.text;
+    const labelMaxHeight = h * 0.22;
+    const startSize = state.autoFit ? w * 0.07 : state.bodyFontSize || 24;
+    const fit = fitFontSize(tempCtx, secondaryLabel, maxTextWidth, labelMaxHeight, startSize, font.bodyFont, '600', 1.25);
+    
+    drawLines(tempCtx, fit.lines, alignX, h * 0.62, fit.size * 1.25, align);
+    
+  } else if (state.template === 'tip') {
+    tempCtx.save();
+    tempCtx.fillStyle = colors.accent;
+    tempCtx.font = `700 ${w * 0.032}px "${font.bodyFont}", sans-serif`;
+    tempCtx.fillText('PRO TIP', alignX, h * 0.14);
+    tempCtx.restore();
+
+    // Heading Title
+    tempCtx.fillStyle = colors.text;
+    const titleMaxHeight = h * 0.4;
+    const startSize = state.autoFit ? w * 0.075 : state.titleFontSize || 50;
+    const fitTitle = fitFontSize(tempCtx, titleText, maxTextWidth, titleMaxHeight, startSize, font.titleFont, '800', 1.15);
+    
+    const titleCenterY = h * 0.42;
+    drawLines(tempCtx, fitTitle.lines, alignX, titleCenterY, fitTitle.size * 1.15, align);
+
+    // Body text below (with line-wrapped auto scaling to fit)
+    if (bodyText) {
+      tempCtx.fillStyle = colors.text;
+      tempCtx.save();
+      tempCtx.globalAlpha = 0.75;
+      
+      const bodyMaxHeight = h * 0.22;
+      const bStartSize = state.autoFit ? w * 0.036 : state.bodyFontSize || 24;
+      const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '400', 1.35);
+      
+      const bodyCenterY = h * 0.72;
+      drawLines(tempCtx, fitBody.lines, alignX, bodyCenterY, fitBody.size * 1.35, align);
+      tempCtx.restore();
+    }
+
+  } else if (state.template === 'simple') {
+    tempCtx.fillStyle = colors.text;
+    const startSize = state.autoFit ? w * 0.09 : state.titleFontSize || 50;
+    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.5, startSize, font.titleFont, '800', 1.15);
+    drawLines(tempCtx, fit.lines, alignX, h * 0.5, fit.size * 1.15, align);
+
+  } else {
+    // Quote layout (Default)
+    tempCtx.save();
+    tempCtx.fillStyle = colors.accent;
+    // Elegant quote styling from Georgia serif
+    tempCtx.font = `800 ${w * 0.12}px Georgia, serif`;
+    tempCtx.fillText('"', alignX, h * 0.22);
+    tempCtx.restore();
+
+    // Quote Title Content
+    tempCtx.fillStyle = colors.text;
+    const startSize = state.autoFit ? w * 0.08 : state.titleFontSize || 50;
+    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.45, startSize, font.titleFont, '700', 1.2);
+    drawLines(tempCtx, fit.lines, alignX, h * 0.5, fit.size * 1.2, align);
+
+    // Quote Author / Body below (with line wrapping auto fit support)
+    if (bodyText) {
+      tempCtx.fillStyle = colors.accent;
+      tempCtx.font = `600 ${w * 0.03}px "${font.bodyFont}", sans-serif`;
+      
+      const bodyMaxHeight = h * 0.15;
+      const bStartSize = w * 0.03;
+      const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '600', 1.3);
+      
+      const authorTextLines = fitBody.lines.map((line, idx) => idx === 0 ? `— ${line}` : `  ${line}`);
+      drawLines(tempCtx, authorTextLines, alignX, h * 0.78, fitBody.size * 1.3, align);
+    }
+  }
+
+  // 6. Draw Logo Layer (if preset and not batch preview)
+  if (state.logoImage && !isThumbnail) {
+    tempCtx.save();
+    tempCtx.globalAlpha = state.logoOpacity / 100;
+    
+    const logoW = state.logoImage.width;
+    const logoH = state.logoImage.height;
+    const scale = state.logoScale / 100;
+    const targetW = w * 0.18 * scale;
+    const targetH = targetW * (logoH / logoW);
+    
+    let lx = w - targetW - pad;
+    let ly = h - targetH - pad;
+    
+    if (state.logoPosition === 'top-left') { lx = pad; ly = pad; }
+    else if (state.logoPosition === 'top-right') { lx = w - targetW - pad; ly = pad; }
+    else if (state.logoPosition === 'bottom-left') { lx = pad; ly = h - targetH - pad; }
+    else if (state.logoPosition === 'center') { lx = w/2 - targetW/2; ly = h/2 - targetH/2; }
+    
+    tempCtx.drawImage(state.logoImage, lx, ly, targetW, targetH);
+    tempCtx.restore();
+  }
+
+  // 7. Draw Watermark handle (centered at bottom)
+  if (state.watermark) {
+    tempCtx.save();
+    tempCtx.textAlign = 'center';
+    tempCtx.textBaseline = 'middle';
+    tempCtx.fillStyle = colors.text;
+    tempCtx.globalAlpha = 0.55;
+    tempCtx.font = `600 ${w * 0.026}px "${font.bodyFont}", sans-serif`;
+    tempCtx.fillText(watermarkText.value.trim() || '@TelepathicThoughtsBD', w / 2, h - pad * 0.55);
+    tempCtx.restore();
+  }
+}
+
+// Main viewport render pipeline
+function render() {
+  const [w, h] = RATIO_DIMS[state.ratio];
+  renderGraphic(canvas, state.ratio, state.platform, false);
+  
+  canvasDims.textContent = `${w} × ${h}px  ·  ${state.ratio}  ·  ${PLATFORMS.find(p => p.id === state.platform).label}`;
+  updateDeviceChromes(w, h);
+}
+
+function drawLines(context, lines, x, centerY, lineHeight, align) {
+  const totalHeight = lines.length * lineHeight;
+  let y = centerY - (totalHeight / 2) + (lineHeight / 2);
+  
+  for (const line of lines) {
+    context.textAlign = align;
+    context.fillText(line, x, y);
+    y += lineHeight;
+  }
+}
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function roundRect(ctx, x, y, width, height, radius, fill = false, stroke = true) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+  if (fill) ctx.fill();
+  if (stroke) ctx.stroke();
+}
+
+/* ---------------- ADAPTIVE DEVICE FRAMES CHROMES ---------------- */
+function updateDeviceChromes(w, h) {
+  const wrap = document.getElementById('deviceChromeWrap');
+  if (!wrap) return;
+  
+  const mainCanvas = document.getElementById('mainCanvas');
+  const frameWrap = document.getElementById('frameWrap');
+  
+  const isPhone = state.ratio === '9:16';
+  const isBrowser = state.ratio === '16:9' || state.ratio === '1.91:1';
+  const isFeedCard = state.ratio === '1:1' || state.ratio === '4:5';
+  
+  wrap.className = '';
+  wrap.innerHTML = '';
+  mainCanvas.className = '';
+  wrap.style = '';
+  
+  if (isPhone) {
+    if (frameWrap) {
+      frameWrap.style.width = '100%';
+      frameWrap.style.maxWidth = '340px';
+    }
+    wrap.className = 'device-chrome-wrap';
+    wrap.style.width = '100%';
+    wrap.style.boxSizing = 'border-box';
+    wrap.style.padding = '46px 12px 32px 12px';
+    wrap.style.borderRadius = '34px';
+    wrap.style.border = '12px solid #1a162b';
+    wrap.style.background = '#090710';
+    wrap.style.position = 'relative';
+    wrap.style.boxShadow = 'inset 0 0 20px rgba(0,0,0,0.8), 0 25px 60px rgba(0,0,0,0.5)';
+    
+    const notch = document.createElement('div');
+    notch.className = 'chrome-phone-notch';
+    
+    const header = document.createElement('div');
+    header.className = 'chrome-phone-header';
+    header.innerHTML = `
+      <div>09:41</div>
+      <div style="display:flex; gap: 6px; align-items:center;">
+        <svg style="width:12px; height:12px;" viewBox="0 0 24 24"><path fill="currentColor" d="M2 22h20V2z"/></svg>
+        <svg style="width:12px; height:12px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c3.9-3.89 10.21-3.89 14.1 0l1.9-1.9C21.6 15.93 22 13.97 22 12c0-4.97-4.03-9-9-9z"/></svg>
+        <svg style="width:14px; height:14px;" viewBox="0 0 24 24"><path fill="currentColor" d="M17 5H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2m4 4h2v6h-2V9z"/></svg>
+      </div>
+    `;
+    
+    const homeIndicator = document.createElement('div');
+    homeIndicator.className = 'chrome-phone-home-indicator';
+    
+    wrap.appendChild(notch);
+    wrap.appendChild(header);
+    wrap.appendChild(mainCanvas);
+    wrap.appendChild(homeIndicator);
+    
+    mainCanvas.classList.add('canvas-phone-styled');
+    
+  } else if (isBrowser) {
+    if (frameWrap) {
+      frameWrap.style.width = '100%';
+      frameWrap.style.maxWidth = '640px';
+    }
+    wrap.className = 'device-chrome-wrap';
+    wrap.style.width = '100%';
+    wrap.style.boxSizing = 'border-box';
+    wrap.style.padding = '0';
+    wrap.style.borderRadius = '14px';
+    wrap.style.border = '2px solid var(--line)';
+    wrap.style.background = '#120e22';
+    wrap.style.overflow = 'hidden';
+    wrap.style.display = 'flex';
+    wrap.style.flexDirection = 'column';
+    wrap.style.boxShadow = '0 25px 60px rgba(0,0,0,0.5)';
+    
+    const browserHeader = document.createElement('div');
+    browserHeader.className = 'chrome-browser-header';
+    
+    const dots = document.createElement('div');
+    dots.className = 'dots';
+    dots.innerHTML = `
+      <div class="dot red"></div>
+      <div class="dot yellow"></div>
+      <div class="dot green"></div>
+    `;
+    
+    const addressBar = document.createElement('div');
+    addressBar.className = 'address-bar';
+    const curPlatform = PLATFORMS.find(p => p.id === state.platform);
+    addressBar.textContent = `contentstudio.live/${curPlatform ? curPlatform.id : 'web'}/${state.ratio}`;
+    
+    browserHeader.appendChild(dots);
+    browserHeader.appendChild(addressBar);
+    
+    wrap.appendChild(browserHeader);
+    wrap.appendChild(mainCanvas);
+    
+  } else if (isFeedCard) {
+    if (frameWrap) {
+      frameWrap.style.width = '100%';
+      frameWrap.style.maxWidth = '460px';
+    }
+    wrap.className = 'chrome-feed-card';
+    wrap.style.width = '100%';
+    wrap.style.boxSizing = 'border-box';
+    wrap.style.padding = '0';
+    wrap.style.border = '1px solid var(--line)';
+    wrap.style.borderRadius = '16px';
+    wrap.style.background = '#110e20';
+    wrap.style.overflow = 'hidden';
+    wrap.style.boxShadow = '0 25px 60px rgba(0,0,0,0.5)';
+    
+    const feedHeader = document.createElement('div');
+    feedHeader.className = 'feed-card-header';
+    
+    const avatar = document.createElement('div');
+    avatar.className = 'feed-card-avatar';
+    
+    const meta = document.createElement('div');
+    meta.className = 'feed-card-meta';
+    const handle = watermarkText.value.trim() || '@TelepathicThoughtsBD';
+    const p = PLATFORMS.find(x => x.id === state.platform);
+    
+    meta.innerHTML = `
+      <div class="feed-card-name">${handle}</div>
+      <div class="feed-card-sub">${p ? p.label : 'Sponsored'}</div>
+    `;
+    
+    const menuIcon = document.createElement('div');
+    menuIcon.style.marginLeft = 'auto';
+    menuIcon.style.color = 'var(--text-dim)';
+    menuIcon.style.cursor = 'pointer';
+    menuIcon.innerHTML = `
+      <svg style="width:20px; height:20px;" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+      </svg>
+    `;
+    
+    feedHeader.appendChild(avatar);
+    feedHeader.appendChild(meta);
+    feedHeader.appendChild(menuIcon);
+    
+    const feedFooter = document.createElement('div');
+    feedFooter.className = 'feed-card-footer';
+    
+    const actions = document.createElement('div');
+    actions.className = 'feed-card-actions';
+    
+    const actionsLeft = document.createElement('div');
+    actionsLeft.className = 'feed-card-actions-left';
+    actionsLeft.innerHTML = `
+      <svg style="width:20px; height:20px; color: var(--accent-coral);" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      <svg style="width:20px; height:20px;" viewBox="0 0 24 24"><path fill="currentColor" d="M9 22a1 1 0 0 1-1-1v-3H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5l-4 4H9z"/></svg>
+      <svg style="width:20px; height:20px;" viewBox="0 0 24 24"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    `;
+    
+    const bookmark = document.createElement('div');
+    bookmark.innerHTML = `
+      <svg style="width:20px; height:20px;" viewBox="0 0 24 24"><path fill="currentColor" d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+    `;
+    
+    actions.appendChild(actionsLeft);
+    actions.appendChild(bookmark);
+    
+    const likes = document.createElement('div');
+    likes.className = 'feed-card-likes';
+    likes.textContent = '1,245 likes';
+    
+    feedFooter.appendChild(actions);
+    feedFooter.appendChild(likes);
+    
+    wrap.appendChild(feedHeader);
+    wrap.appendChild(mainCanvas);
+    wrap.appendChild(feedFooter);
+  } else {
+    if (frameWrap) {
+      frameWrap.style.width = '100%';
+      frameWrap.style.maxWidth = '520px';
+    }
+    wrap.appendChild(mainCanvas);
+  }
+}
+
+/* ---------------- ACTIONS & EXPORTS ---------------- */
+const toast = document.getElementById('toast');
+function showToast(msg) {
+  toast.innerHTML = `<svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> <span>${msg}</span>`;
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2200);
+}
+
+// 1. Download PNG
+document.getElementById('btnDownload').onclick = () => {
+  const link = document.createElement('a');
+  link.download = `content-studio-${state.platform}-${state.ratio}-${Date.now()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  showToast('PNG Graphic Downloaded!');
+};
+
+// 2. Copy Image
+document.getElementById('btnCopyImage').onclick = async () => {
+  try {
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        showToast('Blob creation failed');
+        return;
+      }
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      showToast('Copied graphic to clipboard!');
+    }, 'image/png');
+  } catch (err) {
+    showToast('Clipboard copy unsupported — please download');
+  }
+};
+
+// 3. Copy Caption
+document.getElementById('btnCopyCaption').onclick = async () => {
+  const cap = inputCaption.value.trim();
+  const tags = inputHashtags.value.trim();
+  const full = tags ? `${cap}\n\n${tags}` : cap;
+  
+  try {
+    await navigator.clipboard.writeText(full);
+    showToast('Caption text copied!');
+  } catch (err) {
+    showToast('Copy failed — please copy manually');
+  }
+};
+
+/* ---------------- BATCH EXPORT LOGIC ---------------- */
+const batchModal = document.getElementById('batchModal');
+const btnOpenBatchModal = document.getElementById('btnOpenBatchModal');
+const btnCloseBatchModal = document.getElementById('btnCloseBatchModal');
+const btnCloseBatchModal2 = document.getElementById('btnCloseBatchModal2');
+const btnDownloadAllBatch = document.getElementById('btnDownloadAllBatch');
+const batchGrid = document.getElementById('batchGrid');
+
+btnOpenBatchModal.onclick = () => {
+  batchGrid.innerHTML = '';
+  batchModal.classList.add('show');
+  
+  const ratiosToGenerate = Object.keys(RATIO_DIMS);
+  
+  ratiosToGenerate.forEach(ratio => {
+    const dimensions = RATIO_DIMS[ratio];
+    
+    const card = document.createElement('div');
+    card.className = 'batch-card';
+    
+    const title = document.createElement('div');
+    title.className = 'batch-card-title';
+    title.textContent = `${ratio} Ratio (${dimensions[0]}x${dimensions[1]}px)`;
+    
+    const canvasWrap = document.createElement('div');
+    canvasWrap.className = 'batch-canvas-wrap';
+    
+    const tempCanvas = document.createElement('canvas');
+    renderGraphic(tempCanvas, ratio, state.platform, true);
+    
+    canvasWrap.appendChild(tempCanvas);
+    card.appendChild(title);
+    card.appendChild(canvasWrap);
+    
+    const dwnBtn = document.createElement('button');
+    dwnBtn.className = 'btn secondary';
+    dwnBtn.style.width = '100%';
+    dwnBtn.style.fontSize = '11px';
+    dwnBtn.style.padding = '6px 10px';
+    dwnBtn.textContent = 'Download Format';
+    dwnBtn.onclick = () => {
+      const link = document.createElement('a');
+      link.download = `content-studio-${state.platform}-${ratio}-${Date.now()}.png`;
+      const downloadCanvas = document.createElement('canvas');
+      renderGraphic(downloadCanvas, ratio, state.platform, false);
+      link.href = downloadCanvas.toDataURL('image/png');
+      link.click();
+      showToast(`Downloaded ${ratio} Format!`);
+    };
+    card.appendChild(dwnBtn);
+    
+    batchGrid.appendChild(card);
+  });
+};
+
+const closeBatch = () => {
+  batchModal.classList.remove('show');
+};
+btnCloseBatchModal.onclick = closeBatch;
+btnCloseBatchModal2.onclick = closeBatch;
+
+btnDownloadAllBatch.onclick = () => {
+  const cards = batchGrid.querySelectorAll('.batch-card');
+  if (cards.length === 0) return;
+  
+  let delay = 0;
+  cards.forEach((card) => {
+    const ratioTitle = card.querySelector('.batch-card-title').textContent;
+    const ratio = ratioTitle.split(' ')[0];
+    
+    setTimeout(() => {
+      const link = document.createElement('a');
+      link.download = `content-studio-${state.platform}-${ratio}-${Date.now()}.png`;
+      const downloadCanvas = document.createElement('canvas');
+      renderGraphic(downloadCanvas, ratio, state.platform, false);
+      link.href = downloadCanvas.toDataURL('image/png');
+      link.click();
+    }, delay);
+    
+    delay += 350;
+  });
+  
+  showToast('Downloading all formats...');
+};
+
+/* ---------------- AUTO-RUN ON PAGE LOAD ---------------- */
+updatePlatformUI();
+updateRatioUI();
+updateCaptionLengthStatus();
+updateCaptionPreview();
+render();
+
+window.addEventListener('resize', render);
 </script>
 </body>
 </html>
