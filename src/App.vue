@@ -91,7 +91,7 @@ const state = reactive({
   align: 'center' as 'left' | 'center' | 'right',
   autoFit: true,
   watermark: true,
-  watermarkText: '@TelepathicThoughtsBD',
+  watermarkText: '@TelepathicThoughts',
   
   customAccent: '',
   customBg: '',
@@ -924,7 +924,7 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
     tempCtx.fillStyle = colors.text;
     tempCtx.globalAlpha = 0.55;
     tempCtx.font = `600 ${w * 0.026}px "${font.bodyFont}", sans-serif`;
-    tempCtx.fillText(state.watermarkText.trim() || '@TelepathicThoughtsBD', w / 2, h - pad * 0.55);
+    tempCtx.fillText(state.watermarkText.trim() || '@TelepathicThoughts', w / 2, h - pad * 0.55);
     tempCtx.restore();
   }
 }
@@ -1343,11 +1343,11 @@ onMounted(() => {
             <div class="bottom-user" style="display: flex; flex-direction: column; gap: 8px; pointer-events: auto; text-align: left;">
               <div class="user-row" style="display: flex; align-items: center; gap: 8px;">
                 <div class="avatar" :style="logoImageSrc ? { backgroundImage: `url(${logoImageSrc})`, backgroundSize: 'cover', backgroundPosition: 'center', width: '28px', height: '28px', borderRadius: '50%' } : { width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent), var(--accent-2))' }"></div>
-                <div class="username" style="font-size: 12px; font-weight: 700;">{{ state.watermarkText || '@TelepathicThoughtsBD' }}</div>
+                <div class="username" style="font-size: 12px; font-weight: 700;">{{ state.watermarkText || '@TelepathicThoughts' }}</div>
                 <button class="follow-btn" style="background: rgba(255,255,255,0.25); border: none; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer;">Follow</button>
               </div>
               <div class="caption" style="font-size: 11px; line-height: 1.4; max-width: 80%;">
-                <strong>{{ state.watermarkText || '@TelepathicThoughtsBD' }}</strong> 
+                <strong>{{ state.watermarkText || '@TelepathicThoughts' }}</strong> 
                 <span style="margin-left: 6px;">{{ state.captionText.substring(0, 70) + (state.captionText.length > 70 ? '...' : '') }}</span>
               </div>
             </div>
@@ -1387,7 +1387,7 @@ onMounted(() => {
               :style="logoImageSrc ? { backgroundImage: `url(${logoImageSrc})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}"
             ></div>
             <div class="feed-card-meta">
-              <div class="feed-card-name">{{ state.watermarkText || '@TelepathicThoughtsBD' }}</div>
+              <div class="feed-card-name">{{ state.watermarkText || '@TelepathicThoughts' }}</div>
               <div class="feed-card-sub">{{ currentPlatformObject.label }}</div>
             </div>
             <div style="margin-left: auto; color: var(--text-dim); cursor: pointer;">
