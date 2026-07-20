@@ -978,6 +978,13 @@ onMounted(() => {
   loadDrafts();
   render();
 });
+
+defineExpose({
+  state,
+  wrapText,
+  fitFontSize,
+  renderGraphic
+});
 </script>
 
 <template>
