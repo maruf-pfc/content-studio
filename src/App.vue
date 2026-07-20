@@ -131,7 +131,12 @@ const state = reactive({
   showLiveOverlay: false
 });
 
-const drafts = ref<Record<string, any>>({});
+type DraftItem = typeof state & {
+  bgImageSrc: string | null;
+  logoImageSrc: string | null;
+};
+
+const drafts = ref<Record<string, DraftItem>>({});
 const draftName = ref('');
 const bgImageSrc = ref<string | null>(null);
 const logoImageSrc = ref<string | null>(null);
@@ -433,7 +438,7 @@ const copyImage = async () => {
       ]);
       showToast('Copied graphic to clipboard!');
     }, 'image/png');
-  } catch (err) {
+  } catch {
     showToast('Clipboard copy unsupported — please download');
   }
 };
@@ -446,7 +451,7 @@ const copyCaption = async () => {
   try {
     await navigator.clipboard.writeText(full);
     showToast('Caption text copied!');
-  } catch (err) {
+  } catch {
     showToast('Copy failed — please copy manually');
   }
 };
