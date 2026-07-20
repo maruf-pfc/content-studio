@@ -1538,7 +1538,1242 @@
 
 <!-- JAVASCRIPT STATE & LOGIC -->
 <script>
-  // Will be implemented in the next step
+  /* ---------------- CONSTANTS & DATA ---------------- */
+  const PLATFORMS = [
+    { 
+      id: 'instagram', 
+      label: 'Instagram', 
+      icon: `<svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051C.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>`, 
+      ratios: ['1:1', '4:5', '9:16'], 
+      charLimit: 2200 
+    },
+    { 
+      id: 'facebook', 
+      label: 'Facebook', 
+      icon: `<svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`, 
+      ratios: ['1:1', '9:16'], 
+      charLimit: 63206 
+    },
+    { 
+      id: 'linkedin', 
+      label: 'LinkedIn', 
+      icon: `<svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>`, 
+      ratios: ['1:1', '1.91:1'], 
+      charLimit: 3000 
+    },
+    { 
+      id: 'youtube', 
+      label: 'YouTube', 
+      icon: `<svg viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.518 3.545 12 3.545 12 3.545s-7.518 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11C4.482 20.455 12 20.455 12 20.455s7.518 0 9.388-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`, 
+      ratios: ['16:9'], 
+      charLimit: 5000 
+    },
+    { 
+      id: 'tiktok', 
+      label: 'TikTok', 
+      icon: `<svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.17-2.86-.6-4.05-1.5-.1 1.77-.1 3.55-.1 5.32 0 2.22-.59 4.54-2.24 6.07A7.525 7.525 0 0 1 10.5 22.18c-3.95-.35-7.14-3.79-7.01-7.77.14-3.52 3.02-6.57 6.54-6.81.02.13.06.25.09.38.3.82.72 1.61 1.25 2.3-2.12.35-3.83 2.18-3.94 4.31-.13 2.44 1.72 4.67 4.16 4.88 2.03.18 4.04-1.07 4.7-2.97.29-.81.34-1.69.33-2.54 0-3.92-.01-7.83 0-11.75.01-.86.29-1.78.93-2.39.63-.61 1.48-.9 2.34-.91z"/></svg>`, 
+      ratios: ['9:16'], 
+      charLimit: 2200 
+    },
+    { 
+      id: 'twitter', 
+      label: 'X / Twitter', 
+      icon: `<svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`, 
+      ratios: ['16:9', '1:1'], 
+      charLimit: 280 
+    }
+  ];
+
+  const RATIO_DIMS = {
+    '1:1': [1080, 1080],
+    '4:5': [1080, 1350],
+    '9:16': [1080, 1920],
+    '16:9': [1280, 720],
+    '1.91:1': [1200, 627]
+  };
+
+  const TEMPLATES = [
+    { id: 'quote', name: 'Quote Card', desc: 'Centered quotation marks' },
+    { id: 'tip', name: 'Tip / List', desc: 'Headline + bullet summary' },
+    { id: 'stat', name: 'Stat Highlight', desc: 'Giant number layout' },
+    { id: 'simple', name: 'Minimal', desc: 'Clean typography only' }
+  ];
+
+  const THEMES = [
+    { id: 'midnight', name: 'Midnight', bg: '#120E22', accent: '#7C5CFC', text: '#F5F3FF', secondary: '#E0D8FF', fontPair: 'outfit_plus', mode: 'dark' },
+    { id: 'coral', name: 'Coral Sun', bg: '#1C0F0D', accent: '#FF6B4A', text: '#FFF2EF', secondary: '#FFC3B5', fontPair: 'outfit_plus', mode: 'dark' },
+    { id: 'neon', name: 'Cyber Neon', bg: '#080B07', accent: '#B6FF3C', text: '#F5FFE6', secondary: '#D4FFA6', fontPair: 'syne_space', mode: 'dark' },
+    { id: 'pastel', name: 'Pastel Rose', bg: '#FDF2F4', accent: '#FFA3B8', text: '#3B2329', secondary: '#78515A', fontPair: 'outfit_plus', mode: 'light' },
+    { id: 'cream', name: 'Editorial', bg: '#F7F2E8', accent: '#C25E3B', text: '#2E2620', secondary: '#5A4D45', fontPair: 'playfair_inter', mode: 'light' },
+    { id: 'mono', name: 'Bold Mono', bg: '#000000', accent: '#FFFFFF', text: '#FFFFFF', secondary: '#CCCCCC', fontPair: 'jetbrains_mono', mode: 'dark' }
+  ];
+
+  const FONT_PAIRINGS = [
+    { id: 'outfit_plus', name: 'Outfit & Plus Jakarta', titleFont: 'Outfit', bodyFont: 'Plus Jakarta Sans' },
+    { id: 'syne_space', name: 'Syne & Space Grotesk', titleFont: 'Syne', bodyFont: 'Space Grotesk' },
+    { id: 'playfair_inter', name: 'Playfair & Inter', titleFont: 'Playfair Display', bodyFont: 'Inter' },
+    { id: 'jetbrains_mono', name: 'JetBrains Mono', titleFont: 'JetBrains Mono', bodyFont: 'JetBrains Mono' },
+    { id: 'outfit_inter', name: 'Outfit & Inter', titleFont: 'Outfit', bodyFont: 'Inter' }
+  ];
+
+  const HASHTAG_PRESETS = [
+    '#DesignStudio', '#SocialMedia', '#MarketingTips', '#CreatorEconomy', 
+    '#GraphicDesign', '#ContentCreation', '#SaaSMarketing', '#Branding', 
+    '#RelatableContent', '#Inspiration', '#GrowthHacking', '#UXDesign'
+  ];
+
+  /* ---------------- STATE MACHINE ---------------- */
+  let state = {
+    platform: 'instagram',
+    ratio: '1:1',
+    template: 'quote',
+    theme: 'midnight',
+    fontPairing: 'outfit_plus',
+    bgType: 'solid', // solid, gradient, pattern
+    customBg: '#120E22',
+    customAccent: '#7C5CFC',
+    customTextColor: '#F5F3FF',
+    gradType: 'linear',
+    gradAngle: 135,
+    gradColor1: '#120E22',
+    gradColor2: '#221E30',
+    patternType: 'none',
+    patternOpacity: 15,
+    patternDensity: 30,
+    align: 'center',
+    autoFit: true,
+    titleFontSize: 50,
+    bodyFontSize: 24,
+    contentPadding: 9,
+    watermark: true,
+    watermarkText: '@DesignStudioLive',
+    
+    // Media uploads
+    bgImage: null,
+    bgImageScale: 100,
+    bgImageOpacity: 40,
+    bgImageBlur: 0,
+    
+    logoImage: null,
+    logoScale: 20,
+    logoOpacity: 80,
+    logoPosition: 'bottom-right',
+
+    // Recent colors
+    recentColors: ['#7C5CFC', '#FF6B4A', '#B6FF3C', '#FFA3B8', '#C25E3B', '#FFFFFF', '#120E22', '#FDF2F4']
+  };
+
+  /* ---------------- CORE CANVAS ELEMENTS ---------------- */
+  const canvas = document.getElementById('mainCanvas');
+  const ctx = canvas.getContext('2d');
+
+  /* ---------------- INITIALIZATION & UI POPULATION ---------------- */
+  
+  // Platform Grid
+  const platformGrid = document.getElementById('platformGrid');
+  PLATFORMS.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'platform-btn' + (p.id === state.platform ? ' active' : '');
+    btn.innerHTML = `${p.icon} <span>${p.label}</span>`;
+    btn.dataset.id = p.id;
+    btn.onclick = () => {
+      state.platform = p.id;
+      // switch to first ratio preset
+      state.ratio = p.ratios[0];
+      updatePlatformUI();
+      updateRatioUI();
+      render();
+    };
+    platformGrid.appendChild(btn);
+  });
+
+  function updatePlatformUI() {
+    [...platformGrid.children].forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.id === state.platform);
+    });
+    const curPlatform = PLATFORMS.find(p => p.id === state.platform);
+    document.getElementById('platformNameLabel').textContent = curPlatform.label;
+  }
+
+  // Ratio Chips Row
+  const ratioRow = document.getElementById('ratioRow');
+  function updateRatioUI() {
+    ratioRow.innerHTML = '';
+    const curPlatform = PLATFORMS.find(p => p.id === state.platform);
+    curPlatform.ratios.forEach(r => {
+      const chip = document.createElement('div');
+      chip.className = 'ratio-chip' + (r === state.ratio ? ' active' : '');
+      chip.textContent = r;
+      chip.onclick = () => {
+        state.ratio = r;
+        [...ratioRow.children].forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        render();
+      };
+      ratioRow.appendChild(chip);
+    });
+  }
+
+  // Design Templates Grid
+  const templateGrid = document.getElementById('templateGrid');
+  TEMPLATES.forEach(t => {
+    const btn = document.createElement('div');
+    btn.className = 'tpl-btn' + (t.id === state.template ? ' active' : '');
+    btn.innerHTML = `<strong>${t.name}</strong>${t.desc}`;
+    btn.dataset.id = t.id;
+    btn.onclick = () => {
+      state.template = t.id;
+      [...templateGrid.children].forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    };
+    templateGrid.appendChild(btn);
+  });
+
+  // Font Pairings Select options
+  const fontPairingSelect = document.getElementById('fontPairingSelect');
+  FONT_PAIRINGS.forEach(fp => {
+    const opt = document.createElement('option');
+    opt.value = fp.id;
+    opt.textContent = fp.name;
+    fontPairingSelect.appendChild(opt);
+  });
+  fontPairingSelect.value = state.fontPairing;
+  fontPairingSelect.onchange = (e) => {
+    state.fontPairing = e.target.value;
+    render();
+  };
+
+  // Theme presets Swatch Grid
+  const themeGrid = document.getElementById('themeGrid');
+  THEMES.forEach(t => {
+    const swatch = document.createElement('div');
+    swatch.className = 'theme-swatch' + (t.id === state.theme ? ' active' : '');
+    swatch.style.setProperty('--swatch-bg', t.bg);
+    swatch.style.setProperty('--swatch-accent', t.accent);
+    swatch.innerHTML = `<span>${t.name}</span>`;
+    swatch.dataset.id = t.id;
+    swatch.onclick = () => {
+      state.theme = t.id;
+      [...themeGrid.children].forEach(c => c.classList.remove('active'));
+      swatch.classList.add('active');
+      
+      // Load Theme variables to custom state
+      state.customBg = t.bg;
+      state.customAccent = t.accent;
+      state.customTextColor = t.text;
+      state.fontPairing = t.fontPair;
+      
+      document.getElementById('customBg').value = t.bg;
+      document.getElementById('customAccent').value = t.accent;
+      document.getElementById('customTextColor').value = t.text;
+      fontPairingSelect.value = t.fontPair;
+
+      // Reset to solid bg as default theme color
+      switchBgTab('tab-solid');
+      state.bgType = 'solid';
+      
+      render();
+    };
+    themeGrid.appendChild(swatch);
+  });
+
+  /* ---------------- TABS INTERACTIVE MECHANICS ---------------- */
+  const customizerTabs = document.querySelectorAll('.tab-btn');
+  customizerTabs.forEach(tab => {
+    tab.onclick = () => {
+      const targetTab = tab.dataset.tab;
+      switchBgTab(targetTab);
+      
+      if (targetTab === 'tab-solid') state.bgType = 'solid';
+      else if (targetTab === 'tab-gradient') state.bgType = 'gradient';
+      else if (targetTab === 'tab-pattern') state.bgType = 'pattern';
+      
+      render();
+    };
+  });
+
+  function switchBgTab(targetId) {
+    customizerTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === targetId));
+    document.querySelectorAll('.tab-content').forEach(c => {
+      c.classList.toggle('active', c.id === targetId);
+    });
+  }
+
+  /* ---------------- RECENT COLORS AND SWATCHES ---------------- */
+  const recentColorsContainer = document.getElementById('recentColors');
+  
+  function updateRecentColorsUI() {
+    recentColorsContainer.innerHTML = '';
+    state.recentColors.slice(0, 10).forEach(color => {
+      const sw = document.createElement('div');
+      sw.className = 'recent-color-swatch';
+      sw.style.backgroundColor = color;
+      sw.title = `Apply ${color}`;
+      sw.onclick = () => {
+        // Apply color to background or accent depending on active color customizer tab
+        const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
+        if (activeTab === 'tab-solid') {
+          state.customBg = color;
+          document.getElementById('customBg').value = color;
+        } else if (activeTab === 'tab-gradient') {
+          state.gradColor1 = color;
+          document.getElementById('gradColor1').value = color;
+        }
+        render();
+      };
+      recentColorsContainer.appendChild(sw);
+    });
+  }
+
+  function addRecentColor(color) {
+    if (!color) return;
+    color = color.toUpperCase();
+    state.recentColors = state.recentColors.filter(c => c !== color);
+    state.recentColors.unshift(color);
+    if (state.recentColors.length > 12) state.recentColors.pop();
+    updateRecentColorsUI();
+    localStorage.setItem('studio_recent_colors', JSON.stringify(state.recentColors));
+  }
+
+  // Load colors from storage if exists
+  const localColors = localStorage.getItem('studio_recent_colors');
+  if (localColors) {
+    state.recentColors = JSON.parse(localColors);
+  }
+  updateRecentColorsUI();
+
+  /* ---------------- CUSTOM COLOR INPUTS BINDING ---------------- */
+  document.getElementById('customBg').onchange = (e) => {
+    state.customBg = e.target.value;
+    addRecentColor(e.target.value);
+    render();
+  };
+  document.getElementById('customBg').oninput = (e) => {
+    state.customBg = e.target.value;
+    render();
+  };
+  
+  document.getElementById('customAccent').onchange = (e) => {
+    state.customAccent = e.target.value;
+    addRecentColor(e.target.value);
+    render();
+  };
+  document.getElementById('customAccent').oninput = (e) => {
+    state.customAccent = e.target.value;
+    render();
+  };
+
+  document.getElementById('customTextColor').onchange = (e) => {
+    state.customTextColor = e.target.value;
+    addRecentColor(e.target.value);
+    render();
+  };
+  document.getElementById('customTextColor').oninput = (e) => {
+    state.customTextColor = e.target.value;
+    render();
+  };
+
+  /* ---------------- GRADIENT CONTROLS BINDING ---------------- */
+  const gradTypeSelect = document.getElementById('gradType');
+  const gradAngleInput = document.getElementById('gradAngle');
+  const gradColor1Input = document.getElementById('gradColor1');
+  const gradColor2Input = document.getElementById('gradColor2');
+  const gradAngleRow = document.getElementById('gradAngleRow');
+
+  gradTypeSelect.onchange = (e) => {
+    state.gradType = e.target.value;
+    gradAngleRow.style.display = e.target.value === 'radial' ? 'none' : 'flex';
+    render();
+  };
+  gradAngleInput.oninput = (e) => {
+    state.gradAngle = parseInt(e.target.value);
+    render();
+  };
+  gradColor1Input.onchange = (e) => {
+    state.gradColor1 = e.target.value;
+    addRecentColor(e.target.value);
+    render();
+  };
+  gradColor1Input.oninput = (e) => {
+    state.gradColor1 = e.target.value;
+    render();
+  };
+  gradColor2Input.onchange = (e) => {
+    state.gradColor2 = e.target.value;
+    addRecentColor(e.target.value);
+    render();
+  };
+  gradColor2Input.oninput = (e) => {
+    state.gradColor2 = e.target.value;
+    render();
+  };
+
+  /* ---------------- PATTERN CONTROLS BINDING ---------------- */
+  const patternTypeSelect = document.getElementById('patternType');
+  const patternOpacityRange = document.getElementById('patternOpacity');
+  const patternDensityRange = document.getElementById('patternDensity');
+
+  patternTypeSelect.onchange = (e) => {
+    state.patternType = e.target.value;
+    render();
+  };
+  patternOpacityRange.oninput = (e) => {
+    state.patternOpacity = parseInt(e.target.value);
+    render();
+  };
+  patternDensityRange.oninput = (e) => {
+    state.patternDensity = parseInt(e.target.value);
+    render();
+  };
+
+  /* ---------------- PHOTO BACKGROUND LAYER CONTROLS ---------------- */
+  const bgImageInput = document.getElementById('bgImageFile');
+  const bgControlsDiv = document.getElementById('bgImageControls');
+  const btnRemoveBgImage = document.getElementById('btnRemoveBgImage');
+  const lblBgUpload = document.getElementById('lblBgUpload');
+
+  bgImageInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        state.bgImage = img;
+        bgControlsDiv.style.display = 'flex';
+        btnRemoveBgImage.style.display = 'inline-block';
+        lblBgUpload.querySelector('span').textContent = 'Photo uploaded ✓';
+        render();
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  btnRemoveBgImage.onclick = () => {
+    state.bgImage = null;
+    bgImageInput.value = '';
+    bgControlsDiv.style.display = 'none';
+    btnRemoveBgImage.style.display = 'none';
+    lblBgUpload.querySelector('span').textContent = 'Upload Photo...';
+    render();
+  };
+
+  document.getElementById('bgImageScale').oninput = (e) => {
+    state.bgImageScale = parseInt(e.target.value);
+    render();
+  };
+  document.getElementById('bgImageOpacity').oninput = (e) => {
+    state.bgImageOpacity = parseInt(e.target.value);
+    render();
+  };
+  document.getElementById('bgImageBlur').oninput = (e) => {
+    state.bgImageBlur = parseInt(e.target.value);
+    render();
+  };
+
+  /* ---------------- LOGO LAYER CONTROLS ---------------- */
+  const logoInput = document.getElementById('logoFile');
+  const logoControlsDiv = document.getElementById('logoControls');
+  const btnRemoveLogo = document.getElementById('btnRemoveLogo');
+  const lblLogoUpload = document.getElementById('lblLogoUpload');
+
+  logoInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        state.logoImage = img;
+        logoControlsDiv.style.display = 'flex';
+        btnRemoveLogo.style.display = 'inline-block';
+        lblLogoUpload.querySelector('span').textContent = 'Logo loaded ✓';
+        render();
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  btnRemoveLogo.onclick = () => {
+    state.logoImage = null;
+    logoInput.value = '';
+    logoControlsDiv.style.display = 'none';
+    btnRemoveLogo.style.display = 'none';
+    lblLogoUpload.querySelector('span').textContent = 'Upload Logo PNG...';
+    render();
+  };
+
+  document.getElementById('logoScale').oninput = (e) => {
+    state.logoScale = parseInt(e.target.value);
+    render();
+  };
+  document.getElementById('logoOpacity').oninput = (e) => {
+    state.logoOpacity = parseInt(e.target.value);
+    render();
+  };
+  document.getElementById('logoPosition').onchange = (e) => {
+    state.logoPosition = e.target.value;
+    render();
+  };
+
+  /* ---------------- TEXT CONTENT & ALIGN BINDINGS ---------------- */
+  const inputTitle = document.getElementById('inputTitle');
+  const inputBody = document.getElementById('inputBody');
+  const inputCaption = document.getElementById('inputCaption');
+  const inputHashtags = document.getElementById('inputHashtags');
+  const watermarkText = document.getElementById('watermarkText');
+
+  [inputTitle, inputBody, watermarkText].forEach(el => {
+    el.addEventListener('input', render);
+  });
+
+  // Text Alignment Buttons
+  const alignButtons = document.querySelectorAll('.align-btn');
+  alignButtons.forEach(btn => {
+    btn.onclick = () => {
+      state.align = btn.dataset.align;
+      alignButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    };
+  });
+
+  // Auto Fit size controls
+  const autoFitSwitch = document.getElementById('autoFitSwitch');
+  const manualFontSizes = document.getElementById('manualFontSizes');
+  autoFitSwitch.onclick = () => {
+    state.autoFit = !state.autoFit;
+    autoFitSwitch.classList.toggle('on', state.autoFit);
+    manualFontSizes.style.display = state.autoFit ? 'none' : 'flex';
+    render();
+  };
+
+  document.getElementById('titleFontSize').oninput = (e) => {
+    state.titleFontSize = parseInt(e.target.value);
+    render();
+  };
+  document.getElementById('bodyFontSize').oninput = (e) => {
+    state.bodyFontSize = parseInt(e.target.value);
+    render();
+  };
+
+  document.getElementById('contentPadding').oninput = (e) => {
+    state.contentPadding = parseInt(e.target.value);
+    render();
+  };
+
+  // Watermark Handle Switch
+  const watermarkSwitch = document.getElementById('watermarkSwitch');
+  const watermarkTextWrap = document.getElementById('watermarkTextWrap');
+  watermarkSwitch.onclick = () => {
+    state.watermark = !state.watermark;
+    watermarkSwitch.classList.toggle('on', state.watermark);
+    watermarkTextWrap.style.display = state.watermark ? 'flex' : 'none';
+    render();
+  };
+
+  /* ---------------- CAPTION COPY AND HASHTAG QUICK-ADD CHIPS ---------------- */
+  const hashtagChipsContainer = document.getElementById('hashtagChips');
+  HASHTAG_PRESETS.forEach(tag => {
+    const chip = document.createElement('div');
+    chip.className = 'hchip';
+    chip.textContent = tag;
+    chip.onclick = () => {
+      const curVal = inputHashtags.value.trim();
+      const tagsArray = curVal ? curVal.split(/\s+/) : [];
+      if (!tagsArray.includes(tag)) {
+        tagsArray.push(tag);
+        inputHashtags.value = tagsArray.join(' ');
+        updateCaptionPreview();
+      }
+    };
+    hashtagChipsContainer.appendChild(chip);
+  });
+
+  inputCaption.addEventListener('input', updateCaptionPreview);
+  inputHashtags.addEventListener('input', updateCaptionPreview);
+
+  function updateCaptionPreview() {
+    const p = PLATFORMS.find(x => x.id === state.platform);
+    const limit = p ? p.charLimit : 2200;
+    
+    const captionText = inputCaption.value;
+    const hashtagsText = inputHashtags.value.trim();
+    
+    // Assemble
+    const fullText = hashtagsText ? `${captionText}\n\n${hashtagsText}` : captionText;
+    
+    // Update char counter
+    const length = fullText.length;
+    const counterEl = document.getElementById('captionLengthStatus');
+    counterEl.textContent = `${length}/${limit}`;
+    counterEl.classList.toggle('warn', length > limit);
+    
+    // Text preview
+    const previewEl = document.getElementById('captionPreviewText');
+    const escapedText = escapeHTML(captionText);
+    const escapedHashtags = escapeHTML(hashtagsText);
+    
+    previewEl.innerHTML = escapedText + (escapedHashtags ? `\n\n<span class="hash">${escapedHashtags}</span>` : '');
+  }
+
+  function escapeHTML(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  /* ---------------- DRAFTS SYSTEM ---------------- */
+  const draftNameInput = document.getElementById('draftNameInput');
+  const btnSaveDraft = document.getElementById('btnSaveDraft');
+  const draftList = document.getElementById('draftList');
+
+  btnSaveDraft.onclick = () => {
+    const name = draftNameInput.value.trim();
+    if (!name) {
+      showToast('Enter a name for the draft');
+      return;
+    }
+    
+    const drafts = getDrafts();
+    // Serialize state
+    const savedState = {
+      platform: state.platform,
+      ratio: state.ratio,
+      template: state.template,
+      theme: state.theme,
+      fontPairing: state.fontPairing,
+      bgType: state.bgType,
+      customBg: state.customBg,
+      customAccent: state.customAccent,
+      customTextColor: state.customTextColor,
+      gradType: state.gradType,
+      gradAngle: state.gradAngle,
+      gradColor1: state.gradColor1,
+      gradColor2: state.gradColor2,
+      patternType: state.patternType,
+      patternOpacity: state.patternOpacity,
+      patternDensity: state.patternDensity,
+      align: state.align,
+      autoFit: state.autoFit,
+      titleFontSize: state.titleFontSize,
+      bodyFontSize: state.bodyFontSize,
+      contentPadding: state.contentPadding,
+      watermark: state.watermark,
+      watermarkText: watermarkText.value,
+      
+      titleText: inputTitle.value,
+      bodyText: inputBody.value,
+      captionText: inputCaption.value,
+      hashtagsText: inputHashtags.value
+    };
+
+    drafts[name] = savedState;
+    localStorage.setItem('studio_drafts', JSON.stringify(drafts));
+    draftNameInput.value = '';
+    updateDraftsUI();
+    showToast(`Draft "${name}" saved!`);
+  };
+
+  function getDrafts() {
+    const drafts = localStorage.getItem('studio_drafts');
+    return drafts ? JSON.parse(drafts) : {};
+  }
+
+  function updateDraftsUI() {
+    draftList.innerHTML = '';
+    const drafts = getDrafts();
+    const keys = Object.keys(drafts);
+    
+    if (keys.length === 0) {
+      draftList.innerHTML = '<div style="font-size:11.5px; color:var(--text-muted); text-align:center; padding:10px;">No drafts saved yet</div>';
+      return;
+    }
+    
+    keys.forEach(k => {
+      const item = document.createElement('div');
+      item.className = 'draft-item';
+      
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'draft-name';
+      nameSpan.textContent = k;
+      nameSpan.onclick = () => {
+        loadDraft(k);
+      };
+      
+      const delBtn = document.createElement('button');
+      delBtn.className = 'draft-del-btn';
+      delBtn.innerHTML = `
+        <svg style="width:14px; height:14px;" viewBox="0 0 24 24">
+          <path fill="currentColor" d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14V4zM6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12z"/>
+        </svg>
+      `;
+      delBtn.onclick = () => {
+        deleteDraft(k);
+      };
+      
+      item.appendChild(nameSpan);
+      item.appendChild(delBtn);
+      draftList.appendChild(item);
+    });
+  }
+
+  function loadDraft(name) {
+    const drafts = getDrafts();
+    const d = drafts[name];
+    if (!d) return;
+
+    state.platform = d.platform || 'instagram';
+    state.ratio = d.ratio || '1:1';
+    state.template = d.template || 'quote';
+    state.theme = d.theme || 'midnight';
+    state.fontPairing = d.fontPairing || 'outfit_plus';
+    state.bgType = d.bgType || 'solid';
+    state.customBg = d.customBg || '#120E22';
+    state.customAccent = d.customAccent || '#7C5CFC';
+    state.customTextColor = d.customTextColor || '#F5F3FF';
+    state.gradType = d.gradType || 'linear';
+    state.gradAngle = d.gradAngle || 135;
+    state.gradColor1 = d.gradColor1 || '#120E22';
+    state.gradColor2 = d.gradColor2 || '#221E30';
+    state.patternType = d.patternType || 'none';
+    state.patternOpacity = d.patternOpacity !== undefined ? d.patternOpacity : 15;
+    state.patternDensity = d.patternDensity !== undefined ? d.patternDensity : 30;
+    state.align = d.align || 'center';
+    state.autoFit = d.autoFit !== undefined ? d.autoFit : true;
+    state.titleFontSize = d.titleFontSize || 50;
+    state.bodyFontSize = d.bodyFontSize || 24;
+    state.contentPadding = d.contentPadding || 9;
+    state.watermark = d.watermark !== undefined ? d.watermark : true;
+    
+    // UI fields loading
+    watermarkText.value = d.watermarkText || '@DesignStudioLive';
+    inputTitle.value = d.titleText || '';
+    inputBody.value = d.bodyText || '';
+    inputCaption.value = d.captionText || '';
+    inputHashtags.value = d.hashtagsText || '';
+
+    // Color pickers values sync
+    document.getElementById('customBg').value = state.customBg;
+    document.getElementById('customAccent').value = state.customAccent;
+    document.getElementById('customTextColor').value = state.customTextColor;
+    
+    gradTypeSelect.value = state.gradType;
+    gradAngleInput.value = state.gradAngle;
+    gradColor1Input.value = state.gradColor1;
+    gradColor2Input.value = state.gradColor2;
+    gradAngleRow.style.display = state.gradType === 'radial' ? 'none' : 'flex';
+    
+    patternTypeSelect.value = state.patternType;
+    patternOpacityRange.value = state.patternOpacity;
+    patternDensityRange.value = state.patternDensity;
+
+    // Font pairing select sync
+    fontPairingSelect.value = state.fontPairing;
+
+    // Alignment state sync
+    alignButtons.forEach(b => {
+      b.classList.toggle('active', b.dataset.align === state.align);
+    });
+
+    // Auto-fit switch state sync
+    autoFitSwitch.classList.toggle('on', state.autoFit);
+    manualFontSizes.style.display = state.autoFit ? 'none' : 'flex';
+    document.getElementById('titleFontSize').value = state.titleFontSize;
+    document.getElementById('bodyFontSize').value = state.bodyFontSize;
+    document.getElementById('contentPadding').value = state.contentPadding;
+
+    // Watermark switch state sync
+    watermarkSwitch.classList.toggle('on', state.watermark);
+    watermarkTextWrap.style.display = state.watermark ? 'flex' : 'none';
+
+    // Tabs update
+    if (state.bgType === 'solid') switchBgTab('tab-solid');
+    else if (state.bgType === 'gradient') switchBgTab('tab-gradient');
+    else if (state.bgType === 'pattern') switchBgTab('tab-pattern');
+
+    // Remove file references to keep it simple, or reset them
+    btnRemoveBgImage.click();
+    btnRemoveLogo.click();
+
+    updatePlatformUI();
+    updateRatioUI();
+    
+    // Sync template button active classes
+    [...templateGrid.children].forEach(c => {
+      c.classList.toggle('active', c.dataset.id === state.template);
+    });
+
+    // Sync theme swatch active classes
+    [...themeGrid.children].forEach(c => {
+      c.classList.toggle('active', c.dataset.id === state.theme);
+    });
+
+    updateCaptionPreview();
+    render();
+    showToast(`Loaded draft "${name}"`);
+  }
+
+  function deleteDraft(name) {
+    const drafts = getDrafts();
+    if (drafts[name]) {
+      delete drafts[name];
+      localStorage.setItem('studio_drafts', JSON.stringify(drafts));
+      updateDraftsUI();
+      showToast(`Draft "${name}" deleted`);
+    }
+  }
+
+  updateDraftsUI();
+
+  /* ---------------- GRAPHICS RENDERING PIPELINE ---------------- */
+  
+  function getThemeColors() {
+    return {
+      bg: state.customBg,
+      accent: state.customAccent,
+      text: state.customTextColor
+    };
+  }
+
+  function getFontPairing() {
+    return FONT_PAIRINGS.find(fp => fp.id === state.fontPairing) || FONT_PAIRINGS[0];
+  }
+
+  function wrapText(context, text, maxWidth) {
+    const words = text.split(/\s+/);
+    const lines = [];
+    let line = '';
+    
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (context.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function fitFontSize(context, text, maxWidth, maxHeight, startSize, fontFamily, weight, lineHeightMult) {
+    let size = startSize;
+    context.font = `${weight} ${size}px "${fontFamily}", sans-serif`;
+    let lines = wrapText(context, text, maxWidth);
+    
+    if (!state.autoFit) {
+      return { size: startSize, lines };
+    }
+    
+    // Auto-fit loop
+    while (size > 18) {
+      context.font = `${weight} ${size}px "${fontFamily}", sans-serif`;
+      lines = wrapText(context, text, maxWidth);
+      const totalHeight = lines.length * size * lineHeightMult;
+      if (totalHeight <= maxHeight) {
+        return { size, lines };
+      }
+      size -= 2;
+    }
+    
+    context.font = `${weight} ${size}px "${fontFamily}", sans-serif`;
+    return { size, lines };
+  }
+
+  function renderGraphic(targetCanvas, targetRatio, targetPlatform, isThumbnail = false) {
+    const tempCtx = targetCanvas.getContext('2d');
+    const [w, h] = RATIO_DIMS[targetRatio] || [1080, 1080];
+    
+    targetCanvas.width = w;
+    targetCanvas.height = h;
+
+    const colors = getThemeColors();
+    const font = getFontPairing();
+    const titleText = inputTitle.value.trim() || 'Double-click to edit your catchphrase';
+    const bodyText = inputBody.value.trim();
+    
+    const pad = w * (state.contentPadding / 100);
+
+    // 1. Draw Background Type (Solid or Gradient)
+    if (state.bgType === 'gradient') {
+      let grad;
+      if (state.gradType === 'radial') {
+        grad = tempCtx.createRadialGradient(w/2, h/2, w*0.1, w/2, h/2, w*0.8);
+      } else {
+        // Convert angle (degrees) to coordinates
+        const angleRad = (state.gradAngle * Math.PI) / 180;
+        const x1 = w/2 - Math.cos(angleRad) * w/2;
+        const y1 = h/2 - Math.sin(angleRad) * h/2;
+        const x2 = w/2 + Math.cos(angleRad) * w/2;
+        const y2 = h/2 + Math.sin(angleRad) * h/2;
+        grad = tempCtx.createLinearGradient(x1, y1, x2, y2);
+      }
+      grad.addColorStop(0, state.gradColor1);
+      grad.addColorStop(1, state.gradColor2);
+      tempCtx.fillStyle = grad;
+    } else {
+      tempCtx.fillStyle = colors.bg;
+    }
+    tempCtx.fillRect(0, 0, w, h);
+
+    // 2. Draw Background Image Layer
+    if (state.bgImage) {
+      tempCtx.save();
+      if (state.bgImageBlur > 0) {
+        tempCtx.filter = `blur(${state.bgImageBlur}px)`;
+      }
+      tempCtx.globalAlpha = state.bgImageOpacity / 100;
+      
+      const imgW = state.bgImage.width;
+      const imgH = state.bgImage.height;
+      const scale = state.bgImageScale / 100;
+      
+      // Calculate aspect crop
+      const canvasRatio = w / h;
+      const imgRatio = imgW / imgH;
+      
+      let renderW, renderH;
+      if (imgRatio > canvasRatio) {
+        // Image is wider
+        renderH = h * scale;
+        renderW = renderH * imgRatio;
+      } else {
+        // Image is taller
+        renderW = w * scale;
+        renderH = renderW / imgRatio;
+      }
+      
+      const rx = (w - renderW) / 2;
+      const ry = (h - renderH) / 2;
+      
+      tempCtx.drawImage(state.bgImage, rx, ry, renderW, renderH);
+      tempCtx.restore();
+    }
+
+    // 3. Draw Pattern Overlay
+    if (state.patternType !== 'none') {
+      tempCtx.save();
+      tempCtx.globalAlpha = state.patternOpacity / 100;
+      tempCtx.fillStyle = colors.accent;
+      tempCtx.strokeStyle = colors.accent;
+      
+      const spacing = state.patternDensity * (w / 1000) * 1.5; // Scale spacing with resolution
+      
+      if (state.patternType === 'dots') {
+        for (let x = spacing / 2; x < w; x += spacing) {
+          for (let y = spacing / 2; y < h; y += spacing) {
+            tempCtx.beginPath();
+            tempCtx.arc(x, y, w * 0.0025, 0, Math.PI * 2);
+            tempCtx.fill();
+          }
+        }
+      } else if (state.patternType === 'grid') {
+        tempCtx.lineWidth = w * 0.001;
+        tempCtx.beginPath();
+        for (let x = 0; x < w; x += spacing) {
+          tempCtx.moveTo(x, 0);
+          tempCtx.lineTo(x, h);
+        }
+        for (let y = 0; y < h; y += spacing) {
+          tempCtx.moveTo(0, y);
+          tempCtx.lineTo(w, y);
+        }
+        tempCtx.stroke();
+      } else if (state.patternType === 'stripes') {
+        tempCtx.lineWidth = w * 0.0015;
+        tempCtx.beginPath();
+        for (let offset = -h; offset < w; offset += spacing) {
+          tempCtx.moveTo(offset, 0);
+          tempCtx.lineTo(offset + h, h);
+        }
+        tempCtx.stroke();
+      } else if (state.patternType === 'noise') {
+        const count = (w * h) * 0.0008 * (state.patternDensity / 30);
+        for (let i = 0; i < count; i++) {
+          const rx = Math.random() * w;
+          const ry = Math.random() * h;
+          const size = Math.random() * (w * 0.002) + 1;
+          tempCtx.fillRect(rx, ry, size, size);
+        }
+      }
+      tempCtx.restore();
+    }
+
+    // 4. Setup Alignment coordinates
+    const align = state.align;
+    tempCtx.textAlign = align;
+    tempCtx.textBaseline = 'middle';
+    
+    let alignX = w / 2;
+    if (align === 'left') alignX = pad;
+    else if (align === 'right') alignX = w - pad;
+    
+    const maxTextWidth = w - pad * 2;
+    
+    // 5. Draw templates layout
+    if (state.template === 'stat') {
+      // Statistic template layout
+      const parts = titleText.split(' ');
+      const heroText = parts[0] || '10X';
+      const secondaryLabel = parts.slice(1).join(' ') || 'Growth in design efficiency';
+      
+      // Giant stat number
+      tempCtx.fillStyle = colors.accent;
+      const heroSize = w * 0.22;
+      tempCtx.font = `900 ${heroSize}px "${font.titleFont}", sans-serif`;
+      tempCtx.fillText(heroText, alignX, h * 0.38);
+      
+      // Supporting label
+      tempCtx.fillStyle = colors.text;
+      const labelMaxHeight = h * 0.35;
+      const startSize = state.autoFit ? w * 0.055 : state.bodyFontSize;
+      const fit = fitFontSize(tempCtx, secondaryLabel, maxTextWidth, labelMaxHeight, startSize, font.bodyFont, '600', 1.35);
+      
+      drawLines(tempCtx, fit.lines, alignX, h * 0.65, fit.size * 1.35, align);
+      
+    } else if (state.template === 'tip') {
+      // Tip card template layout
+      tempCtx.save();
+      // Draw Tip capsule
+      const tipText = 'PRO TIP';
+      tempCtx.font = `900 ${w * 0.026}px "${font.bodyFont}", sans-serif`;
+      const txtWidth = tempCtx.measureText(tipText).width;
+      const capW = txtWidth + w * 0.04;
+      const capH = w * 0.06;
+      
+      let capX = w / 2 - capW / 2;
+      if (align === 'left') capX = pad;
+      else if (align === 'right') capX = w - pad - capW;
+      
+      const capY = h * 0.13;
+      
+      // Capsule border/bg
+      tempCtx.strokeStyle = colors.accent;
+      tempCtx.lineWidth = w * 0.002;
+      tempCtx.fillStyle = hexToRgba(colors.accent, 0.1);
+      roundRect(tempCtx, capX, capY - capH/2, capW, capH, w * 0.03, true, true);
+      
+      // Capsule text
+      tempCtx.fillStyle = colors.accent;
+      tempCtx.fillText(tipText, capX + capW/2, capY);
+      tempCtx.restore();
+
+      // Heading Title
+      tempCtx.fillStyle = colors.text;
+      const titleMaxHeight = h * 0.38;
+      const startSize = state.autoFit ? w * 0.065 : state.titleFontSize;
+      const fitTitle = fitFontSize(tempCtx, titleText, maxTextWidth, titleMaxHeight, startSize, font.titleFont, '800', 1.25);
+      
+      const titleCenterY = h * 0.44;
+      drawLines(tempCtx, fitTitle.lines, alignX, titleCenterY, fitTitle.size * 1.25, align);
+
+      // Body text below
+      if (bodyText) {
+        tempCtx.fillStyle = colors.text;
+        tempCtx.save();
+        tempCtx.globalAlpha = 0.8;
+        
+        const bodyMaxHeight = h * 0.25;
+        const bStartSize = state.autoFit ? w * 0.035 : state.bodyFontSize;
+        const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '400', 1.45);
+        
+        const bodyCenterY = h * 0.74;
+        drawLines(tempCtx, fitBody.lines, alignX, bodyCenterY, fitBody.size * 1.45, align);
+        tempCtx.restore();
+      }
+
+    } else if (state.template === 'simple') {
+      // Minimal template layout
+      tempCtx.fillStyle = colors.text;
+      const startSize = state.autoFit ? w * 0.078 : state.titleFontSize;
+      const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.65, startSize, font.titleFont, '800', 1.3);
+      drawLines(tempCtx, fit.lines, alignX, h * 0.5, fit.size * 1.3, align);
+
+    } else {
+      // Quote layout (Default)
+      tempCtx.save();
+      // Giant quotation marks
+      tempCtx.fillStyle = colors.accent;
+      tempCtx.font = `800 ${w * 0.16}px Georgia, serif`;
+      
+      let quoteX = w / 2;
+      if (align === 'left') quoteX = pad + w * 0.03;
+      else if (align === 'right') quoteX = w - pad - w * 0.03;
+      
+      tempCtx.fillText('“', quoteX, h * 0.22);
+      tempCtx.restore();
+
+      // Quote Title Content
+      tempCtx.fillStyle = colors.text;
+      const startSize = state.autoFit ? w * 0.068 : state.titleFontSize;
+      const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.42, startSize, font.titleFont, '700', 1.3);
+      drawLines(tempCtx, fit.lines, alignX, h * 0.48, fit.size * 1.3, align);
+
+      // Quote Author / Body below
+      if (bodyText) {
+        tempCtx.fillStyle = colors.accent;
+        tempCtx.font = `600 ${w * 0.032}px "${font.bodyFont}", sans-serif`;
+        let authorText = bodyText.startsWith('—') || bodyText.startsWith('-') ? bodyText : `— ${bodyText}`;
+        tempCtx.fillText(authorText, alignX, h * 0.77);
+      }
+    }
+
+    // 6. Draw Logo Layer (if preset and not batch preview)
+    if (state.logoImage && !isThumbnail) {
+      tempCtx.save();
+      tempCtx.globalAlpha = state.logoOpacity / 100;
+      const logoW = state.logoImage.width;
+      const logoH = state.logoImage.height;
+      const targetW = w * (state.logoScale / 100);
+      const targetH = (logoH / logoW) * targetW;
+      
+      const margin = w * 0.05;
+      let lx = 0, ly = 0;
+      
+      switch (state.logoPosition) {
+        case 'top-left': lx = margin; ly = margin; break;
+        case 'top-right': lx = w - targetW - margin; ly = margin; break;
+        case 'bottom-left': lx = margin; ly = h - targetH - margin; break;
+        case 'bottom-right': lx = w - targetW - margin; ly = h - targetH - margin; break;
+        case 'center': lx = (w - targetW) / 2; ly = (h - targetH) / 2; break;
+      }
+      tempCtx.drawImage(state.logoImage, lx, ly, targetW, targetH);
+      tempCtx.restore();
+    }
+
+    // 7. Draw Handle Watermark Text
+    if (state.watermark && !isThumbnail) {
+      tempCtx.save();
+      tempCtx.textAlign = 'center';
+      tempCtx.textBaseline = 'middle';
+      tempCtx.fillStyle = colors.text;
+      tempCtx.globalAlpha = 0.5;
+      
+      const wmText = watermarkText.value.trim() || '@DesignStudioLive';
+      tempCtx.font = `600 ${w * 0.024}px "${font.bodyFont}", sans-serif`;
+      
+      tempCtx.fillText(wmText, w / 2, h - pad * 0.65);
+      tempCtx.restore();
+    }
+  }
+
+  function render() {
+    renderGraphic(canvas, state.ratio, state.platform, false);
+    
+    // Update dimension descriptors
+    const [w, h] = RATIO_DIMS[state.ratio];
+    document.getElementById('dimsLabel').textContent = `${w} × ${h}px`;
+    document.getElementById('canvasDims').textContent = `${w} × ${h}px  ·  ${state.ratio}  ·  ${PLATFORMS.find(p=>p.id===state.platform).label}`;
+    
+    // Trigger device frame adjustments (Phase 3)
+    if (typeof updateDeviceChromes === 'function') {
+      updateDeviceChromes(w, h);
+    }
+  }
+
+  function drawLines(context, lines, x, centerY, lineHeight, align) {
+    const totalHeight = lines.length * lineHeight;
+    let y = centerY - (totalHeight / 2) + (lineHeight / 2);
+    
+    for (const line of lines) {
+      context.textAlign = align;
+      context.fillText(line, x, y);
+      y += lineHeight;
+    }
+  }
+
+  /* ---------------- CANVAS DRAW UTILITIES ---------------- */
+  function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  function roundRect(ctx, x, y, width, height, radius, fill = false, stroke = true) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  /* ---------------- ACTIONS & EXPORT FUNCTIONS ---------------- */
+  const toast = document.getElementById('toast');
+  function showToast(msg) {
+    toast.innerHTML = `<svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> <span>${msg}</span>`;
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2500);
+  }
+
+  // 1. Download PNG
+  document.getElementById('btnDownload').onclick = () => {
+    const link = document.createElement('a');
+    link.download = `content-studio-${state.platform}-${state.ratio}-${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('PNG Graphic Downloaded!');
+  };
+
+  // 2. Copy Image to Clipboard
+  document.getElementById('btnCopyImage').onclick = async () => {
+    try {
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          showToast('Failed to create image blob');
+          return;
+        }
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob })
+        ]);
+        showToast('Image copied to clipboard!');
+      }, 'image/png');
+    } catch (err) {
+      showToast('Clipboard copy unsupported — please download');
+      console.error(err);
+    }
+  };
+
+  // 3. Copy Caption + Hashtags text
+  document.getElementById('btnCopyCaption').onclick = async () => {
+    const cap = inputCaption.value;
+    const tags = inputHashtags.value.trim();
+    const full = tags ? `${cap}\n\n${tags}` : cap;
+    
+    try {
+      await navigator.clipboard.writeText(full);
+      showToast('Caption + hashtags copied!');
+    } catch (err) {
+      showToast('Failed to copy text — copy manually');
+    }
+  };
+
+  /* ---------------- AUTO-RUN INITIALS ---------------- */
+  updatePlatformUI();
+  updateRatioUI();
+  updateCaptionPreview();
+  render();
+
+  // Handle window resize to keep canvas fitting nicely
+  window.addEventListener('resize', render);
 </script>
 </body>
 </html>
