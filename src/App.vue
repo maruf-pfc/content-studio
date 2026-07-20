@@ -861,19 +861,24 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
     drawLines(tempCtx, fit.lines, alignX, h * 0.5, fit.size * 1.15, align, fit.size, font.titleFont, '800', colors.accent, colors.text);
 
   } else {
-    // Quote layout (Default)
+    // Quote layout (Default) - Always Centered Quote Style
+    const quoteAlignX = w / 2;
+    const quoteAlign = 'center';
+
     tempCtx.save();
     tempCtx.fillStyle = colors.accent;
+    tempCtx.textAlign = 'center';
+    tempCtx.textBaseline = 'middle';
     // Elegant quote styling from Georgia serif
     tempCtx.font = `800 ${w * 0.12}px Georgia, serif`;
-    tempCtx.fillText('"', alignX, h * 0.22);
+    tempCtx.fillText('"', quoteAlignX, h * 0.22);
     tempCtx.restore();
 
     // Quote Title Content
     tempCtx.fillStyle = colors.text;
     const startSize = state.autoFit ? w * 0.08 : (state.titleFontSize / 1000) * w;
     const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.45, startSize, font.titleFont, '700', 1.2);
-    drawLines(tempCtx, fit.lines, alignX, h * 0.5, fit.size * 1.2, align, fit.size, font.titleFont, '700', colors.accent, colors.text);
+    drawLines(tempCtx, fit.lines, quoteAlignX, h * 0.5, fit.size * 1.2, quoteAlign, fit.size, font.titleFont, '700', colors.accent, colors.text);
 
     // Quote Author / Body below (with line wrapping auto fit support)
     if (bodyText) {
@@ -884,7 +889,7 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
       const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '600', 1.3);
       
       const authorTextLines = fitBody.lines.map((line, idx) => idx === 0 ? `— ${line}` : `  ${line}`);
-      drawLines(tempCtx, authorTextLines, alignX, h * 0.78, fitBody.size * 1.3, align, fitBody.size, font.bodyFont, '600', colors.accent, colors.text);
+      drawLines(tempCtx, authorTextLines, quoteAlignX, h * 0.78, fitBody.size * 1.3, quoteAlign, fitBody.size, font.bodyFont, '600', colors.accent, colors.text);
     }
   }
 
@@ -925,8 +930,10 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
 }
 
 const render = () => {
-  if (!mainCanvas.value) return;
-  renderGraphic(mainCanvas.value, state.ratio, state.platform, false);
+  nextTick(() => {
+    if (!mainCanvas.value) return;
+    renderGraphic(mainCanvas.value, state.ratio, state.platform, false);
+  });
 };
 
 // Batch Export Previews Generation
