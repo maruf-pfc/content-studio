@@ -2674,8 +2674,178 @@
     document.getElementById('canvasDims').textContent = `${w} × ${h}px  ·  ${state.ratio}  ·  ${PLATFORMS.find(p=>p.id===state.platform).label}`;
     
     // Trigger device frame adjustments (Phase 3)
-    if (typeof updateDeviceChromes === 'function') {
-      updateDeviceChromes(w, h);
+    updateDeviceChromes(w, h);
+  }
+
+  function updateDeviceChromes(w, h) {
+    const wrap = document.getElementById('deviceChromeWrap');
+    if (!wrap) return;
+    
+    // Keep canvas reference
+    const mainCanvas = document.getElementById('mainCanvas');
+    
+    // Determine frame archetype based on aspect ratio
+    const isPhone = state.ratio === '9:16';
+    const isBrowser = state.ratio === '16:9' || state.ratio === '1.91:1';
+    const isFeedCard = state.ratio === '1:1' || state.ratio === '4:5';
+    
+    // Reset wrapper & canvas styling
+    wrap.className = '';
+    wrap.innerHTML = '';
+    mainCanvas.className = '';
+    wrap.style = '';
+    
+    if (isPhone) {
+      wrap.className = 'device-chrome-wrap';
+      wrap.style.padding = '46px 12px 32px 12px';
+      wrap.style.borderRadius = '34px';
+      wrap.style.border = '12px solid #1a162b';
+      wrap.style.background = '#090710';
+      wrap.style.position = 'relative';
+      wrap.style.boxShadow = 'inset 0 0 20px rgba(0,0,0,0.8), 0 25px 60px rgba(0,0,0,0.5)';
+      
+      // Notch cutout
+      const notch = document.createElement('div');
+      notch.className = 'chrome-phone-notch';
+      
+      // Top status indicators
+      const header = document.createElement('div');
+      header.className = 'chrome-phone-header';
+      header.innerHTML = `
+        <div>09:41</div>
+        <div style="display:flex; gap: 6px; align-items:center;">
+          <!-- Signal Icon -->
+          <svg style="width:14px; height:14px;" viewBox="0 0 24 24"><path fill="currentColor" d="M2 22h20V2z"/></svg>
+          <!-- Wifi Icon -->
+          <svg style="width:14px; height:14px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c3.9-3.89 10.21-3.89 14.1 0l1.9-1.9C21.6 15.93 22 13.97 22 12c0-4.97-4.03-9-9-9z"/></svg>
+          <!-- Battery Icon -->
+          <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M17 5H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2m4 4h2v6h-2V9z"/></svg>
+        </div>
+      `;
+      
+      // Home indicator pill
+      const homeIndicator = document.createElement('div');
+      homeIndicator.className = 'chrome-phone-home-indicator';
+      
+      wrap.appendChild(notch);
+      wrap.appendChild(header);
+      wrap.appendChild(mainCanvas);
+      wrap.appendChild(homeIndicator);
+      
+      mainCanvas.classList.add('canvas-phone-styled');
+      
+    } else if (isBrowser) {
+      wrap.className = 'device-chrome-wrap';
+      wrap.style.padding = '0';
+      wrap.style.borderRadius = '14px';
+      wrap.style.border = '2px solid var(--line)';
+      wrap.style.background = '#120e22';
+      wrap.style.overflow = 'hidden';
+      wrap.style.display = 'flex';
+      wrap.style.flexDirection = 'column';
+      wrap.style.boxShadow = '0 25px 60px rgba(0,0,0,0.5)';
+      
+      const browserHeader = document.createElement('div');
+      browserHeader.className = 'chrome-browser-header';
+      
+      const dots = document.createElement('div');
+      dots.className = 'dots';
+      dots.innerHTML = `
+        <div class="dot red"></div>
+        <div class="dot yellow"></div>
+        <div class="dot green"></div>
+      `;
+      
+      const addressBar = document.createElement('div');
+      addressBar.className = 'address-bar';
+      const curPlatform = PLATFORMS.find(p => p.id === state.platform);
+      addressBar.textContent = `contentstudio.live/${curPlatform ? curPlatform.id : 'web'}/${state.ratio}`;
+      
+      browserHeader.appendChild(dots);
+      browserHeader.appendChild(addressBar);
+      
+      wrap.appendChild(browserHeader);
+      wrap.appendChild(mainCanvas);
+      
+    } else if (isFeedCard) {
+      wrap.className = 'chrome-feed-card';
+      wrap.style.padding = '0';
+      wrap.style.border = '1px solid var(--line)';
+      wrap.style.borderRadius = '16px';
+      wrap.style.background = '#110e20';
+      wrap.style.overflow = 'hidden';
+      wrap.style.boxShadow = '0 25px 60px rgba(0,0,0,0.5)';
+      
+      // Instagram-like Card Header
+      const feedHeader = document.createElement('div');
+      feedHeader.className = 'feed-card-header';
+      
+      const avatar = document.createElement('div');
+      avatar.className = 'feed-card-avatar';
+      
+      const meta = document.createElement('div');
+      meta.className = 'feed-card-meta';
+      const handle = watermarkText.value.trim() || '@DesignStudioLive';
+      const p = PLATFORMS.find(x => x.id === state.platform);
+      
+      meta.innerHTML = `
+        <div class="feed-card-name">${handle}</div>
+        <div class="feed-card-sub">${p ? p.label : 'Sponsored'}</div>
+      `;
+      
+      const menuIcon = document.createElement('div');
+      menuIcon.style.marginLeft = 'auto';
+      menuIcon.style.color = 'var(--text-dim)';
+      menuIcon.style.cursor = 'pointer';
+      menuIcon.innerHTML = `
+        <svg style="width:20px; height:20px;" viewBox="0 0 24 24">
+          <path fill="currentColor" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+        </svg>
+      `;
+      
+      feedHeader.appendChild(avatar);
+      feedHeader.appendChild(meta);
+      feedHeader.appendChild(menuIcon);
+      
+      // Footer actions
+      const feedFooter = document.createElement('div');
+      feedFooter.className = 'feed-card-footer';
+      
+      const actions = document.createElement('div');
+      actions.className = 'feed-card-actions';
+      
+      const actionsLeft = document.createElement('div');
+      actionsLeft.className = 'feed-card-actions-left';
+      actionsLeft.innerHTML = `
+        <!-- Heart -->
+        <svg style="width:20px; height:20px; color: var(--accent-coral);" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        <!-- Comment -->
+        <svg style="width:20px; height:20px;" viewBox="0 0 24 24"><path fill="currentColor" d="M9 22a1 1 0 0 1-1-1v-3H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5l-4 4H9z"/></svg>
+        <!-- Share -->
+        <svg style="width:20px; height:20px;" viewBox="0 0 24 24"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      `;
+      
+      const bookmark = document.createElement('div');
+      bookmark.innerHTML = `
+        <svg style="width:20px; height:20px;" viewBox="0 0 24 24"><path fill="currentColor" d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+      `;
+      
+      actions.appendChild(actionsLeft);
+      actions.appendChild(bookmark);
+      
+      const likes = document.createElement('div');
+      likes.className = 'feed-card-likes';
+      likes.textContent = '1,245 likes';
+      
+      feedFooter.appendChild(actions);
+      feedFooter.appendChild(likes);
+      
+      wrap.appendChild(feedHeader);
+      wrap.appendChild(mainCanvas);
+      wrap.appendChild(feedFooter);
+    } else {
+      // Direct placement fallback
+      wrap.appendChild(mainCanvas);
     }
   }
 
