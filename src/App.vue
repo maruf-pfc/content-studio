@@ -1492,7 +1492,7 @@ defineExpose({
   
   @media (max-width: 1024px) {
     .app { grid-template-columns: 1fr; }
-    .canvas-area { order: -1; }
+    .canvas-area { order: -1; height: auto; padding: 24px 16px 40px; }
   }
 
   /* ---- Sidebar ---- */
@@ -1505,7 +1505,7 @@ defineExpose({
   }
   
   @media (max-width: 1024px) {
-    .sidebar { height: auto; }
+    .sidebar { height: auto; padding: 24px 16px 60px; }
   }
 
   .brand {
