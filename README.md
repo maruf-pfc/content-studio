@@ -33,7 +33,9 @@ To highlight specific words in the canvas in your theme's accent color:
 ## Project Structure
 
 * `src/App.vue`: Main Single File Component containing the app state, canvas drawing pipeline, inputs, and UI layout.
-* `src/__tests__/App.spec.ts`: Unit test suite verifying mounting and base render.
+* `src/utils/textHelper.ts`: Pure utility functions for canvas text wrapping and auto font-fitting.
+* `src/__tests__/App.spec.ts`: Unit tests verifying multi-line split behavior and automatic word wrapping.
+* `bunfig.toml`: Configuration file telling `bun test` to skip E2E test discovery.
 * `.github/workflows/ci.yml`: GitHub Actions pipeline configuration.
 
 ---
