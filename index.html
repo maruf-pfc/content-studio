@@ -728,6 +728,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      width: 100%;
     }
 
     /* Realistic device chromes */
@@ -2731,6 +2732,7 @@
     
     // Keep canvas reference
     const mainCanvas = document.getElementById('mainCanvas');
+    const frameWrap = document.getElementById('frameWrap');
     
     // Determine frame archetype based on aspect ratio
     const isPhone = state.ratio === '9:16';
@@ -2744,7 +2746,13 @@
     wrap.style = '';
     
     if (isPhone) {
+      if (frameWrap) {
+        frameWrap.style.width = '100%';
+        frameWrap.style.maxWidth = '340px';
+      }
       wrap.className = 'device-chrome-wrap';
+      wrap.style.width = '100%';
+      wrap.style.boxSizing = 'border-box';
       wrap.style.padding = '46px 12px 32px 12px';
       wrap.style.borderRadius = '34px';
       wrap.style.border = '12px solid #1a162b';
@@ -2763,11 +2771,11 @@
         <div>09:41</div>
         <div style="display:flex; gap: 6px; align-items:center;">
           <!-- Signal Icon -->
-          <svg style="width:14px; height:14px;" viewBox="0 0 24 24"><path fill="currentColor" d="M2 22h20V2z"/></svg>
+          <svg style="width:12px; height:12px;" viewBox="0 0 24 24"><path fill="currentColor" d="M2 22h20V2z"/></svg>
           <!-- Wifi Icon -->
-          <svg style="width:14px; height:14px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c3.9-3.89 10.21-3.89 14.1 0l1.9-1.9C21.6 15.93 22 13.97 22 12c0-4.97-4.03-9-9-9z"/></svg>
+          <svg style="width:12px; height:12px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c3.9-3.89 10.21-3.89 14.1 0l1.9-1.9C21.6 15.93 22 13.97 22 12c0-4.97-4.03-9-9-9z"/></svg>
           <!-- Battery Icon -->
-          <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M17 5H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2m4 4h2v6h-2V9z"/></svg>
+          <svg style="width:14px; height:14px;" viewBox="0 0 24 24"><path fill="currentColor" d="M17 5H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2m4 4h2v6h-2V9z"/></svg>
         </div>
       `;
       
@@ -2783,7 +2791,13 @@
       mainCanvas.classList.add('canvas-phone-styled');
       
     } else if (isBrowser) {
+      if (frameWrap) {
+        frameWrap.style.width = '100%';
+        frameWrap.style.maxWidth = '640px';
+      }
       wrap.className = 'device-chrome-wrap';
+      wrap.style.width = '100%';
+      wrap.style.boxSizing = 'border-box';
       wrap.style.padding = '0';
       wrap.style.borderRadius = '14px';
       wrap.style.border = '2px solid var(--line)';
@@ -2816,7 +2830,13 @@
       wrap.appendChild(mainCanvas);
       
     } else if (isFeedCard) {
+      if (frameWrap) {
+        frameWrap.style.width = '100%';
+        frameWrap.style.maxWidth = '460px';
+      }
       wrap.className = 'chrome-feed-card';
+      wrap.style.width = '100%';
+      wrap.style.boxSizing = 'border-box';
       wrap.style.padding = '0';
       wrap.style.border = '1px solid var(--line)';
       wrap.style.borderRadius = '16px';
@@ -2892,6 +2912,10 @@
       wrap.appendChild(mainCanvas);
       wrap.appendChild(feedFooter);
     } else {
+      if (frameWrap) {
+        frameWrap.style.width = '100%';
+        frameWrap.style.maxWidth = '520px';
+      }
       // Direct placement fallback
       wrap.appendChild(mainCanvas);
     }
