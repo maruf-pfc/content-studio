@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Content Studio — Premium Graphic Generator</title>
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,800;1,400&family=Inter:wght@400;500;600;700&family=Syne:wght@700;800&family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #090710;
+      --panel: rgba(20, 16, 35, 0.7);
+      --panel-border: rgba(124, 92, 252, 0.15);
+      --panel-hover: rgba(124, 92, 252, 0.25);
+      --panel-2: #161225;
+      --line: #292440;
+      
+      --accent: #7C5CFC;
+      --accent-glow: rgba(124, 92, 252, 0.4);
+      --accent-coral: #FF6B4A;
+      --accent-coral-glow: rgba(255, 107, 74, 0.4);
+      
+      --text: #F5F3FF;
+      --text-dim: #9D99B3;
+      --text-muted: #5E5A75;
+      
+      --mono: 'JetBrains Mono', 'Courier New', monospace;
+      --disp: 'Outfit', 'Syne', sans-serif;
+      --body: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line) transparent;
+    }
+
+    /* Custom Scrollbars */
+    *::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    *::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    *::-webkit-scrollbar-thumb {
+      background-color: var(--line);
+      border-radius: 20px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(124, 92, 252, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(255, 107, 74, 0.06) 0%, transparent 45%);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      min-height: 100vh;
+    }
+
+    @media (max-width: 1100px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+      .canvas-area {
+        order: -1;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: rgba(9, 7, 16, 0.95);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--line);
+        padding: 20px !important;
+        height: auto !important;
+      }
+    }
+
+    /* ---- Sidebar Controls ---- */
+    .sidebar {
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+      border-right: 1px solid var(--panel-border);
+      padding: 24px;
+      overflow-y: auto;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
+    }
+
+    @media (max-width: 1100px) {
+      .sidebar {
+        height: auto;
+        overflow-y: visible;
+      }
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-coral));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    
+    .brand-mark svg {
+      width: 22px;
+      height: 22px;
+      fill: #fff;
+    }
+
+    .brand-title-wrap {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-family: var(--disp);
+      font-weight: 800;
+      font-size: 19px;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #fff, var(--text-dim));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-sub {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: var(--accent-coral);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+      margin-left: 8px;
+    }
+
+    /* ---- Form Controls ---- */
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label.field-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    input[type=text], select, textarea {
+      width: 100%;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-family: var(--body);
+      transition: all 0.2s;
+    }
+
+    input[type=text]:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 10px rgba(124, 92, 252, 0.2);
+      background: rgba(22, 18, 37, 0.9);
+    }
+
+    textarea {
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    /* Platform & Ratio Grid */
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .platform-btn {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 6px;
+      cursor: pointer;
+      color: var(--text-dim);
+      font-size: 11px;
+      font-family: var(--mono);
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .platform-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    .platform-btn:hover {
+      border-color: var(--panel-hover);
+      color: var(--text);
+    }
+
+    .platform-btn.active {
+      border-color: var(--accent);
+      color: #fff;
+      background: rgba(124, 92, 252, 0.15);
+      box-shadow: inset 0 0 12px rgba(124, 92, 252, 0.1);
+    }
+
+    .ratio-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .ratio-chip {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 11.5px;
+      font-family: var(--mono);
+      cursor: pointer;
+      color: var(--text-dim);
+      transition: all 0.2s;
+    }
+
+    .ratio-chip:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .ratio-chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    /* Template Grid */
+    .template-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .tpl-btn {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      cursor: pointer;
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: left;
+      transition: all 0.2s;
+    }
+
+    .tpl-btn strong {
+      display: block;
+      font-size: 13px;
+      color: var(--text);
+      margin-bottom: 2px;
+      font-family: var(--disp);
+    }
+
+    .tpl-btn:hover {
+      border-color: var(--accent-coral);
+    }
+
+    .tpl-btn.active {
+      border-color: var(--accent-coral);
+      background: rgba(255, 107, 74, 0.12);
+      box-shadow: inset 0 0 10px rgba(255, 107, 74, 0.05);
+    }
+
+    /* Themes & Colors */
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .theme-swatch {
+      height: 60px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    .theme-swatch::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--swatch-bg), var(--swatch-accent));
+    }
+
+    .theme-swatch.active {
+      border-color: var(--text);
+      transform: scale(1.03);
+    }
+
+    .theme-swatch span {
+      position: absolute;
+      bottom: 4px;
+      left: 6px;
+      font-family: var(--mono);
+      font-size: 9px;
+      background: rgba(0, 0, 0, 0.65);
+      padding: 1.5px 5px;
+      border-radius: 4px;
+      color: #fff;
+      backdrop-filter: blur(2px);
+    }
+
+    /* Customizer Tabs */
+    .customizer-box {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tabs-header {
+      display: flex;
+      border-bottom: 1px solid var(--line);
+      gap: 12px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 6px 0 10px 0;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      color: var(--accent-coral);
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-coral);
+    }
+
+    .tab-content {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    /* Align & Sliders */
+    .align-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .align-btn {
+      flex: 1;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 0;
+      cursor: pointer;
+      color: var(--text-dim);
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .align-btn:hover {
+      border-color: var(--accent);
+    }
+
+    .align-btn.active {
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(124, 92, 252, 0.12);
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    /* Modern range slider */
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      background: var(--line);
+      border-radius: 5px;
+      outline: none;
+      transition: background 0.3s;
+    }
+
+    input[type=range]::-webkit-canvas-run-out {
+      background: var(--line);
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent-coral);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--accent-coral-glow);
+      transition: transform 0.1s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Switch Component */
+    .switch {
+      width: 44px;
+      height: 24px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .switch.on {
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .switch::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    .switch.on::after {
+      left: 23px;
+    }
+
+    /* Custom File Input Styling */
+    .file-upload-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .file-upload-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--panel-2);
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .file-upload-btn:hover {
+      border-color: var(--accent-coral);
+      color: var(--text);
+      background: rgba(255, 107, 74, 0.03);
+    }
+
+    .file-upload-wrapper input[type=file] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    /* Remove file button */
+    .file-remove-btn {
+      background: none;
+      border: none;
+      color: var(--accent-coral);
+      font-size: 11px;
+      cursor: pointer;
+      font-family: var(--mono);
+      display: none;
+    }
+
+    /* Drafts System & Memory */
+    .draft-input-wrap {
+      display: flex;
+      gap: 8px;
+    }
+
+    .draft-list {
+      max-height: 150px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .draft-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .draft-name {
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text-dim);
+      transition: color 0.15s;
+      flex: 1;
+    }
+
+    .draft-name:hover {
+      color: var(--text);
+    }
+
+    .draft-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .draft-del-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .draft-del-btn:hover {
+      color: var(--accent-coral);
+    }
+
+    .recent-colors {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .recent-color-swatch {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 1px solid var(--line);
+      transition: transform 0.15s;
+    }
+
+    .recent-color-swatch:hover {
+      transform: scale(1.15);
+    }
+
+    /* Hashtags */
+    .hashtag-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .hchip {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      padding: 4px 10px;
+      border-radius: 16px;
+      cursor: pointer;
+      color: var(--text-dim);
+      transition: all 0.2s;
+    }
+
+    .hchip:hover {
+      border-color: var(--accent-coral);
+      color: var(--text);
+      background: rgba(255, 107, 74, 0.05);
+    }
+
+    .char-count {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      text-align: right;
+      margin-top: 4px;
+    }
+
+    .char-count.warn {
+      color: var(--accent-coral);
+      font-weight: 700;
+    }
+
+    /* ---- Canvas Area ---- */
+    .canvas-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      gap: 28px;
+      height: 100vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .frame-wrap {
+      position: relative;
+      filter: drop-shadow(0 25px 50px rgba(0, 0, 0, 0.6));
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Realistic device chromes */
+    .device-chrome-wrap {
+      position: relative;
+      border-radius: 24px;
+      padding: 8px;
+      background: #110e1a;
+      border: 4px solid #2d2642;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Browser Mockup Chrome */
+    .chrome-browser-header {
+      height: 38px;
+      background: #1d182e;
+      border-radius: 12px 12px 0 0;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+      width: 100%;
+    }
+
+    .chrome-browser-header .dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .chrome-browser-header .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .chrome-browser-header .dot.red { background: #FF5F56; }
+    .chrome-browser-header .dot.yellow { background: #FFBD2E; }
+    .chrome-browser-header .dot.green { background: #27C93F; }
+
+    .chrome-browser-header .address-bar {
+      flex: 1;
+      height: 22px;
+      background: #131020;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: var(--text-dim);
+    }
+
+    /* Phone Mockup Chrome */
+    .chrome-phone-header {
+      height: 36px;
+      width: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 24px;
+      color: rgba(255,255,255,0.9);
+      font-size: 11px;
+      font-weight: 600;
+      z-index: 5;
+      font-family: var(--body);
+      pointer-events: none;
+    }
+
+    .chrome-phone-notch {
+      width: 110px;
+      height: 20px;
+      background: #000;
+      border-radius: 0 0 12px 12px;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 6;
+      pointer-events: none;
+    }
+
+    .chrome-phone-home-indicator {
+      height: 5px;
+      width: 120px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 10px;
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    /* Mock Social Feed Card Chrome */
+    .chrome-feed-card {
+      background: #120e21;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .feed-card-header {
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #19142d;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .feed-card-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-coral));
+    }
+
+    .feed-card-meta {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .feed-card-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .feed-card-sub {
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    .feed-card-footer {
+      padding: 12px;
+      background: #19142d;
+      border-top: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .feed-card-actions {
+      display: flex;
+      justify-content: space-between;
+      font-size: 18px;
+      color: var(--text-dim);
+    }
+
+    .feed-card-actions-left {
+      display: flex;
+      gap: 12px;
+    }
+
+    .feed-card-likes {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* Main preview canvas elements */
+    canvas {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .canvas-phone-styled {
+      border-radius: 18px;
+    }
+
+    /* Actions Panel */
+    .actions-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .actions-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .btn {
+      font-family: var(--body);
+      font-weight: 600;
+      font-size: 13.5px;
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      cursor: pointer;
+      background: var(--panel-2);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+      background: rgba(124, 92, 252, 0.05);
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, var(--accent), #5d3dcf);
+      border: none;
+      box-shadow: 0 4px 15px rgba(124, 92, 252, 0.3);
+    }
+
+    .btn.primary:hover {
+      box-shadow: 0 4px 20px rgba(124, 92, 252, 0.5);
+      background: linear-gradient(135deg, #8a6efc, #6c4ee0);
+    }
+
+    .btn.secondary {
+      background: linear-gradient(135deg, var(--accent-coral), #e05331);
+      border: none;
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(255, 107, 74, 0.25);
+    }
+
+    .btn.secondary:hover {
+      box-shadow: 0 4px 20px rgba(255, 107, 74, 0.45);
+      background: linear-gradient(135deg, #ff8469, #ec5d3b);
+    }
+
+    .btn.ghost {
+      background: transparent;
+      border: 1px solid var(--panel-border);
+      color: var(--text-dim);
+    }
+
+    .btn.ghost:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none !important;
+    }
+
+    /* Caption Preview Box */
+    .caption-preview {
+      width: 100%;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+
+    .caption-preview .lbl {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .caption-preview .txt {
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--text);
+      white-space: pre-wrap;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .caption-preview .hash {
+      color: var(--accent-coral);
+    }
+
+    /* Toast system */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #fff;
+      color: #0b0914;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 13.5px;
+      font-weight: 600;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      z-index: 1000;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Batch Export Modal styling */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 4, 9, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+      opacity: 1;
+    }
+
+    .modal-container {
+      background: #110e1c;
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 960px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+      transform: scale(0.95);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .modal-overlay.show .modal-container {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-family: var(--disp);
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 24px;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .modal-close:hover {
+      color: var(--accent-coral);
+    }
+
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .batch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .batch-card {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+    }
+
+    .batch-card-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    .batch-canvas-wrap {
+      width: 100%;
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #090710;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    .batch-canvas-wrap canvas {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .modal-footer {
+      padding: 20px 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
+        </svg>
+      </div>
+      <div class="brand-title-wrap">
+        <div class="brand-name">Content Studio</div>
+        <div class="brand-sub">Platform Engine</div>
+      </div>
+    </div>
+
+    <!-- 1. Platforms -->
+    <div class="section">
+      <div class="section-label">1. Social Platform</div>
+      <div class="platform-grid" id="platformGrid"></div>
+    </div>
+
+    <!-- 2. Ratios -->
+    <div class="section">
+      <div class="section-label">2. Dimension Aspect</div>
+      <div class="ratio-row" id="ratioRow"></div>
+      <div class="control-row">
+        <span style="font-size: 11px; color: var(--text-dim);" id="dimsLabel">1080 × 1080px</span>
+        <span style="font-size: 11px; color: var(--accent-coral);" id="platformNameLabel">Instagram</span>
+      </div>
+    </div>
+
+    <!-- 3. Templates -->
+    <div class="section">
+      <div class="section-label">3. Design Layout</div>
+      <div class="template-grid" id="templateGrid"></div>
+    </div>
+
+    <!-- 4. Typography & Font Pairings -->
+    <div class="section">
+      <div class="section-label">4. Font Pairings</div>
+      <select id="fontPairingSelect"></select>
+    </div>
+
+    <!-- 5. Appearance & Styling Customizer -->
+    <div class="section">
+      <div class="section-label">5. Visual Theme & Style</div>
+      <div class="theme-grid" id="themeGrid"></div>
+      
+      <!-- Customizer Tabs -->
+      <div class="customizer-box">
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="tab-solid">Solid</button>
+          <button class="tab-btn" data-tab="tab-gradient">Gradient</button>
+          <button class="tab-btn" data-tab="tab-pattern">Pattern</button>
+        </div>
+        
+        <!-- Tab: Solid -->
+        <div class="tab-content active" id="tab-solid">
+          <div class="control-row">
+            <span style="font-size: 12px; color: var(--text-dim);">Background</span>
+            <input type="color" id="customBg" value="#14121A" style="width:36px; height:24px; border:none; border-radius:4px; cursor:pointer; background:none; padding:0;">
+          </div>
+          <div class="control-row">
+            <span style="font-size: 12px; color: var(--text-dim);">Accent Highlight</span>
+            <input type="color" id="customAccent" value="#7C5CFC" style="width:36px; height:24px; border:none; border-radius:4px; cursor:pointer; background:none; padding:0;">
+          </div>
+          <div class="control-row">
+            <span style="font-size: 12px; color: var(--text-dim);">Primary Text</span>
+            <input type="color" id="customTextColor" value="#F5F3FF" style="width:36px; height:24px; border:none; border-radius:4px; cursor:pointer; background:none; padding:0;">
+          </div>
+        </div>
+        
+        <!-- Tab: Gradient -->
+        <div class="tab-content" id="tab-gradient">
+          <div class="control-row">
+            <span style="font-size: 12px; color: var(--text-dim);">Gradient Style</span>
+            <select id="gradType" style="padding: 6px 10px; font-size:12px; width:120px;">
+              <option value="linear">Linear</option>
+              <option value="radial">Radial</option>
+            </select>
+          </div>
+          <div class="control-row" id="gradAngleRow">
+            <span style="font-size: 12px; color: var(--text-dim);">Angle (deg)</span>
+            <input type="range" id="gradAngle" min="0" max="360" value="135" style="width:120px;">
+          </div>
+          <div class="control-row">
+            <span style="font-size: 12px; color: var(--text-dim);">Color Stop 1</span>
+            <input type="color" id="gradColor1" value="#14121A" style="width:36px; height:24px; border:none; border-radius:4px; cursor:pointer; background:none; padding:0;">
+          </div>
+          <div class="control-row">
+            <span style="font-size: 12px; color: var(--text-dim);">Color Stop 2</span>
+            <input type="color" id="gradColor2" value="#221E30" style="width:36px; height:24px; border:none; border-radius:4px; cursor:pointer; background:none; padding:0;">
+          </div>
+        </div>
+        
+        <!-- Tab: Pattern -->
+        <div class="tab-content" id="tab-pattern">
+          <div class="control-row">
+            <span style="font-size: 12px; color: var(--text-dim);">Overlay Pattern</span>
+            <select id="patternType" style="padding: 6px 10px; font-size:12px; width:120px;">
+              <option value="none">None</option>
+              <option value="dots">Dotted Grid</option>
+              <option value="grid">Gridlines</option>
+              <option value="stripes">Diagonal Stripes</option>
+              <option value="noise">Grain Noise</option>
+            </select>
+          </div>
+          <div class="control-row">
+            <span style="font-size: 12px; color: var(--text-dim);">Pattern Opacity</span>
+            <input type="range" id="patternOpacity" min="0" max="100" value="15" style="width:120px;">
+          </div>
+          <div class="control-row">
+            <span style="font-size: 12px; color: var(--text-dim);">Pattern Size / Density</span>
+            <input type="range" id="patternDensity" min="10" max="100" value="30" style="width:120px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent colors memory swatches -->
+      <div class="field-group">
+        <label class="field-label">Recent Palette Colors</label>
+        <div class="recent-colors" id="recentColors"></div>
+      </div>
+    </div>
+
+    <!-- 6. Background Image & Logo Layers -->
+    <div class="section">
+      <div class="section-label">6. Background & Logo layers</div>
+      
+      <!-- Background Image -->
+      <div class="field-group">
+        <label class="field-label">
+          <span>Background Image Layer</span>
+          <button class="file-remove-btn" id="btnRemoveBgImage">Remove</button>
+        </label>
+        <div class="file-upload-wrapper">
+          <div class="file-upload-btn" id="lblBgUpload">
+            <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+            <span>Upload Photo...</span>
+          </div>
+          <input type="file" id="bgImageFile" accept="image/*">
+        </div>
+        <div id="bgImageControls" style="display:none; flex-direction:column; gap:8px; margin-top:4px;">
+          <div class="control-row">
+            <span style="font-size: 11px; color: var(--text-dim);">Image Scale</span>
+            <input type="range" id="bgImageScale" min="10" max="300" value="100" style="width:120px;">
+          </div>
+          <div class="control-row">
+            <span style="font-size: 11px; color: var(--text-dim);">Image Opacity</span>
+            <input type="range" id="bgImageOpacity" min="0" max="100" value="40" style="width:120px;">
+          </div>
+          <div class="control-row">
+            <span style="font-size: 11px; color: var(--text-dim);">Image Blur</span>
+            <input type="range" id="bgImageBlur" min="0" max="30" value="0" style="width:120px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Logo Layer -->
+      <div class="field-group" style="margin-top: 8px;">
+        <label class="field-label">
+          <span>Logo / Brand Watermark Overlay</span>
+          <button class="file-remove-btn" id="btnRemoveLogo">Remove</button>
+        </label>
+        <div class="file-upload-wrapper">
+          <div class="file-upload-btn" id="lblLogoUpload">
+            <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 16H6c-.55 0-1-.45-1-1V6c0-.55.45-1 1-1h12c.55 0 1 .45 1 1v12c0 .55-.45 1-1 1zm-4.5-9.5c0-.83-.67-1.5-1.5-1.5H9c-.83 0-1.5.67-1.5 1.5v5c0 .83.67 1.5 1.5 1.5h3c.83 0 1.5-.67 1.5-1.5v-5zm-1.5 5H9v-5h3v5z"/></svg>
+            <span>Upload Logo PNG...</span>
+          </div>
+          <input type="file" id="logoFile" accept="image/*">
+        </div>
+        <div id="logoControls" style="display:none; flex-direction:column; gap:8px; margin-top:4px;">
+          <div class="control-row">
+            <span style="font-size: 11px; color: var(--text-dim);">Logo Size</span>
+            <input type="range" id="logoScale" min="5" max="100" value="20" style="width:120px;">
+          </div>
+          <div class="control-row">
+            <span style="font-size: 11px; color: var(--text-dim);">Logo Opacity</span>
+            <input type="range" id="logoOpacity" min="10" max="100" value="80" style="width:120px;">
+          </div>
+          <div class="control-row">
+            <span style="font-size: 11px; color: var(--text-dim);">Logo Position</span>
+            <select id="logoPosition" style="padding: 4px 8px; font-size:11px; width:120px;">
+              <option value="top-left">Top Left</option>
+              <option value="top-right">Top Right</option>
+              <option value="bottom-left">Bottom Left</option>
+              <option value="bottom-right" selected>Bottom Right</option>
+              <option value="center">Center</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Content -->
+    <div class="section">
+      <div class="section-label">7. Content Settings</div>
+      
+      <div class="field-group">
+        <label class="field-label">Title / Hook Text</label>
+        <textarea id="inputTitle" placeholder="e.g. 5 steps to start a web development studio">5 steps to design landing pages that convert like crazy</textarea>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Body / Subtext (Optional)</label>
+        <textarea id="inputBody" placeholder="e.g. Supporting explanation, list details, or quote author">Step 1: Focus on the hero header. Step 2: Establish trust factors early. Step 3: Add obvious CTA.</textarea>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Caption Text (For the post itself)</label>
+        <textarea id="inputCaption" placeholder="Write caption text copy here...">Struggling with low conversion rates on your website? Try auditing your landing pages against these five foundational guidelines. High converting pages align key headers with user queries instantly! 🚀</textarea>
+        <div class="char-count" id="charCount">0 characters</div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Hashtags</label>
+        <textarea id="inputHashtags" placeholder="#DesignStudio #Marketing">#ContentMarketing #DesignStudio #WebDesign #GrowthHacking #UXDesign</textarea>
+        <div class="hashtag-chips" id="hashtagChips"></div>
+      </div>
+    </div>
+
+    <!-- 8. Graphics Styling Options -->
+    <div class="section">
+      <div class="section-label">8. Card Settings</div>
+      
+      <div class="field-group">
+        <label class="field-label">Text Alignment</label>
+        <div class="align-row" id="alignRow">
+          <button class="align-btn" data-align="left">⯇ Left</button>
+          <button class="align-btn active" data-align="center">☰ Center</button>
+          <button class="align-btn" data-align="right">Right ⯈</button>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <label class="field-label">Auto-fit font size</label>
+        <div class="switch on" id="autoFitSwitch"></div>
+      </div>
+
+      <!-- Size sliders if auto-fit is disabled -->
+      <div id="manualFontSizes" style="display:none; flex-direction:column; gap:8px; margin-top:4px;">
+        <div class="control-row">
+          <span style="font-size: 11px; color: var(--text-dim);">Title Font Size</span>
+          <input type="range" id="titleFontSize" min="20" max="120" value="50" style="width:120px;">
+        </div>
+        <div class="control-row">
+          <span style="font-size: 11px; color: var(--text-dim);">Body Font Size</span>
+          <input type="range" id="bodyFontSize" min="12" max="60" value="24" style="width:120px;">
+        </div>
+      </div>
+
+      <div class="control-row">
+        <label class="field-label">Content Padding (%)</label>
+        <input type="range" id="contentPadding" min="4" max="20" value="9" style="width:120px;">
+      </div>
+
+      <div class="control-row">
+        <label class="field-label">Watermark / Handle overlay</label>
+        <div class="switch on" id="watermarkSwitch"></div>
+      </div>
+      
+      <div id="watermarkTextWrap" class="field-group">
+        <input type="text" id="watermarkText" value="@DesignStudioLive" placeholder="@handle">
+      </div>
+    </div>
+
+    <!-- 9. Draft Management -->
+    <div class="section">
+      <div class="section-label">9. Drafts & Templates Manager</div>
+      <div class="field-group">
+        <div class="draft-input-wrap">
+          <input type="text" id="draftNameInput" placeholder="Draft Name" style="flex:1; padding: 8px 12px; font-size:12.5px;">
+          <button class="btn primary" id="btnSaveDraft" style="flex:none; padding:8px 12px; min-width:auto; font-size:12.5px;">Save</button>
+        </div>
+        <div class="draft-list" id="draftList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANVAS AREA -->
+  <div class="canvas-area">
+    <!-- device framing wrapper -->
+    <div class="frame-wrap" id="frameWrap">
+      <div class="device-chrome-wrap" id="deviceChromeWrap">
+        <!-- Rendered Chrome content inside JS based on ratios -->
+        <canvas id="mainCanvas"></canvas>
+      </div>
+    </div>
+
+    <div class="actions-panel">
+      <!-- Dimensions info -->
+      <span style="font-size: 11px; color: var(--text-dim); text-align: center;" id="canvasDims">1080 × 1080px  ·  1:1  ·  Instagram</span>
+
+      <!-- Primary controls -->
+      <div class="actions-buttons">
+        <button class="btn primary" id="btnDownload">
+          <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
+          Download PNG
+        </button>
+        <button class="btn" id="btnCopyImage">
+          <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+          Copy Image
+        </button>
+        <button class="btn secondary" id="btnCopyCaption">
+          <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+          Copy Caption
+        </button>
+      </div>
+
+      <!-- Batch Export Button -->
+      <div class="actions-buttons" style="margin-top:-6px;">
+        <button class="btn ghost" id="btnOpenBatchModal" style="flex:1;">
+          <svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+          Multi-Format Batch Export Previews
+        </button>
+      </div>
+
+      <!-- Post Caption Preview -->
+      <div class="caption-preview">
+        <div class="lbl">
+          <span>Post Caption Copy</span>
+          <span id="captionLengthStatus">0/2200</span>
+        </div>
+        <div class="txt" id="captionPreviewText"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BATCH EXPORT MODAL -->
+<div class="modal-overlay" id="batchModal">
+  <div class="modal-container">
+    <div class="modal-header">
+      <div class="modal-title">Multi-Format Batch Export</div>
+      <button class="modal-close" id="btnCloseBatchModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom: 20px; font-size:13.5px; color: var(--text-dim); line-height: 1.5;">
+        Generate the same graphic layout optimized across all ratios. Check how the design looks on other layouts, and export them.
+      </p>
+      <div class="batch-grid" id="batchGrid"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn ghost" id="btnCloseBatchModal2">Close</button>
+      <button class="btn secondary" id="btnDownloadAllBatch">⬇ Download All Formats</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- JAVASCRIPT STATE & LOGIC -->
+<script>
+  // Will be implemented in the next step
+</script>
+</body>
+</html>
