@@ -2188,6 +2188,15 @@
       watermark: state.watermark,
       watermarkText: watermarkText.value,
       
+      // Media customization parameters (no image contents)
+      bgImageScale: state.bgImageScale,
+      bgImageOpacity: state.bgImageOpacity,
+      bgImageBlur: state.bgImageBlur,
+      bgImageBlend: state.bgImageBlend,
+      logoScale: state.logoScale,
+      logoOpacity: state.logoOpacity,
+      logoPosition: state.logoPosition,
+      
       titleText: inputTitle.value,
       bodyText: inputBody.value,
       captionText: inputCaption.value,
@@ -2272,6 +2281,15 @@
     state.contentPadding = d.contentPadding || 9;
     state.watermark = d.watermark !== undefined ? d.watermark : true;
     
+    // Media settings
+    state.bgImageScale = d.bgImageScale !== undefined ? d.bgImageScale : 100;
+    state.bgImageOpacity = d.bgImageOpacity !== undefined ? d.bgImageOpacity : 40;
+    state.bgImageBlur = d.bgImageBlur !== undefined ? d.bgImageBlur : 0;
+    state.bgImageBlend = d.bgImageBlend || 'normal';
+    state.logoScale = d.logoScale !== undefined ? d.logoScale : 20;
+    state.logoOpacity = d.logoOpacity !== undefined ? d.logoOpacity : 80;
+    state.logoPosition = d.logoPosition || 'bottom-right';
+
     // UI fields loading
     watermarkText.value = d.watermarkText || '@DesignStudioLive';
     inputTitle.value = d.titleText || '';
@@ -2296,6 +2314,15 @@
 
     // Font pairing select sync
     fontPairingSelect.value = state.fontPairing;
+
+    // Media controls sync
+    document.getElementById('bgImageScale').value = state.bgImageScale;
+    document.getElementById('bgImageOpacity').value = state.bgImageOpacity;
+    document.getElementById('bgImageBlur').value = state.bgImageBlur;
+    document.getElementById('bgImageBlend').value = state.bgImageBlend;
+    document.getElementById('logoScale').value = state.logoScale;
+    document.getElementById('logoOpacity').value = state.logoOpacity;
+    document.getElementById('logoPosition').value = state.logoPosition;
 
     // Alignment state sync
     alignButtons.forEach(b => {
