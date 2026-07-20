@@ -1,0 +1,2022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Studio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700;900&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;600&family=Space+Grotesk:wght@600&family=Syne:wght@700;800&display=swap');
+
+  :root {
+    --bg: #14121A;
+    --panel: #1C1926;
+    --panel-2: #221E30;
+    --line: #332E44;
+    --accent: #7C5CFC;
+    --accent-2: #FF6B4A;
+    --text: #F5F3FF;
+    --text-dim: #8B879C;
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+    --disp: 'Trebuchet MS', 'Arial Black', sans-serif;
+    --body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+  }
+  
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    min-height: 100vh;
+  }
+  
+  @media (max-width: 1024px) {
+    .app { grid-template-columns: 1fr; }
+    .canvas-area { order: -1; }
+  }
+
+  /* ---- Sidebar ---- */
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    padding: 28px 24px 60px;
+    overflow-y: auto;
+    height: 100vh;
+  }
+  
+  @media (max-width: 1024px) {
+    .sidebar { height: auto; }
+  }
+
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 28px;
+  }
+  
+  .brand-mark {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--disp); font-weight: 900; font-size: 16px;
+    flex-shrink: 0;
+  }
+  
+  .brand-name { font-family: var(--disp); font-weight: 900; font-size: 17px; letter-spacing: -0.02em; }
+  .brand-sub { font-family: var(--mono); font-size: 10px; color: var(--text-dim); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .section { margin-bottom: 26px; }
+  
+  .section-label {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+  label.field-label { display: block; font-size: 12px; color: var(--text-dim); margin: 12px 0 6px; }
+  
+  input[type=text], textarea, select {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--line);
+    color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 13.5px;
+    font-family: var(--body); resize: vertical;
+  }
+  
+  textarea { min-height: 64px; line-height: 1.4; }
+  
+  input[type=text]:focus, textarea:focus, select:focus {
+    outline: none; border-color: var(--accent);
+  }
+  
+  .char-count { font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-align: right; margin-top: 4px; }
+  .char-count.warn { color: var(--accent-2); }
+
+  /* Platform grid */
+  .platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  
+  .platform-btn {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 4px; cursor: pointer; color: var(--text-dim); font-size: 10.5px;
+    font-family: var(--mono); text-align: center; transition: all .12s;
+  }
+  
+  .platform-btn .pico { font-size: 16px; display: block; margin-bottom: 4px; }
+  .platform-btn.active { border-color: var(--accent); color: var(--text); background: rgba(124, 92, 252, 0.14); }
+  .platform-btn:hover { border-color: var(--accent); }
+
+  .ratio-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  
+  .ratio-chip {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px;
+    padding: 6px 12px; font-size: 11.5px; font-family: var(--mono); cursor: pointer; color: var(--text-dim);
+  }
+  
+  .ratio-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  
+  .tpl-btn {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px; cursor: pointer; font-size: 12px; color: var(--text-dim); text-align: left;
+  }
+  
+  .tpl-btn strong { display: block; font-size: 12.5px; color: var(--text); margin-bottom: 2px; font-family: var(--body); }
+  .tpl-btn.active { border-color: var(--accent-2); background: rgba(255, 107, 74, 0.10); }
+
+  .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  
+  .theme-swatch {
+    height: 52px; border-radius: 8px; cursor: pointer; border: 2px solid transparent;
+    position: relative; overflow: hidden;
+  }
+  
+  .theme-swatch.active { border-color: var(--text); }
+  
+  .theme-swatch span {
+    position: absolute; bottom: 4px; left: 6px; font-family: var(--mono); font-size: 9px;
+    background: rgba(0, 0, 0, 0.4); padding: 1px 5px; border-radius: 4px; color: #fff;
+  }
+
+  .align-row { display: flex; gap: 6px; }
+  
+  .align-btn {
+    flex: 1; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
+    padding: 8px 0; cursor: pointer; color: var(--text-dim); font-size: 14px; text-align: center;
+  }
+  
+  .align-btn.active { border-color: var(--accent); color: var(--text); }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+  .toggle-row .field-label { margin: 0; }
+  
+  .switch {
+    width: 38px; height: 22px; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 20px; position: relative; cursor: pointer; flex-shrink: 0;
+  }
+  
+  .switch.on { background: var(--accent); border-color: var(--accent); }
+  
+  .switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+    background: #fff; border-radius: 50%; transition: left .15s;
+  }
+  
+  .switch.on::after { left: 18px; }
+
+  .hashtag-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  
+  .hchip {
+    font-family: var(--mono); font-size: 10.5px; background: var(--panel-2);
+    border: 1px solid var(--line); padding: 4px 9px; border-radius: 14px; cursor: pointer; color: var(--text-dim);
+  }
+  
+  .hchip:hover { border-color: var(--accent-2); color: var(--text); }
+
+  .color-row { display: flex; gap: 8px; margin-top: 8px; }
+  
+  .color-row input[type=color] {
+    width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line);
+    background: none; cursor: pointer; padding: 0;
+  }
+
+  .recent-colors-grid {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;
+  }
+  .recent-color-dot {
+    width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line);
+    cursor: pointer; transition: transform 0.15s;
+  }
+  .recent-color-dot:hover {
+    transform: scale(1.15);
+    border-color: var(--accent);
+  }
+
+  /* Range Inputs customization */
+  input[type=range] {
+    -webkit-appearance: none;
+    background: var(--panel-2);
+    height: 6px;
+    border-radius: 4px;
+    outline: none;
+    border: 1px solid var(--line);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  /* ---- Canvas Area ---- */
+  .canvas-area {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 40px 24px 60px; gap: 24px;
+    overflow-y: auto;
+    height: 100vh;
+  }
+  
+  .frame-wrap {
+    position: relative;
+    filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.45));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 460px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  
+  .device-chrome-wrap {
+    position: relative;
+    border-radius: 24px;
+    padding: 8px;
+    background: #110e1a;
+    border: 4px solid #2d2642;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Realistic device chromes styling */
+  .chrome-phone-header {
+    height: 36px;
+    width: 100%;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 11px;
+    font-weight: 600;
+    z-index: 5;
+    pointer-events: none;
+  }
+  
+  .chrome-phone-notch {
+    width: 110px;
+    height: 20px;
+    background: #000;
+    border-radius: 0 0 12px 12px;
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    pointer-events: none;
+  }
+  
+  .chrome-phone-home-indicator {
+    height: 5px;
+    width: 120px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 10px;
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  .chrome-browser-header {
+    height: 38px;
+    background: #1d182e;
+    border-radius: 12px 12px 0 0;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    width: 100%;
+  }
+  
+  .chrome-browser-header .dots {
+    display: flex;
+    gap: 6px;
+  }
+  .chrome-browser-header .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .chrome-browser-header .dot.red { background: #FF5F56; }
+  .chrome-browser-header .dot.yellow { background: #FFBD2E; }
+  .chrome-browser-header .dot.green { background: #27C93F; }
+  
+  .chrome-browser-header .address-bar {
+    flex: 1;
+    height: 22px;
+    background: #131020;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--text-dim);
+  }
+
+  .chrome-feed-card {
+    background: #110e20;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .feed-card-header {
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #19142d;
+    border-bottom: 1px solid var(--line);
+  }
+  .feed-card-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .feed-card-meta {
+    display: flex;
+    flex-direction: column;
+  }
+  .feed-card-name { font-size: 12.5px; font-weight: 700; color: var(--text); }
+  .feed-card-sub { font-size: 10px; color: var(--text-dim); }
+  
+  .feed-card-footer {
+    padding: 12px;
+    background: #19142d;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .feed-card-actions {
+    display: flex;
+    justify-content: space-between;
+    font-size: 18px;
+    color: var(--text-dim);
+  }
+  .feed-card-actions-left {
+    display: flex;
+    gap: 12px;
+  }
+  .feed-card-likes { font-size: 12px; font-weight: 700; color: var(--text); }
+
+  canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  }
+  .canvas-phone-styled { border-radius: 18px; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  
+  .btn {
+    font-family: var(--body); font-weight: 600; font-size: 13px; padding: 10px 16px;
+    border-radius: 8px; border: 1px solid var(--line); cursor: pointer; background: var(--panel);
+    color: var(--text); display: flex; align-items: center; gap: 8px; transition: all .15s;
+  }
+  .btn:hover { border-color: var(--accent); background: rgba(124, 92, 252, 0.05); }
+  .btn:active { transform: scale(0.97); }
+  .btn.primary { background: linear-gradient(135deg, var(--accent), #6a4de0); border: none; }
+  .btn.secondary { background: var(--accent-2); border: none; color: #1a0f0a; }
+  .btn.secondary:hover { background: #ff8266; }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #fff; color: #111; padding: 10px 20px; border-radius: 24px; font-size: 13px;
+    font-weight: 600; opacity: 0; transition: all .25s; pointer-events: none; z-index: 999;
+    display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .caption-preview {
+    width: 100%; max-width: 520px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px 18px;
+  }
+  .caption-preview .lbl { font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+  .caption-preview .txt { font-size: 13px; line-height: 1.55; color: var(--text); white-space: pre-wrap; }
+  .caption-preview .hash { color: var(--accent); }
+
+  .dims-label { font-family: var(--mono); font-size: 11px; color: var(--text-dim); text-align: center; }
+
+  /* Draft Items Styling */
+  .draft-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--panel-2); border: 1px solid var(--line);
+    padding: 6px 10px; border-radius: 6px; font-size: 12px;
+  }
+  .draft-name { cursor: pointer; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .draft-name:hover { color: var(--accent); }
+  .draft-del-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; padding: 2px; }
+  .draft-del-btn:hover { color: var(--accent-2); }
+
+  /* Modal Overlay (Batch Previews) */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(8, 6, 12, 0.85); backdrop-filter: blur(8px);
+    z-index: 1000; display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    padding: 20px;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: auto; }
+  
+  .modal-container {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 16px; width: 100%; max-width: 960px; max-height: 90vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.6);
+  }
+  
+  .modal-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-title { font-family: var(--disp); font-weight: 900; font-size: 18px; }
+  .modal-close { background: none; border: none; color: var(--text-dim); font-size: 24px; cursor: pointer; }
+  .modal-close:hover { color: var(--text); }
+  
+  .modal-body {
+    padding: 24px; overflow-y: auto; flex: 1;
+  }
+  
+  .batch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+  }
+  
+  .batch-card {
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px; display: flex; flex-direction: column;
+    align-items: center; gap: 12px;
+  }
+  .batch-card-title { font-family: var(--mono); font-size: 11px; color: var(--text-dim); text-align: center; }
+  .batch-canvas-wrap {
+    width: 100%; height: 180px; display: flex; align-items: center; justify-content: center;
+    background: #090710; border-radius: 8px; overflow: hidden; border: 1px solid var(--line);
+  }
+  .batch-canvas-wrap canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
+  
+  .modal-footer {
+    padding: 16px 24px; border-top: 1px solid var(--line);
+    display: flex; justify-content: flex-end; gap: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">T</div>
+      <div>
+        <div class="brand-name">Content Studio</div>
+        <div class="brand-sub">Telepathic Thoughts</div>
+      </div>
+    </div>
+
+    <!-- 1. Platform & Ratio -->
+    <div class="section">
+      <div class="section-label">Platform</div>
+      <div class="platform-grid" id="platformGrid"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Image Ratio</div>
+      <div class="ratio-row" id="ratioRow"></div>
+      <div class="dims-label" id="dimsLabel" style="text-align:left; margin-top:8px;"></div>
+    </div>
+
+    <!-- 2. Template & Fonts -->
+    <div class="section">
+      <div class="section-label">Layout Template</div>
+      <div class="template-grid" id="templateGrid"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Typography</div>
+      <label class="field-label">Font Pairing</label>
+      <select id="fontPairing">
+        <option value="outfit_plus">Outfit & Plus Jakarta</option>
+        <option value="syne_space">Syne & Space Grotesk</option>
+        <option value="playfair_inter">Playfair & Inter</option>
+        <option value="jetbrains_mono">JetBrains Mono</option>
+        <option value="trebuchet_sans">Trebuchet & System Sans</option>
+        <option value="georgia_serif">Georgia & Serif</option>
+      </select>
+      <label class="field-label">Alignment</label>
+      <div class="align-row" id="alignRow">
+        <div class="align-btn" data-align="left">⯇</div>
+        <div class="align-btn active" data-align="center">☰</div>
+        <div class="align-btn" data-align="right">⯈</div>
+      </div>
+      <div class="toggle-row">
+        <label class="field-label">Auto-fit text size</label>
+        <div class="switch on" id="autoFitSwitch"></div>
+      </div>
+    </div>
+
+    <!-- 3. Theme & Pattern -->
+    <div class="section">
+      <div class="section-label">Theme</div>
+      <div class="theme-grid" id="themeGrid"></div>
+      <div class="color-row">
+        <input type="color" id="customAccent" title="Custom accent color">
+        <input type="color" id="customBg" title="Custom background color">
+        <span style="font-size:11px; color:var(--text-dim); align-self:center;">Fine-tune colors</span>
+      </div>
+      <div class="recent-colors-grid" id="recentColorsGrid"></div>
+      
+      <label class="field-label">Overlay Pattern</label>
+      <select id="patternType">
+        <option value="none">None</option>
+        <option value="circles" selected>Corner Circles</option>
+        <option value="dots">Dotted Grid</option>
+        <option value="grid">Gridlines</option>
+        <option value="stripes">Diagonal Stripes</option>
+        <option value="noise">Grain Noise</option>
+        <option value="waves">Organic Waves</option>
+        <option value="geometric">Geometric Angles</option>
+      </select>
+      
+      <div style="margin-top:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:11px; color:var(--text-dim);">Pattern Opacity</span>
+          <input type="range" id="patternOpacity" min="0" max="100" value="12" style="width:120px;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:11px; color:var(--text-dim);">Pattern Density</span>
+          <input type="range" id="patternDensity" min="5" max="100" value="30" style="width:120px;">
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Media Layer Overlays -->
+    <div class="section">
+      <div class="section-label">Media Overlays</div>
+      <label class="field-label">Background Photo</label>
+      <div style="display:flex; gap:8px;">
+        <input type="file" id="bgFile" accept="image/*" style="display:none;">
+        <button class="btn" onclick="document.getElementById('bgFile').click()" style="padding:6px 12px; font-size:12px; flex:1; justify-content:center;">Upload Photo</button>
+        <button class="btn" id="btnRemoveBgImage" style="padding:6px 12px; font-size:12px; display:none;">Remove</button>
+      </div>
+      <div id="bgControls" style="display:none; margin-top:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Scale</span>
+          <input type="range" id="bgImageScale" min="10" max="200" value="100" style="width:120px;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Opacity</span>
+          <input type="range" id="bgImageOpacity" min="0" max="100" value="40" style="width:120px;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Blur</span>
+          <input type="range" id="bgImageBlur" min="0" max="30" value="0" style="width:120px;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Blend Mode</span>
+          <select id="bgImageBlend" style="padding: 4px 6px; font-size:11px; width:120px;">
+            <option value="normal">Normal</option>
+            <option value="multiply">Multiply</option>
+            <option value="screen">Screen</option>
+            <option value="overlay">Overlay</option>
+            <option value="darken">Darken</option>
+            <option value="lighten">Lighten</option>
+            <option value="color-dodge">Color Dodge</option>
+            <option value="color-burn">Color Burn</option>
+            <option value="difference">Difference</option>
+            <option value="luminosity">Luminosity</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="field-label" style="margin-top:12px;">Brand Logo Overlay</label>
+      <div style="display:flex; gap:8px;">
+        <input type="file" id="logoFile" accept="image/*" style="display:none;">
+        <button class="btn" onclick="document.getElementById('logoFile').click()" style="padding:6px 12px; font-size:12px; flex:1; justify-content:center;">Upload Logo</button>
+        <button class="btn" id="btnRemoveLogo" style="padding:6px 12px; font-size:12px; display:none;">Remove</button>
+      </div>
+      <div id="logoControls" style="display:none; margin-top:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Scale</span>
+          <input type="range" id="logoScale" min="5" max="100" value="20" style="width:120px;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Opacity</span>
+          <input type="range" id="logoOpacity" min="0" max="100" value="80" style="width:120px;">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);">Position</span>
+          <select id="logoPosition" style="padding: 4px 6px; font-size:11px; width:120px;">
+            <option value="top-left">Top Left</option>
+            <option value="top-right">Top Right</option>
+            <option value="bottom-left">Bottom Left</option>
+            <option value="bottom-right" selected>Bottom Right</option>
+            <option value="center">Center</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Content Input -->
+    <div class="section">
+      <div class="section-label">Content</div>
+      <label class="field-label">Title / Hook</label>
+      <textarea id="inputTitle" placeholder="যা মনে আছে সেটাই বলি">যা মনে আছে সেটাই বলি</textarea>
+
+      <label class="field-label">Body / Subtext (optional)</label>
+      <textarea id="inputBody" placeholder="Supporting line or leave blank"></textarea>
+
+      <label class="field-label">Caption (for post)</label>
+      <textarea id="inputCaption" placeholder="Write caption...">We just know 🧠</textarea>
+      <div class="char-count" id="captionLengthStatus">0/2200</div>
+
+      <label class="field-label">Hashtags</label>
+      <textarea id="inputHashtags" placeholder="#Hashtags">#TelepathicThoughts #TelepathicBD #BangladeshMemes #RelatableMemes</textarea>
+      <div class="hashtag-chips" id="hashtagChips"></div>
+    </div>
+
+    <!-- 6. Watermark -->
+    <div class="section">
+      <div class="section-label">Watermark</div>
+      <div class="toggle-row">
+        <label class="field-label">Show page handle</label>
+        <div class="switch on" id="watermarkSwitch"></div>
+      </div>
+      <input type="text" id="watermarkText" value="@TelepathicThoughtsBD" style="margin-top:8px;">
+    </div>
+
+    <!-- 7. Saved Drafts -->
+    <div class="section">
+      <div class="section-label">Saved Drafts</div>
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <input type="text" id="draftName" placeholder="Draft name..." style="flex:1; padding:6px 10px; font-size:12px;">
+        <button class="btn" id="btnSaveDraft" style="padding:6px 12px; font-size:12px;">Save</button>
+      </div>
+      <div id="draftList"></div>
+    </div>
+  </div>
+
+  <!-- CANVAS AREA -->
+  <div class="canvas-area">
+    <div class="frame-wrap" id="frameWrap">
+      <div class="device-chrome-wrap" id="deviceChromeWrap">
+        <canvas id="mainCanvas"></canvas>
+      </div>
+    </div>
+    <div class="dims-label" id="canvasDims"></div>
+
+    <div class="actions">
+      <button class="btn primary" id="btnDownload">⬇ Download PNG</button>
+      <button class="btn" id="btnCopyImage">⧉ Copy Image</button>
+      <button class="btn secondary" id="btnCopyCaption">📋 Copy Caption + Hashtags</button>
+    </div>
+    
+    <button class="btn ghost" id="btnOpenBatchModal" style="width:100%; max-width:520px; justify-content:center;">⚡ Multi-Format Batch Export Previews</button>
+
+    <div class="caption-preview">
+      <div class="lbl">Ready-to-paste caption</div>
+      <div class="txt" id="captionPreviewText"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BATCH EXPORT MODAL -->
+<div class="modal-overlay" id="batchModal">
+  <div class="modal-container">
+    <div class="modal-header">
+      <div class="modal-title">Multi-Format Batch Export</div>
+      <button class="modal-close" id="btnCloseBatchModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom: 20px; font-size:13px; color: var(--text-dim); line-height: 1.5;">
+        Generate and verify your graphic across all key social media formats before exporting.
+      </p>
+      <div class="batch-grid" id="batchGrid"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn ghost" id="btnCloseBatchModal2">Close</button>
+      <button class="btn secondary" id="btnDownloadAllBatch">⬇ Download All Formats</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- JAVASCRIPT STATE & LOGIC -->
+<script>
+/* ---------------- DATA PRESETS ---------------- */
+const PLATFORMS = [
+  { id: 'instagram', label: 'Instagram', icon: '◪', ratios: ['1:1', '4:5', '9:16'], maxChars: 2200 },
+  { id: 'facebook', label: 'Facebook', icon: '▣', ratios: ['1:1', '9:16'], maxChars: 63206 },
+  { id: 'linkedin', label: 'LinkedIn', icon: '▤', ratios: ['1:1', '1.91:1'], maxChars: 3000 },
+  { id: 'youtube', label: 'YouTube', icon: '▶', ratios: ['16:9'], maxChars: 5000 },
+  { id: 'tiktok', label: 'TikTok', icon: '♪', ratios: ['9:16'], maxChars: 2200 },
+  { id: 'twitter', label: 'X / Twitter', icon: '𝕏', ratios: ['16:9', '1:1'], maxChars: 280 }
+];
+
+const RATIO_DIMS = {
+  '1:1': [1080, 1080],
+  '4:5': [1080, 1350],
+  '9:16': [1080, 1920],
+  '16:9': [1280, 720],
+  '1.91:1': [1200, 627]
+};
+
+const TEMPLATES = [
+  { id: 'quote', name: 'Quote Card', desc: 'Centered quote style' },
+  { id: 'tip', name: 'Tip / List', desc: 'Headline + body lines' },
+  { id: 'stat', name: 'Stat Highlight', desc: 'Giant numeric callout' },
+  { id: 'simple', name: 'Minimal', desc: 'Clean statement layout' }
+];
+
+const THEMES = [
+  { id: 'midnight', name: 'Midnight Violet', bg: '#14121A', bg2: '#221E30', text: '#F5F3FF', accent: '#7C5CFC', fontPair: 'outfit_plus', mode: 'dark' },
+  { id: 'cream', name: 'Cream Editorial', bg: '#F4EFE6', bg2: '#EAE1D0', text: '#241F1A', accent: '#C1552E', fontPair: 'georgia_serif', mode: 'light' },
+  { id: 'neon', name: 'Neon Night', bg: '#0A0A0A', bg2: '#151515', text: '#F2FFEA', accent: '#B6FF3C', fontPair: 'syne_space', mode: 'dark' },
+  { id: 'pastel', name: 'Soft Pastel', bg: '#FDEFF4', bg2: '#F6E4EE', text: '#3B2A34', accent: '#FF8FAB', fontPair: 'outfit_plus', mode: 'light' },
+  { id: 'mono', name: 'Bold Mono', bg: '#0E0E0E', bg2: '#1a1a1a', text: '#FFFFFF', accent: '#FFFFFF', fontPair: 'jetbrains_mono', mode: 'dark' },
+  { id: 'ocean', name: 'Ocean Gradient', bg: '#062B3F', bg2: '#0A4A66', text: '#EAF7FF', accent: '#4FD1C5', fontPair: 'syne_space', mode: 'dark' }
+];
+
+const FONT_PAIRINGS = [
+  { id: 'outfit_plus', name: 'Outfit & Plus Jakarta', titleFont: 'Outfit', bodyFont: 'Plus Jakarta Sans' },
+  { id: 'syne_space', name: 'Syne & Space Grotesk', titleFont: 'Syne', bodyFont: 'Space Grotesk' },
+  { id: 'playfair_inter', name: 'Playfair & Inter', titleFont: 'Playfair Display', bodyFont: 'Inter' },
+  { id: 'jetbrains_mono', name: 'JetBrains Mono', titleFont: 'JetBrains Mono', bodyFont: 'JetBrains Mono' },
+  { id: 'trebuchet_sans', name: 'Trebuchet & System Sans', titleFont: 'Trebuchet MS', bodyFont: '-apple-system' },
+  { id: 'georgia_serif', name: 'Georgia & Serif', titleFont: 'Georgia', bodyFont: 'Georgia' }
+];
+
+const HASHTAG_PRESETS = [
+  '#TelepathicThoughts', '#TelepathicBD', '#RelatableMemes', '#BangladeshMemes',
+  '#DhakaVibes', '#SameThoughts', '#CreatorEconomy', '#SocialMedia', '#TipsAndTricks'
+];
+
+/* ---------------- STATE ---------------- */
+let state = {
+  platform: 'instagram',
+  ratio: '1:1',
+  template: 'quote',
+  theme: 'midnight',
+  fontPairing: 'outfit_plus',
+  align: 'center',
+  autoFit: true,
+  watermark: true,
+  watermarkText: '@TelepathicThoughtsBD',
+  
+  customAccent: null,
+  customBg: null,
+  
+  patternType: 'circles',
+  patternOpacity: 12,
+  patternDensity: 30,
+  
+  bgImage: null,
+  bgImageScale: 100,
+  bgImageOpacity: 40,
+  bgImageBlur: 0,
+  bgImageBlend: 'normal',
+  
+  logoImage: null,
+  logoScale: 20,
+  logoOpacity: 80,
+  logoPosition: 'bottom-right',
+  
+  recentColors: ['#7C5CFC', '#FF6B4A', '#B6FF3C', '#FFA3B8', '#C1552E', '#FFFFFF', '#14121A']
+};
+
+/* ---------------- INITIALIZATION & UI POPULATION ---------------- */
+const platformGrid = document.getElementById('platformGrid');
+const ratioRow = document.getElementById('ratioRow');
+const templateGrid = document.getElementById('templateGrid');
+const themeGrid = document.getElementById('themeGrid');
+const fontPairingSelect = document.getElementById('fontPairing');
+const patternTypeSelect = document.getElementById('patternType');
+const patternOpacityRange = document.getElementById('patternOpacity');
+const patternDensityRange = document.getElementById('patternDensity');
+const recentColorsGrid = document.getElementById('recentColorsGrid');
+
+// Set platform choices
+PLATFORMS.forEach(p => {
+  const btn = document.createElement('div');
+  btn.className = `platform-btn ${p.id === state.platform ? 'active' : ''}`;
+  btn.innerHTML = `<span class="pico">${p.icon}</span>${p.label}`;
+  btn.dataset.id = p.id;
+  btn.onclick = () => {
+    state.platform = p.id;
+    state.ratio = p.ratios[0];
+    updatePlatformUI();
+    updateRatioUI();
+    updateCaptionPreview();
+    render();
+  };
+  platformGrid.appendChild(btn);
+});
+
+function updatePlatformUI() {
+  [...platformGrid.children].forEach(c => {
+    c.classList.toggle('active', c.dataset.id === state.platform);
+  });
+}
+
+function updateRatioUI() {
+  ratioRow.innerHTML = '';
+  const plat = PLATFORMS.find(p => p.id === state.platform);
+  plat.ratios.forEach(r => {
+    const chip = document.createElement('div');
+    chip.className = `ratio-chip ${r === state.ratio ? 'active' : ''}`;
+    chip.textContent = r;
+    chip.onclick = () => {
+      state.ratio = r;
+      updateRatioUI();
+      render();
+    };
+    ratioRow.appendChild(chip);
+  });
+  
+  const dims = RATIO_DIMS[state.ratio];
+  document.getElementById('dimsLabel').textContent = `${dims[0]} × ${dims[1]}px  ·  ${plat.label}`;
+}
+
+// Set templates choices
+TEMPLATES.forEach(t => {
+  const btn = document.createElement('div');
+  btn.className = `tpl-btn ${t.id === state.template ? 'active' : ''}`;
+  btn.innerHTML = `<strong>${t.name}</strong>${t.desc}`;
+  btn.dataset.id = t.id;
+  btn.onclick = () => {
+    state.template = t.id;
+    [...templateGrid.children].forEach(c => c.classList.toggle('active', c.dataset.id === t.id));
+    render();
+  };
+  templateGrid.appendChild(btn);
+});
+
+// Set themes choices
+THEMES.forEach(th => {
+  const sw = document.createElement('div');
+  sw.className = `theme-swatch ${th.id === state.theme ? 'active' : ''}`;
+  sw.style.background = `linear-gradient(135deg, ${th.bg}, ${th.accent})`;
+  sw.innerHTML = `<span>${th.name}</span>`;
+  sw.dataset.id = th.id;
+  sw.onclick = () => {
+    state.theme = th.id;
+    state.customAccent = null;
+    state.customBg = null;
+    state.fontPairing = th.fontPair;
+    fontPairingSelect.value = th.fontPair;
+    
+    document.getElementById('customBg').value = th.bg;
+    document.getElementById('customAccent').value = th.accent;
+    
+    [...themeGrid.children].forEach(c => c.classList.toggle('active', c.dataset.id === th.id));
+    render();
+  };
+  themeGrid.appendChild(sw);
+});
+
+// Font pairing dropdown change
+fontPairingSelect.onchange = (e) => {
+  state.fontPairing = e.target.value;
+  render();
+};
+
+// Colors change listeners
+document.getElementById('customBg').oninput = (e) => {
+  state.customBg = e.target.value;
+  trackColorHistory(e.target.value);
+  render();
+};
+document.getElementById('customAccent').oninput = (e) => {
+  state.customAccent = e.target.value;
+  trackColorHistory(e.target.value);
+  render();
+};
+
+function trackColorHistory(color) {
+  if (!state.recentColors.includes(color)) {
+    state.recentColors.unshift(color);
+    if (state.recentColors.length > 8) state.recentColors.pop();
+    updateRecentColorsUI();
+    localStorage.setItem('studio_recent_colors', JSON.stringify(state.recentColors));
+  }
+}
+
+function updateRecentColorsUI() {
+  recentColorsGrid.innerHTML = '';
+  state.recentColors.forEach(col => {
+    const dot = document.createElement('div');
+    dot.className = 'recent-color-dot';
+    dot.style.backgroundColor = col;
+    dot.onclick = () => {
+      state.customAccent = col;
+      document.getElementById('customAccent').value = col;
+      render();
+    };
+    recentColorsGrid.appendChild(dot);
+  });
+}
+
+// Load color memory
+const cachedColors = localStorage.getItem('studio_recent_colors');
+if (cachedColors) {
+  state.recentColors = JSON.parse(cachedColors);
+}
+updateRecentColorsUI();
+
+// Pattern change listeners
+patternTypeSelect.onchange = (e) => {
+  state.patternType = e.target.value;
+  render();
+};
+patternOpacityRange.oninput = (e) => {
+  state.patternOpacity = parseInt(e.target.value);
+  render();
+};
+patternDensityRange.oninput = (e) => {
+  state.patternDensity = parseInt(e.target.value);
+  render();
+};
+
+// Alignment selection
+const alignButtons = document.querySelectorAll('.align-btn');
+alignButtons.forEach(btn => {
+  btn.onclick = () => {
+    state.align = btn.dataset.align;
+    alignButtons.forEach(b => b.classList.toggle('active', b === btn));
+    render();
+  };
+});
+
+// Auto fit and Watermark Switches
+const autoFitSwitch = document.getElementById('autoFitSwitch');
+autoFitSwitch.onclick = () => {
+  state.autoFit = !state.autoFit;
+  autoFitSwitch.classList.toggle('on', state.autoFit);
+  render();
+};
+
+const watermarkSwitch = document.getElementById('watermarkSwitch');
+watermarkSwitch.onclick = () => {
+  state.watermark = !state.watermark;
+  watermarkSwitch.classList.toggle('on', state.watermark);
+  render();
+};
+
+/* ---------------- MEDIA LAYER EVENT BINDINGS ---------------- */
+const bgInput = document.getElementById('bgFile');
+const bgControlsDiv = document.getElementById('bgControls');
+const btnRemoveBgImage = document.getElementById('btnRemoveBgImage');
+
+bgInput.onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      state.bgImage = img;
+      bgControlsDiv.style.display = 'block';
+      btnRemoveBgImage.style.display = 'inline-block';
+      render();
+    };
+    img.src = event.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+btnRemoveBgImage.onclick = () => {
+  state.bgImage = null;
+  bgInput.value = '';
+  bgControlsDiv.style.display = 'none';
+  btnRemoveBgImage.style.display = 'none';
+  render();
+};
+
+document.getElementById('bgImageScale').oninput = (e) => {
+  state.bgImageScale = parseInt(e.target.value);
+  render();
+};
+document.getElementById('bgImageOpacity').oninput = (e) => {
+  state.bgImageOpacity = parseInt(e.target.value);
+  render();
+};
+document.getElementById('bgImageBlur').oninput = (e) => {
+  state.bgImageBlur = parseInt(e.target.value);
+  render();
+};
+document.getElementById('bgImageBlend').onchange = (e) => {
+  state.bgImageBlend = e.target.value;
+  render();
+};
+
+const logoInput = document.getElementById('logoFile');
+const logoControlsDiv = document.getElementById('logoControls');
+const btnRemoveLogo = document.getElementById('btnRemoveLogo');
+
+logoInput.onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      state.logoImage = img;
+      logoControlsDiv.style.display = 'block';
+      btnRemoveLogo.style.display = 'inline-block';
+      render();
+    };
+    img.src = event.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+btnRemoveLogo.onclick = () => {
+  state.logoImage = null;
+  logoInput.value = '';
+  logoControlsDiv.style.display = 'none';
+  btnRemoveLogo.style.display = 'none';
+  render();
+};
+
+document.getElementById('logoScale').oninput = (e) => {
+  state.logoScale = parseInt(e.target.value);
+  render();
+};
+document.getElementById('logoOpacity').oninput = (e) => {
+  state.logoOpacity = parseInt(e.target.value);
+  render();
+};
+document.getElementById('logoPosition').onchange = (e) => {
+  state.logoPosition = e.target.value;
+  render();
+};
+
+/* ---------------- INPUTS SYNC & TEXTS ---------------- */
+const inputTitle = document.getElementById('inputTitle');
+const inputBody = document.getElementById('inputBody');
+const inputCaption = document.getElementById('inputCaption');
+const inputHashtags = document.getElementById('inputHashtags');
+const watermarkText = document.getElementById('watermarkText');
+
+[inputTitle, inputBody].forEach(el => el.oninput = () => render());
+watermarkText.oninput = () => render();
+
+// Caption warning limits check
+function updateCaptionLengthStatus() {
+  const curPlat = PLATFORMS.find(p => p.id === state.platform);
+  const max = curPlat ? curPlat.maxChars : 2200;
+  const len = inputCaption.value.length;
+  
+  const statusEl = document.getElementById('captionLengthStatus');
+  statusEl.textContent = `${len}/${max}`;
+  statusEl.classList.toggle('warn', len > max);
+}
+
+inputCaption.oninput = () => {
+  updateCaptionLengthStatus();
+  updateCaptionPreview();
+};
+inputHashtags.oninput = () => updateCaptionPreview();
+
+// Hashtags presetting chips
+const hashtagChips = document.getElementById('hashtagChips');
+HASHTAG_PRESETS.forEach(tag => {
+  const chip = document.createElement('div');
+  chip.className = 'hchip';
+  chip.textContent = tag;
+  chip.onclick = () => {
+    const cur = inputHashtags.value.trim();
+    if (!cur.includes(tag)) {
+      inputHashtags.value = (cur ? cur + ' ' : '') + tag;
+      updateCaptionPreview();
+    }
+  };
+  hashtagChips.appendChild(chip);
+});
+
+const captionPreviewText = document.getElementById('captionPreviewText');
+function updateCaptionPreview() {
+  const cap = inputCaption.value.trim();
+  const tags = inputHashtags.value.trim();
+  const full = tags ? `${cap}\n\n${tags}` : cap;
+  
+  const escapedCap = cap.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const escapedTags = tags.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  
+  captionPreviewText.innerHTML = escapedCap + (tags ? `\n\n<span class="hash">${escapedTags}</span>` : '');
+}
+
+/* ---------------- LOCAL DRAFTS SAVING ---------------- */
+const draftNameInput = document.getElementById('draftName');
+const btnSaveDraft = document.getElementById('btnSaveDraft');
+const draftList = document.getElementById('draftList');
+
+btnSaveDraft.onclick = () => {
+  const name = draftNameInput.value.trim();
+  if (!name) {
+    showToast('Enter a draft name first!');
+    return;
+  }
+  
+  const drafts = getDrafts();
+  const savedState = {
+    platform: state.platform,
+    ratio: state.ratio,
+    template: state.template,
+    theme: state.theme,
+    fontPairing: state.fontPairing,
+    customAccent: state.customAccent,
+    customBg: state.customBg,
+    patternType: state.patternType,
+    patternOpacity: state.patternOpacity,
+    patternDensity: state.patternDensity,
+    align: state.align,
+    autoFit: state.autoFit,
+    watermark: state.watermark,
+    watermarkText: watermarkText.value,
+    
+    bgImageScale: state.bgImageScale,
+    bgImageOpacity: state.bgImageOpacity,
+    bgImageBlur: state.bgImageBlur,
+    bgImageBlend: state.bgImageBlend,
+    logoScale: state.logoScale,
+    logoOpacity: state.logoOpacity,
+    logoPosition: state.logoPosition,
+    
+    titleText: inputTitle.value,
+    bodyText: inputBody.value,
+    captionText: inputCaption.value,
+    hashtagsText: inputHashtags.value
+  };
+  
+  drafts[name] = savedState;
+  localStorage.setItem('studio_drafts', JSON.stringify(drafts));
+  draftNameInput.value = '';
+  updateDraftsUI();
+  showToast(`Draft "${name}" saved ✓`);
+};
+
+function getDrafts() {
+  const drafts = localStorage.getItem('studio_drafts');
+  return drafts ? JSON.parse(drafts) : {};
+}
+
+function updateDraftsUI() {
+  draftList.innerHTML = '';
+  const drafts = getDrafts();
+  const keys = Object.keys(drafts);
+  
+  if (keys.length === 0) {
+    draftList.innerHTML = '<div style="font-size:11px; color:var(--text-dim); text-align:center; padding:8px;">No saved drafts</div>';
+    return;
+  }
+  
+  keys.forEach(k => {
+    const item = document.createElement('div');
+    item.className = 'draft-item';
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'draft-name';
+    nameSpan.textContent = k;
+    nameSpan.onclick = () => loadDraft(k);
+    
+    const delBtn = document.createElement('button');
+    delBtn.className = 'draft-del-btn';
+    delBtn.innerHTML = `
+      <svg style="width:14px; height:14px;" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14V4zM6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12z"/>
+      </svg>
+    `;
+    delBtn.onclick = () => deleteDraft(k);
+    
+    item.appendChild(nameSpan);
+    item.appendChild(delBtn);
+    draftList.appendChild(item);
+  });
+}
+
+function deleteDraft(name) {
+  const drafts = getDrafts();
+  delete drafts[name];
+  localStorage.setItem('studio_drafts', JSON.stringify(drafts));
+  updateDraftsUI();
+  showToast(`Draft "${name}" deleted`);
+}
+
+function loadDraft(name) {
+  const drafts = getDrafts();
+  const d = drafts[name];
+  if (!d) return;
+  
+  state.platform = d.platform || 'instagram';
+  state.ratio = d.ratio || '1:1';
+  state.template = d.template || 'quote';
+  state.theme = d.theme || 'midnight';
+  state.fontPairing = d.fontPairing || 'outfit_plus';
+  state.customAccent = d.customAccent;
+  state.customBg = d.customBg;
+  state.patternType = d.patternType || 'circles';
+  state.patternOpacity = d.patternOpacity !== undefined ? d.patternOpacity : 12;
+  state.patternDensity = d.patternDensity !== undefined ? d.patternDensity : 30;
+  state.align = d.align || 'center';
+  state.autoFit = d.autoFit !== undefined ? d.autoFit : true;
+  state.watermark = d.watermark !== undefined ? d.watermark : true;
+  
+  state.bgImageScale = d.bgImageScale !== undefined ? d.bgImageScale : 100;
+  state.bgImageOpacity = d.bgImageOpacity !== undefined ? d.bgImageOpacity : 40;
+  state.bgImageBlur = d.bgImageBlur !== undefined ? d.bgImageBlur : 0;
+  state.bgImageBlend = d.bgImageBlend || 'normal';
+  state.logoScale = d.logoScale !== undefined ? d.logoScale : 20;
+  state.logoOpacity = d.logoOpacity !== undefined ? d.logoOpacity : 80;
+  state.logoPosition = d.logoPosition || 'bottom-right';
+  
+  watermarkText.value = d.watermarkText || '@TelepathicThoughtsBD';
+  inputTitle.value = d.titleText || '';
+  inputBody.value = d.bodyText || '';
+  inputCaption.value = d.captionText || '';
+  inputHashtags.value = d.hashtagsText || '';
+  
+  // Sync form controls
+  fontPairingSelect.value = state.fontPairing;
+  patternTypeSelect.value = state.patternType;
+  patternOpacityRange.value = state.patternOpacity;
+  patternDensityRange.value = state.patternDensity;
+  
+  document.getElementById('bgImageScale').value = state.bgImageScale;
+  document.getElementById('bgImageOpacity').value = state.bgImageOpacity;
+  document.getElementById('bgImageBlur').value = state.bgImageBlur;
+  document.getElementById('bgImageBlend').value = state.bgImageBlend;
+  
+  document.getElementById('logoScale').value = state.logoScale;
+  document.getElementById('logoOpacity').value = state.logoOpacity;
+  document.getElementById('logoPosition').value = state.logoPosition;
+  
+  if (state.customBg) document.getElementById('customBg').value = state.customBg;
+  if (state.customAccent) document.getElementById('customAccent').value = state.customAccent;
+  
+  alignButtons.forEach(b => b.classList.toggle('active', b.dataset.align === state.align));
+  autoFitSwitch.classList.toggle('on', state.autoFit);
+  watermarkSwitch.classList.toggle('on', state.watermark);
+  
+  // Clear file references to keep simple
+  btnRemoveBgImage.click();
+  btnRemoveLogo.click();
+  
+  updatePlatformUI();
+  updateRatioUI();
+  updateCaptionLengthStatus();
+  updateCaptionPreview();
+  render();
+  
+  // Sync template button visual active classes
+  [...templateGrid.children].forEach(c => c.classList.toggle('active', c.dataset.id === state.template));
+  // Sync theme swatch visual active classes
+  [...themeGrid.children].forEach(c => c.classList.toggle('active', c.dataset.id === state.theme));
+  
+  showToast(`Loaded draft "${name}"`);
+}
+
+updateDraftsUI();
+
+/* ---------------- CANVAS RENDERING ENGINE ---------------- */
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+const frameWrap = document.getElementById('frameWrap');
+const canvasDims = document.getElementById('canvasDims');
+
+function getThemeDetails() {
+  const th = { ...THEMES.find(t => t.id === state.theme) };
+  if (state.customAccent) th.accent = state.customAccent;
+  if (state.customBg) th.bg = state.customBg;
+  return th;
+}
+
+function getActiveFontPair() {
+  return FONT_PAIRINGS.find(f => f.id === state.fontPairing) || FONT_PAIRINGS[0];
+}
+
+// Word wrapping utility
+function wrapText(context, text, maxWidth) {
+  const words = text.split(/\s+/);
+  const lines = [];
+  let currentLine = '';
+  
+  for (const word of words) {
+    const testLine = currentLine ? currentLine + ' ' + word : word;
+    if (context.measureText(testLine).width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
+// Fit Font sizing utility
+function fitFontSize(context, text, maxWidth, maxHeight, startSize, fontFamily, weight, lineHeightMult) {
+  let size = startSize;
+  context.font = `${weight} ${size}px "${fontFamily}", sans-serif`;
+  let lines = wrapText(context, text, maxWidth);
+  let totalHeight = lines.length * size * lineHeightMult;
+  
+  while (totalHeight > maxHeight && size > 20) {
+    size -= 2;
+    context.font = `${weight} ${size}px "${fontFamily}", sans-serif`;
+    lines = wrapText(context, text, maxWidth);
+    totalHeight = lines.length * size * lineHeightMult;
+  }
+  return { size, lines };
+}
+
+// Primary drawing routine (can be outputted to main canvas or temporary ones for batch thumbnail rendering)
+function renderGraphic(tempCanvas, ratio, platformId, isThumbnail = false) {
+  const dims = RATIO_DIMS[ratio] || [1080, 1080];
+  const w = dims[0];
+  const h = dims[1];
+  tempCanvas.width = w;
+  tempCanvas.height = h;
+  
+  const tempCtx = tempCanvas.getContext('2d');
+  const colors = getThemeDetails();
+  const font = getActiveFontPair();
+  const titleText = inputTitle.value.trim() || 'Your title/hook goes here';
+  const bodyText = inputBody.value.trim();
+  const pad = w * 0.09;
+  
+  // 1. Draw Background
+  if (colors.mode === 'dark' && state.theme === 'ocean') {
+    const grad = tempCtx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, colors.bg);
+    grad.addColorStop(1, colors.bg2 || '#0A4A66');
+    tempCtx.fillStyle = grad;
+  } else {
+    tempCtx.fillStyle = colors.bg;
+  }
+  tempCtx.fillRect(0, 0, w, h);
+
+  // 2. Draw Background Image Layer
+  if (state.bgImage) {
+    tempCtx.save();
+    tempCtx.globalCompositeOperation = state.bgImageBlend || 'source-over';
+    if (state.bgImageBlur > 0) {
+      tempCtx.filter = `blur(${state.bgImageBlur}px)`;
+    }
+    tempCtx.globalAlpha = state.bgImageOpacity / 100;
+    
+    const imgW = state.bgImage.width;
+    const imgH = state.bgImage.height;
+    const scale = state.bgImageScale / 100;
+    
+    const canvasRatio = w / h;
+    const imgRatio = imgW / imgH;
+    
+    let renderW, renderH;
+    if (imgRatio > canvasRatio) {
+      renderH = h * scale;
+      renderW = renderH * imgRatio;
+    } else {
+      renderW = w * scale;
+      renderH = renderW / imgRatio;
+    }
+    
+    const rx = (w - renderW) / 2;
+    const ry = (h - renderH) / 2;
+    tempCtx.drawImage(state.bgImage, rx, ry, renderW, renderH);
+    tempCtx.restore();
+  }
+
+  // 3. Draw Pattern Overlay
+  if (state.patternType !== 'none') {
+    tempCtx.save();
+    tempCtx.globalAlpha = state.patternOpacity / 100;
+    tempCtx.fillStyle = colors.accent;
+    tempCtx.strokeStyle = colors.accent;
+    
+    const spacing = state.patternDensity * (w / 1000) * 1.5;
+    
+    if (state.patternType === 'dots') {
+      for (let x = spacing / 2; x < w; x += spacing) {
+        for (let y = spacing / 2; y < h; y += spacing) {
+          tempCtx.beginPath();
+          tempCtx.arc(x, y, w * 0.0025, 0, Math.PI * 2);
+          tempCtx.fill();
+        }
+      }
+    } else if (state.patternType === 'grid') {
+      tempCtx.lineWidth = w * 0.001;
+      tempCtx.beginPath();
+      for (let x = 0; x < w; x += spacing) {
+        tempCtx.moveTo(x, 0);
+        tempCtx.lineTo(x, h);
+      }
+      for (let y = 0; y < h; y += spacing) {
+        tempCtx.moveTo(0, y);
+        tempCtx.lineTo(w, y);
+      }
+      tempCtx.stroke();
+    } else if (state.patternType === 'stripes') {
+      tempCtx.lineWidth = w * 0.0015;
+      tempCtx.beginPath();
+      for (let offset = -h; offset < w; offset += spacing) {
+        tempCtx.moveTo(offset, 0);
+        tempCtx.lineTo(offset + h, h);
+      }
+      tempCtx.stroke();
+    } else if (state.patternType === 'noise') {
+      const count = (w * h) * 0.0008 * (state.patternDensity / 30);
+      for (let i = 0; i < count; i++) {
+        const rx = Math.random() * w;
+        const ry = Math.random() * h;
+        const size = Math.random() * (w * 0.002) + 1;
+        tempCtx.fillRect(rx, ry, size, size);
+      }
+    } else if (state.patternType === 'circles') {
+      // Corner Circles (Default background geometric shapes as requested from draft.html)
+      const rad1 = w * 0.32 * (state.patternDensity / 30);
+      const rad2 = w * 0.22 * (state.patternDensity / 30);
+      
+      tempCtx.beginPath();
+      tempCtx.ellipse(w * 0.88, h * 0.08, rad1, rad1, 0, 0, Math.PI * 2);
+      tempCtx.fill();
+      
+      tempCtx.beginPath();
+      tempCtx.ellipse(w * 0.06, h * 0.96, rad2, rad2, 0, 0, Math.PI * 2);
+      tempCtx.fill();
+    } else if (state.patternType === 'waves') {
+      const amp = h * 0.1 * (state.patternDensity / 30);
+      
+      tempCtx.beginPath();
+      tempCtx.moveTo(0, h * 0.85);
+      tempCtx.bezierCurveTo(w * 0.25, h * 0.85 - amp, w * 0.75, h * 0.85 + amp, w, h * 0.8);
+      tempCtx.lineTo(w, h);
+      tempCtx.lineTo(0, h);
+      tempCtx.closePath();
+      tempCtx.fill();
+      
+      tempCtx.beginPath();
+      tempCtx.moveTo(0, 0);
+      tempCtx.lineTo(w, 0);
+      tempCtx.bezierCurveTo(w * 0.7, amp, w * 0.3, h * 0.1, 0, h * 0.15);
+      tempCtx.closePath();
+      tempCtx.fill();
+    } else if (state.patternType === 'geometric') {
+      const sizeMult = state.patternDensity / 30;
+      
+      tempCtx.beginPath();
+      tempCtx.moveTo(w * (1 - 0.3 * sizeMult), 0);
+      tempCtx.lineTo(w, 0);
+      tempCtx.lineTo(w, h * 0.4 * sizeMult);
+      tempCtx.closePath();
+      tempCtx.fill();
+      
+      tempCtx.beginPath();
+      tempCtx.moveTo(0, h * (1 - 0.4 * sizeMult));
+      tempCtx.lineTo(0, h);
+      tempCtx.lineTo(w * 0.35 * sizeMult, h);
+      tempCtx.closePath();
+      tempCtx.fill();
+    }
+    tempCtx.restore();
+  }
+
+  // 4. Setup Alignment coordinates
+  const align = state.align;
+  tempCtx.textAlign = align;
+  tempCtx.textBaseline = 'middle';
+  
+  let alignX = w / 2;
+  if (align === 'left') alignX = pad;
+  else if (align === 'right') alignX = w - pad;
+  
+  const maxTextWidth = w - pad * 2;
+  
+  // 5. Draw templates layout
+  if (state.template === 'stat') {
+    const parts = titleText.split(' ');
+    const heroText = parts[0] || '10X';
+    const secondaryLabel = parts.slice(1).join(' ') || 'Growth in design efficiency';
+    
+    // Giant stat number
+    tempCtx.fillStyle = colors.accent;
+    const heroSize = w * 0.28;
+    tempCtx.font = `900 ${heroSize}px "${font.titleFont}", sans-serif`;
+    tempCtx.fillText(heroText, alignX, h * 0.42);
+    
+    // Supporting label
+    tempCtx.fillStyle = colors.text;
+    const labelMaxHeight = h * 0.22;
+    const startSize = state.autoFit ? w * 0.07 : state.bodyFontSize || 24;
+    const fit = fitFontSize(tempCtx, secondaryLabel, maxTextWidth, labelMaxHeight, startSize, font.bodyFont, '600', 1.25);
+    
+    drawLines(tempCtx, fit.lines, alignX, h * 0.62, fit.size * 1.25, align);
+    
+  } else if (state.template === 'tip') {
+    tempCtx.save();
+    tempCtx.fillStyle = colors.accent;
+    tempCtx.font = `700 ${w * 0.032}px "${font.bodyFont}", sans-serif`;
+    tempCtx.fillText('PRO TIP', alignX, h * 0.14);
+    tempCtx.restore();
+
+    // Heading Title
+    tempCtx.fillStyle = colors.text;
+    const titleMaxHeight = h * 0.4;
+    const startSize = state.autoFit ? w * 0.075 : state.titleFontSize || 50;
+    const fitTitle = fitFontSize(tempCtx, titleText, maxTextWidth, titleMaxHeight, startSize, font.titleFont, '800', 1.15);
+    
+    const titleCenterY = h * 0.42;
+    drawLines(tempCtx, fitTitle.lines, alignX, titleCenterY, fitTitle.size * 1.15, align);
+
+    // Body text below (with line-wrapped auto scaling to fit)
+    if (bodyText) {
+      tempCtx.fillStyle = colors.text;
+      tempCtx.save();
+      tempCtx.globalAlpha = 0.75;
+      
+      const bodyMaxHeight = h * 0.22;
+      const bStartSize = state.autoFit ? w * 0.036 : state.bodyFontSize || 24;
+      const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '400', 1.35);
+      
+      const bodyCenterY = h * 0.72;
+      drawLines(tempCtx, fitBody.lines, alignX, bodyCenterY, fitBody.size * 1.35, align);
+      tempCtx.restore();
+    }
+
+  } else if (state.template === 'simple') {
+    tempCtx.fillStyle = colors.text;
+    const startSize = state.autoFit ? w * 0.09 : state.titleFontSize || 50;
+    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.5, startSize, font.titleFont, '800', 1.15);
+    drawLines(tempCtx, fit.lines, alignX, h * 0.5, fit.size * 1.15, align);
+
+  } else {
+    // Quote layout (Default)
+    tempCtx.save();
+    tempCtx.fillStyle = colors.accent;
+    // Elegant quote styling from Georgia serif
+    tempCtx.font = `800 ${w * 0.12}px Georgia, serif`;
+    tempCtx.fillText('"', alignX, h * 0.22);
+    tempCtx.restore();
+
+    // Quote Title Content
+    tempCtx.fillStyle = colors.text;
+    const startSize = state.autoFit ? w * 0.08 : state.titleFontSize || 50;
+    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.45, startSize, font.titleFont, '700', 1.2);
+    drawLines(tempCtx, fit.lines, alignX, h * 0.5, fit.size * 1.2, align);
+
+    // Quote Author / Body below (with line wrapping auto fit support)
+    if (bodyText) {
+      tempCtx.fillStyle = colors.accent;
+      tempCtx.font = `600 ${w * 0.03}px "${font.bodyFont}", sans-serif`;
+      
+      const bodyMaxHeight = h * 0.15;
+      const bStartSize = w * 0.03;
+      const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '600', 1.3);
+      
+      const authorTextLines = fitBody.lines.map((line, idx) => idx === 0 ? `— ${line}` : `  ${line}`);
+      drawLines(tempCtx, authorTextLines, alignX, h * 0.78, fitBody.size * 1.3, align);
+    }
+  }
+
+  // 6. Draw Logo Layer (if preset and not batch preview)
+  if (state.logoImage && !isThumbnail) {
+    tempCtx.save();
+    tempCtx.globalAlpha = state.logoOpacity / 100;
+    
+    const logoW = state.logoImage.width;
+    const logoH = state.logoImage.height;
+    const scale = state.logoScale / 100;
+    const targetW = w * 0.18 * scale;
+    const targetH = targetW * (logoH / logoW);
+    
+    let lx = w - targetW - pad;
+    let ly = h - targetH - pad;
+    
+    if (state.logoPosition === 'top-left') { lx = pad; ly = pad; }
+    else if (state.logoPosition === 'top-right') { lx = w - targetW - pad; ly = pad; }
+    else if (state.logoPosition === 'bottom-left') { lx = pad; ly = h - targetH - pad; }
+    else if (state.logoPosition === 'center') { lx = w/2 - targetW/2; ly = h/2 - targetH/2; }
+    
+    tempCtx.drawImage(state.logoImage, lx, ly, targetW, targetH);
+    tempCtx.restore();
+  }
+
+  // 7. Draw Watermark handle (centered at bottom)
+  if (state.watermark) {
+    tempCtx.save();
+    tempCtx.textAlign = 'center';
+    tempCtx.textBaseline = 'middle';
+    tempCtx.fillStyle = colors.text;
+    tempCtx.globalAlpha = 0.55;
+    tempCtx.font = `600 ${w * 0.026}px "${font.bodyFont}", sans-serif`;
+    tempCtx.fillText(watermarkText.value.trim() || '@TelepathicThoughtsBD', w / 2, h - pad * 0.55);
+    tempCtx.restore();
+  }
+}
+
+// Main viewport render pipeline
+function render() {
+  const [w, h] = RATIO_DIMS[state.ratio];
+  renderGraphic(canvas, state.ratio, state.platform, false);
+  
+  canvasDims.textContent = `${w} × ${h}px  ·  ${state.ratio}  ·  ${PLATFORMS.find(p => p.id === state.platform).label}`;
+  updateDeviceChromes(w, h);
+}
+
+function drawLines(context, lines, x, centerY, lineHeight, align) {
+  const totalHeight = lines.length * lineHeight;
+  let y = centerY - (totalHeight / 2) + (lineHeight / 2);
+  
+  for (const line of lines) {
+    context.textAlign = align;
+    context.fillText(line, x, y);
+    y += lineHeight;
+  }
+}
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function roundRect(ctx, x, y, width, height, radius, fill = false, stroke = true) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+  if (fill) ctx.fill();
+  if (stroke) ctx.stroke();
+}
+
+/* ---------------- ADAPTIVE DEVICE FRAMES CHROMES ---------------- */
+function updateDeviceChromes(w, h) {
+  const wrap = document.getElementById('deviceChromeWrap');
+  if (!wrap) return;
+  
+  const mainCanvas = document.getElementById('mainCanvas');
+  const frameWrap = document.getElementById('frameWrap');
+  
+  const isPhone = state.ratio === '9:16';
+  const isBrowser = state.ratio === '16:9' || state.ratio === '1.91:1';
+  const isFeedCard = state.ratio === '1:1' || state.ratio === '4:5';
+  
+  wrap.className = '';
+  wrap.innerHTML = '';
+  mainCanvas.className = '';
+  wrap.style = '';
+  
+  if (isPhone) {
+    if (frameWrap) {
+      frameWrap.style.width = '100%';
+      frameWrap.style.maxWidth = '340px';
+    }
+    wrap.className = 'device-chrome-wrap';
+    wrap.style.width = '100%';
+    wrap.style.boxSizing = 'border-box';
+    wrap.style.padding = '46px 12px 32px 12px';
+    wrap.style.borderRadius = '34px';
+    wrap.style.border = '12px solid #1a162b';
+    wrap.style.background = '#090710';
+    wrap.style.position = 'relative';
+    wrap.style.boxShadow = 'inset 0 0 20px rgba(0,0,0,0.8), 0 25px 60px rgba(0,0,0,0.5)';
+    
+    const notch = document.createElement('div');
+    notch.className = 'chrome-phone-notch';
+    
+    const header = document.createElement('div');
+    header.className = 'chrome-phone-header';
+    header.innerHTML = `
+      <div>09:41</div>
+      <div style="display:flex; gap: 6px; align-items:center;">
+        <svg style="width:12px; height:12px;" viewBox="0 0 24 24"><path fill="currentColor" d="M2 22h20V2z"/></svg>
+        <svg style="width:12px; height:12px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c3.9-3.89 10.21-3.89 14.1 0l1.9-1.9C21.6 15.93 22 13.97 22 12c0-4.97-4.03-9-9-9z"/></svg>
+        <svg style="width:14px; height:14px;" viewBox="0 0 24 24"><path fill="currentColor" d="M17 5H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2m4 4h2v6h-2V9z"/></svg>
+      </div>
+    `;
+    
+    const homeIndicator = document.createElement('div');
+    homeIndicator.className = 'chrome-phone-home-indicator';
+    
+    wrap.appendChild(notch);
+    wrap.appendChild(header);
+    wrap.appendChild(mainCanvas);
+    wrap.appendChild(homeIndicator);
+    
+    mainCanvas.classList.add('canvas-phone-styled');
+    
+  } else if (isBrowser) {
+    if (frameWrap) {
+      frameWrap.style.width = '100%';
+      frameWrap.style.maxWidth = '640px';
+    }
+    wrap.className = 'device-chrome-wrap';
+    wrap.style.width = '100%';
+    wrap.style.boxSizing = 'border-box';
+    wrap.style.padding = '0';
+    wrap.style.borderRadius = '14px';
+    wrap.style.border = '2px solid var(--line)';
+    wrap.style.background = '#120e22';
+    wrap.style.overflow = 'hidden';
+    wrap.style.display = 'flex';
+    wrap.style.flexDirection = 'column';
+    wrap.style.boxShadow = '0 25px 60px rgba(0,0,0,0.5)';
+    
+    const browserHeader = document.createElement('div');
+    browserHeader.className = 'chrome-browser-header';
+    
+    const dots = document.createElement('div');
+    dots.className = 'dots';
+    dots.innerHTML = `
+      <div class="dot red"></div>
+      <div class="dot yellow"></div>
+      <div class="dot green"></div>
+    `;
+    
+    const addressBar = document.createElement('div');
+    addressBar.className = 'address-bar';
+    const curPlatform = PLATFORMS.find(p => p.id === state.platform);
+    addressBar.textContent = `contentstudio.live/${curPlatform ? curPlatform.id : 'web'}/${state.ratio}`;
+    
+    browserHeader.appendChild(dots);
+    browserHeader.appendChild(addressBar);
+    
+    wrap.appendChild(browserHeader);
+    wrap.appendChild(mainCanvas);
+    
+  } else if (isFeedCard) {
+    if (frameWrap) {
+      frameWrap.style.width = '100%';
+      frameWrap.style.maxWidth = '460px';
+    }
+    wrap.className = 'chrome-feed-card';
+    wrap.style.width = '100%';
+    wrap.style.boxSizing = 'border-box';
+    wrap.style.padding = '0';
+    wrap.style.border = '1px solid var(--line)';
+    wrap.style.borderRadius = '16px';
+    wrap.style.background = '#110e20';
+    wrap.style.overflow = 'hidden';
+    wrap.style.boxShadow = '0 25px 60px rgba(0,0,0,0.5)';
+    
+    const feedHeader = document.createElement('div');
+    feedHeader.className = 'feed-card-header';
+    
+    const avatar = document.createElement('div');
+    avatar.className = 'feed-card-avatar';
+    
+    const meta = document.createElement('div');
+    meta.className = 'feed-card-meta';
+    const handle = watermarkText.value.trim() || '@TelepathicThoughtsBD';
+    const p = PLATFORMS.find(x => x.id === state.platform);
+    
+    meta.innerHTML = `
+      <div class="feed-card-name">${handle}</div>
+      <div class="feed-card-sub">${p ? p.label : 'Sponsored'}</div>
+    `;
+    
+    const menuIcon = document.createElement('div');
+    menuIcon.style.marginLeft = 'auto';
+    menuIcon.style.color = 'var(--text-dim)';
+    menuIcon.style.cursor = 'pointer';
+    menuIcon.innerHTML = `
+      <svg style="width:20px; height:20px;" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+      </svg>
+    `;
+    
+    feedHeader.appendChild(avatar);
+    feedHeader.appendChild(meta);
+    feedHeader.appendChild(menuIcon);
+    
+    const feedFooter = document.createElement('div');
+    feedFooter.className = 'feed-card-footer';
+    
+    const actions = document.createElement('div');
+    actions.className = 'feed-card-actions';
+    
+    const actionsLeft = document.createElement('div');
+    actionsLeft.className = 'feed-card-actions-left';
+    actionsLeft.innerHTML = `
+      <svg style="width:20px; height:20px; color: var(--accent-coral);" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      <svg style="width:20px; height:20px;" viewBox="0 0 24 24"><path fill="currentColor" d="M9 22a1 1 0 0 1-1-1v-3H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5l-4 4H9z"/></svg>
+      <svg style="width:20px; height:20px;" viewBox="0 0 24 24"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    `;
+    
+    const bookmark = document.createElement('div');
+    bookmark.innerHTML = `
+      <svg style="width:20px; height:20px;" viewBox="0 0 24 24"><path fill="currentColor" d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+    `;
+    
+    actions.appendChild(actionsLeft);
+    actions.appendChild(bookmark);
+    
+    const likes = document.createElement('div');
+    likes.className = 'feed-card-likes';
+    likes.textContent = '1,245 likes';
+    
+    feedFooter.appendChild(actions);
+    feedFooter.appendChild(likes);
+    
+    wrap.appendChild(feedHeader);
+    wrap.appendChild(mainCanvas);
+    wrap.appendChild(feedFooter);
+  } else {
+    if (frameWrap) {
+      frameWrap.style.width = '100%';
+      frameWrap.style.maxWidth = '520px';
+    }
+    wrap.appendChild(mainCanvas);
+  }
+}
+
+/* ---------------- ACTIONS & EXPORTS ---------------- */
+const toast = document.getElementById('toast');
+function showToast(msg) {
+  toast.innerHTML = `<svg style="width:16px; height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> <span>${msg}</span>`;
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2200);
+}
+
+// 1. Download PNG
+document.getElementById('btnDownload').onclick = () => {
+  const link = document.createElement('a');
+  link.download = `content-studio-${state.platform}-${state.ratio}-${Date.now()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  showToast('PNG Graphic Downloaded!');
+};
+
+// 2. Copy Image
+document.getElementById('btnCopyImage').onclick = async () => {
+  try {
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        showToast('Blob creation failed');
+        return;
+      }
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      showToast('Copied graphic to clipboard!');
+    }, 'image/png');
+  } catch (err) {
+    showToast('Clipboard copy unsupported — please download');
+  }
+};
+
+// 3. Copy Caption
+document.getElementById('btnCopyCaption').onclick = async () => {
+  const cap = inputCaption.value.trim();
+  const tags = inputHashtags.value.trim();
+  const full = tags ? `${cap}\n\n${tags}` : cap;
+  
+  try {
+    await navigator.clipboard.writeText(full);
+    showToast('Caption text copied!');
+  } catch (err) {
+    showToast('Copy failed — please copy manually');
+  }
+};
+
+/* ---------------- BATCH EXPORT LOGIC ---------------- */
+const batchModal = document.getElementById('batchModal');
+const btnOpenBatchModal = document.getElementById('btnOpenBatchModal');
+const btnCloseBatchModal = document.getElementById('btnCloseBatchModal');
+const btnCloseBatchModal2 = document.getElementById('btnCloseBatchModal2');
+const btnDownloadAllBatch = document.getElementById('btnDownloadAllBatch');
+const batchGrid = document.getElementById('batchGrid');
+
+btnOpenBatchModal.onclick = () => {
+  batchGrid.innerHTML = '';
+  batchModal.classList.add('show');
+  
+  const ratiosToGenerate = Object.keys(RATIO_DIMS);
+  
+  ratiosToGenerate.forEach(ratio => {
+    const dimensions = RATIO_DIMS[ratio];
+    
+    const card = document.createElement('div');
+    card.className = 'batch-card';
+    
+    const title = document.createElement('div');
+    title.className = 'batch-card-title';
+    title.textContent = `${ratio} Ratio (${dimensions[0]}x${dimensions[1]}px)`;
+    
+    const canvasWrap = document.createElement('div');
+    canvasWrap.className = 'batch-canvas-wrap';
+    
+    const tempCanvas = document.createElement('canvas');
+    renderGraphic(tempCanvas, ratio, state.platform, true);
+    
+    canvasWrap.appendChild(tempCanvas);
+    card.appendChild(title);
+    card.appendChild(canvasWrap);
+    
+    const dwnBtn = document.createElement('button');
+    dwnBtn.className = 'btn secondary';
+    dwnBtn.style.width = '100%';
+    dwnBtn.style.fontSize = '11px';
+    dwnBtn.style.padding = '6px 10px';
+    dwnBtn.textContent = 'Download Format';
+    dwnBtn.onclick = () => {
+      const link = document.createElement('a');
+      link.download = `content-studio-${state.platform}-${ratio}-${Date.now()}.png`;
+      const downloadCanvas = document.createElement('canvas');
+      renderGraphic(downloadCanvas, ratio, state.platform, false);
+      link.href = downloadCanvas.toDataURL('image/png');
+      link.click();
+      showToast(`Downloaded ${ratio} Format!`);
+    };
+    card.appendChild(dwnBtn);
+    
+    batchGrid.appendChild(card);
+  });
+};
+
+const closeBatch = () => {
+  batchModal.classList.remove('show');
+};
+btnCloseBatchModal.onclick = closeBatch;
+btnCloseBatchModal2.onclick = closeBatch;
+
+btnDownloadAllBatch.onclick = () => {
+  const cards = batchGrid.querySelectorAll('.batch-card');
+  if (cards.length === 0) return;
+  
+  let delay = 0;
+  cards.forEach((card) => {
+    const ratioTitle = card.querySelector('.batch-card-title').textContent;
+    const ratio = ratioTitle.split(' ')[0];
+    
+    setTimeout(() => {
+      const link = document.createElement('a');
+      link.download = `content-studio-${state.platform}-${ratio}-${Date.now()}.png`;
+      const downloadCanvas = document.createElement('canvas');
+      renderGraphic(downloadCanvas, ratio, state.platform, false);
+      link.href = downloadCanvas.toDataURL('image/png');
+      link.click();
+    }, delay);
+    
+    delay += 350;
+  });
+  
+  showToast('Downloading all formats...');
+};
+
+/* ---------------- AUTO-RUN ON PAGE LOAD ---------------- */
+updatePlatformUI();
+updateRatioUI();
+updateCaptionLengthStatus();
+updateCaptionPreview();
+render();
+
+window.addEventListener('resize', render);
+</script>
+</body>
+</html>
