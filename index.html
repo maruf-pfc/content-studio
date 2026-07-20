@@ -1340,6 +1340,21 @@
             <span style="font-size: 11px; color: var(--text-dim);">Image Blur</span>
             <input type="range" id="bgImageBlur" min="0" max="30" value="0" style="width:120px;">
           </div>
+          <div class="control-row">
+            <span style="font-size: 11px; color: var(--text-dim);">Blend Mode</span>
+            <select id="bgImageBlend" style="padding: 4px 6px; font-size:11px; width:120px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg-surface); color: var(--text-main); outline:none;">
+              <option value="normal">Normal</option>
+              <option value="multiply">Multiply</option>
+              <option value="screen">Screen</option>
+              <option value="overlay">Overlay</option>
+              <option value="darken">Darken</option>
+              <option value="lighten">Lighten</option>
+              <option value="color-dodge">Color Dodge</option>
+              <option value="color-burn">Color Burn</option>
+              <option value="difference">Difference</option>
+              <option value="luminosity">Luminosity</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -1653,6 +1668,7 @@
     bgImageScale: 100,
     bgImageOpacity: 40,
     bgImageBlur: 0,
+    bgImageBlend: 'normal',
     
     logoImage: null,
     logoScale: 20,
@@ -1970,6 +1986,10 @@
   };
   document.getElementById('bgImageBlur').oninput = (e) => {
     state.bgImageBlur = parseInt(e.target.value);
+    render();
+  };
+  document.getElementById('bgImageBlend').onchange = (e) => {
+    state.bgImageBlend = e.target.value;
     render();
   };
 
@@ -2427,6 +2447,7 @@
     // 2. Draw Background Image Layer
     if (state.bgImage) {
       tempCtx.save();
+      tempCtx.globalCompositeOperation = state.bgImageBlend || 'source-over';
       if (state.bgImageBlur > 0) {
         tempCtx.filter = `blur(${state.bgImageBlur}px)`;
       }
