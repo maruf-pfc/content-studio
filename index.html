@@ -2984,6 +2984,98 @@
     }
   };
 
+  /* ---------------- BATCH EXPORT MODAL LOGIC ---------------- */
+  const batchModal = document.getElementById('batchModal');
+  const btnOpenBatchModal = document.getElementById('btnOpenBatchModal');
+  const btnCloseBatchModal = document.getElementById('btnCloseBatchModal');
+  const btnCloseBatchModal2 = document.getElementById('btnCloseBatchModal2');
+  const btnDownloadAllBatch = document.getElementById('btnDownloadAllBatch');
+  const batchGrid = document.getElementById('batchGrid');
+
+  // Open batch modal
+  btnOpenBatchModal.onclick = () => {
+    batchGrid.innerHTML = '';
+    batchModal.classList.add('show');
+    
+    // Generate all ratio options
+    const ratiosToGenerate = Object.keys(RATIO_DIMS);
+    
+    ratiosToGenerate.forEach(ratio => {
+      const dimensions = RATIO_DIMS[ratio];
+      
+      const card = document.createElement('div');
+      card.className = 'batch-card';
+      
+      const title = document.createElement('div');
+      title.className = 'batch-card-title';
+      title.textContent = `${ratio} Ratio (${dimensions[0]}x${dimensions[1]}px)`;
+      
+      const canvasWrap = document.createElement('div');
+      canvasWrap.className = 'batch-canvas-wrap';
+      
+      const tempCanvas = document.createElement('canvas');
+      // Draw graphic onto it - setting isThumbnail to true ensures logos/watermarks are omitted for thumbnail clean look
+      renderGraphic(tempCanvas, ratio, state.platform, true);
+      
+      canvasWrap.appendChild(tempCanvas);
+      card.appendChild(title);
+      card.appendChild(canvasWrap);
+      
+      // Individual Download Button
+      const dwnBtn = document.createElement('button');
+      dwnBtn.className = 'btn secondary';
+      dwnBtn.style.width = '100%';
+      dwnBtn.style.fontSize = '11px';
+      dwnBtn.style.padding = '6px 10px';
+      dwnBtn.textContent = 'Download format';
+      dwnBtn.onclick = () => {
+        const link = document.createElement('a');
+        link.download = `content-studio-${state.platform}-${ratio}-${Date.now()}.png`;
+        // Redraw canvas with full resolution details (logo and watermark included) for final download
+        const downloadCanvas = document.createElement('canvas');
+        renderGraphic(downloadCanvas, ratio, state.platform, false);
+        link.href = downloadCanvas.toDataURL('image/png');
+        link.click();
+        showToast(`Downloaded ${ratio} Format!`);
+      };
+      card.appendChild(dwnBtn);
+      
+      batchGrid.appendChild(card);
+    });
+  };
+
+  // Close batch modal
+  const closeBatch = () => {
+    batchModal.classList.remove('show');
+  };
+  btnCloseBatchModal.onclick = closeBatch;
+  btnCloseBatchModal2.onclick = closeBatch;
+
+  // Download all formats sequentially
+  btnDownloadAllBatch.onclick = () => {
+    const cards = batchGrid.querySelectorAll('.batch-card');
+    if (cards.length === 0) return;
+    
+    let delay = 0;
+    cards.forEach((card) => {
+      const ratioTitle = card.querySelector('.batch-card-title').textContent;
+      const ratio = ratioTitle.split(' ')[0]; // E.g. "1:1"
+      
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.download = `content-studio-${state.platform}-${ratio}-${Date.now()}.png`;
+        const downloadCanvas = document.createElement('canvas');
+        renderGraphic(downloadCanvas, ratio, state.platform, false);
+        link.href = downloadCanvas.toDataURL('image/png');
+        link.click();
+      }, delay);
+      
+      delay += 350; // Delay to prevent browser thread collision or pop-up blocker issues
+    });
+    
+    showToast('Triggered downloading all formats!');
+  };
+
   /* ---------------- AUTO-RUN INITIALS ---------------- */
   updatePlatformUI();
   updateRatioUI();
