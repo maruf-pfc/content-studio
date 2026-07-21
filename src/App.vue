@@ -38,7 +38,8 @@ const TEMPLATES: Template[] = [
   { id: 'quote', name: 'Quote Card', desc: 'Centered quote style' },
   { id: 'tip', name: 'Tip / List', desc: 'Headline + body lines' },
   { id: 'stat', name: 'Stat Highlight', desc: 'Giant numeric callout' },
-  { id: 'simple', name: 'Minimal', desc: 'Clean statement layout' }
+  { id: 'simple', name: 'Minimal', desc: 'Clean statement layout' },
+  { id: 'news', name: 'News Card', desc: 'Bangladeshi news style' }
 ];
 
 interface Theme {
