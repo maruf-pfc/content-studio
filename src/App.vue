@@ -310,6 +310,39 @@ const addHashtag = (tag: string) => {
   }
 };
 
+const isDragging = ref(false);
+
+const onPhotoDrop = (e: DragEvent) => {
+  isDragging.value = false;
+  const file = e.dataTransfer?.files?.[0];
+  if (file && file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const src = evt.target?.result as string;
+      bgImageSrc.value = src;
+      const img = new Image();
+      img.onload = () => {
+        bgImageEl.value = img;
+        render();
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+const useTodayDate = () => {
+  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+  try {
+    const d = new Date();
+    const bnDate = d.toLocaleDateString('bn-BD', options);
+    state.newsFooterDate = bnDate;
+  } catch {
+    const d = new Date();
+    state.newsFooterDate = d.toLocaleDateString('en-US', options);
+  }
+};
+
 // Background Image Upload
 const onBgFileChange = (e: Event) => {
   const target = e.target as HTMLInputElement;
@@ -1092,59 +1125,61 @@ defineExpose({
           ></div>
         </div>
 
-        <label class="field-label" style="margin-top:12px;">Background Style</label>
-        <select v-model="state.bgType">
-          <option value="solid">Solid Color</option>
-          <option value="gradient">Linear Gradient</option>
-          <option value="radial">Radial Gradient</option>
-        </select>
+        <div v-if="state.template !== 'news'">
+          <label class="field-label" style="margin-top:12px;">Background Style</label>
+          <select v-model="state.bgType">
+            <option value="solid">Solid Color</option>
+            <option value="gradient">Linear Gradient</option>
+            <option value="radial">Radial Gradient</option>
+          </select>
 
-        <div v-if="state.bgType !== 'solid'" style="margin-top: 10px; padding: 10px; background: var(--panel-2); border-radius: 8px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size: 11px; color: var(--text-dim);">Gradient Color 2</span>
-            <input type="color" v-model="state.bgGradientColor2" style="width:36px; height:36px; border-radius:8px; border:1px solid var(--line); background:none; cursor:pointer; padding:0;">
+          <div v-if="state.bgType !== 'solid'" style="margin-top: 10px; padding: 10px; background: var(--panel-2); border-radius: 8px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size: 11px; color: var(--text-dim);">Gradient Color 2</span>
+              <input type="color" v-model="state.bgGradientColor2" style="width:36px; height:36px; border-radius:8px; border:1px solid var(--line); background:none; cursor:pointer; padding:0;">
+            </div>
+            <div v-if="state.bgType === 'gradient'" style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size: 11px; color: var(--text-dim);">Angle</span>
+              <input type="range" v-model.number="state.bgGradientAngle" min="0" max="360" style="width:120px;">
+            </div>
           </div>
-          <div v-if="state.bgType === 'gradient'" style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size: 11px; color: var(--text-dim);">Angle</span>
-            <input type="range" v-model.number="state.bgGradientAngle" min="0" max="360" style="width:120px;">
-          </div>
-        </div>
 
-        <div class="toggle-row" style="margin-top:10px;">
-          <label class="field-label">Ambient Glowing Blobs</label>
-          <div class="switch" :class="{ on: state.ambientGlow }" @click="state.ambientGlow = !state.ambientGlow"></div>
-        </div>
-        
-        <label class="field-label" style="margin-top:12px;">Overlay Pattern</label>
-        <select v-model="state.patternType">
-          <option value="none">None</option>
-          <option value="circles">Corner Circles</option>
-          <option value="dots">Dotted Grid</option>
-          <option value="grid">Gridlines</option>
-          <option value="stripes">Diagonal Stripes</option>
-          <option value="noise">Grain Noise</option>
-          <option value="waves">Organic Waves</option>
-          <option value="geometric">Geometric Angles</option>
-        </select>
-        
-        <div v-if="state.patternType !== 'none'" style="margin-top:10px; padding:10px; background:var(--panel-2); border-radius:8px; border:1px solid var(--line); display:flex; flex-direction:column; gap:8px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size: 11px; color: var(--text-dim);">Pattern Color</span>
-            <input type="color" v-model="state.bgPatternColor" style="width:36px; height:36px; border-radius:8px; border:1px solid var(--line); background:none; cursor:pointer; padding:0;">
+          <div class="toggle-row" style="margin-top:10px;">
+            <label class="field-label">Ambient Glowing Blobs</label>
+            <div class="switch" :class="{ on: state.ambientGlow }" @click="state.ambientGlow = !state.ambientGlow"></div>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:11px; color:var(--text-dim);">Opacity</span>
-            <input type="range" v-model.number="state.patternOpacity" min="0" max="100" style="width:120px;">
-          </div>
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:11px; color:var(--text-dim);">Density / Spacing</span>
-            <input type="range" v-model.number="state.patternDensity" min="5" max="100" style="width:120px;">
+          
+          <label class="field-label" style="margin-top:12px;">Overlay Pattern</label>
+          <select v-model="state.patternType">
+            <option value="none">None</option>
+            <option value="circles">Corner Circles</option>
+            <option value="dots">Dotted Grid</option>
+            <option value="grid">Gridlines</option>
+            <option value="stripes">Diagonal Stripes</option>
+            <option value="noise">Grain Noise</option>
+            <option value="waves">Organic Waves</option>
+            <option value="geometric">Geometric Angles</option>
+          </select>
+          
+          <div v-if="state.patternType !== 'none'" style="margin-top:10px; padding:10px; background:var(--panel-2); border-radius:8px; border:1px solid var(--line); display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size: 11px; color: var(--text-dim);">Pattern Color</span>
+              <input type="color" v-model="state.bgPatternColor" style="width:36px; height:36px; border-radius:8px; border:1px solid var(--line); background:none; cursor:pointer; padding:0;">
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:11px; color:var(--text-dim);">Opacity</span>
+              <input type="range" v-model.number="state.patternOpacity" min="0" max="100" style="width:120px;">
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:11px; color:var(--text-dim);">Density / Spacing</span>
+              <input type="range" v-model.number="state.patternDensity" min="5" max="100" style="width:120px;">
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 4. Media Layer Overlays -->
-      <div class="section">
+      <div v-if="state.template !== 'news'" class="section">
         <div class="section-label">Media Overlays</div>
         <label class="field-label">Background Photo</label>
         <div style="display:flex; gap:8px;">
@@ -1212,6 +1247,58 @@ defineExpose({
         </div>
       </div>
 
+      <!-- 4b. News Card Media Settings -->
+      <div v-else class="section">
+        <div class="section-label">News Card Media</div>
+        
+        <label class="field-label">Post Photo (Top Zone)</label>
+        <!-- Drag and Drop Dropzone -->
+        <div 
+          class="drag-drop-zone"
+          @dragover.prevent="isDragging = true"
+          @dragleave.prevent="isDragging = false"
+          @drop.prevent="onPhotoDrop"
+          @click="bgFileInput?.click()"
+          :class="{ dragging: isDragging }"
+          style="border: 2px dashed var(--line); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; background: var(--panel-2); transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;"
+        >
+          <div v-if="!bgImageSrc" style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+            <span style="font-size: 24px;">📸</span>
+            <span style="font-size: 11px; font-weight: 600; color: var(--text-dim); text-align: center;">Drag & Drop Photo or Click to Browse</span>
+          </div>
+          <div v-else style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <img :src="bgImageSrc" style="max-height: 80px; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);" />
+            <span style="font-size: 10px; color: var(--text-dim);">Click or drop to replace</span>
+          </div>
+        </div>
+        <div v-if="bgImageSrc" style="display:flex; justify-content:flex-end; margin-top:6px;">
+          <button type="button" class="btn" @click="removeBgImage" style="padding:4px 10px; font-size:11px;">Remove Photo</button>
+        </div>
+        
+        <label class="field-label" style="margin-top: 16px;">Brand Logo (Badge)</label>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" @click="logoFileInput?.click()" style="padding:6px 12px; font-size:12px; flex:1; justify-content:center;">Upload Brand Logo</button>
+          <button v-if="logoImageSrc" class="btn" @click="removeLogo" style="padding:6px 12px; font-size:12px;">Remove</button>
+        </div>
+        
+        <div v-if="logoImageSrc" style="margin-top:10px; padding:10px; background:var(--panel-2); border-radius:8px; border:1px solid var(--line); display:flex; flex-direction:column; gap:8px;">
+          <div class="toggle-row">
+            <span style="font-size: 11px; color: var(--text-dim);">Show Logo Badge</span>
+            <div class="switch" :class="{ on: state.newsLogoVisible }" @click="state.newsLogoVisible = !state.newsLogoVisible"></div>
+          </div>
+          <div v-if="state.newsLogoVisible" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size: 11px; color: var(--text-dim);">Badge Size</span>
+              <input type="range" v-model.number="state.newsLogoSize" min="20" max="150" style="width:120px;">
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size: 11px; color: var(--text-dim);">Vertical Offset</span>
+              <input type="range" v-model.number="state.newsLogoOffset" min="-100" max="100" style="width:120px;">
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 5. Content Input -->
       <div class="section">
         <div class="section-label">Content</div>
@@ -1219,11 +1306,64 @@ defineExpose({
           <label class="field-label">Hero Stat Number (e.g. 99%, 10x, #1)</label>
           <input type="text" v-model="state.statNumber" placeholder="e.g. 10x or 99%" style="margin-bottom:12px; width:100%; box-sizing:border-box;">
         </div>
-        <label class="field-label">Title / Hook</label>
-        <textarea v-model="state.titleText" placeholder="e.g. যা মনে আছে সেটাই বলি"></textarea>
+        <div v-if="state.template === 'news'">
+          <!-- Banner Color Override -->
+          <label class="field-label">Banner Background Color</label>
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+            <input type="color" v-model="state.newsBannerColor" title="Banner color override" style="width:36px; height:36px; border-radius:8px; border:1px solid var(--line); background:none; cursor:pointer; padding:0;">
+            <button type="button" class="btn" style="padding:6px 12px; font-size:11px;" @click="state.newsBannerColor = ''">Reset to Theme Accent</button>
+          </div>
 
-        <label class="field-label">Body / Subtext (optional)</label>
-        <textarea v-model="state.bodyText" placeholder="Supporting line or leave blank"></textarea>
+          <!-- Headline Mode Toggle -->
+          <label class="field-label">Headline Mode</label>
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <button 
+              type="button"
+              class="btn" 
+              :class="{ primary: state.newsHeadingMode === '1-line' }"
+              @click="state.newsHeadingMode = '1-line'"
+              style="flex:1; justify-content:center;"
+            >1 Line</button>
+            <button 
+              type="button"
+              class="btn" 
+              :class="{ primary: state.newsHeadingMode === '2-line' }"
+              @click="state.newsHeadingMode = '2-line'"
+              style="flex:1; justify-content:center;"
+            >2 Line</button>
+          </div>
+
+          <!-- Eyebrow text input (only visible in 2 Line mode) -->
+          <div v-if="state.newsHeadingMode === '2-line'">
+            <label class="field-label">Eyebrow / Subheading</label>
+            <input type="text" v-model="state.newsEyebrowText" placeholder="e.g. BREAKING NEWS" style="margin-bottom:12px; width:100%; box-sizing:border-box; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 13px;">
+          </div>
+
+          <!-- Primary Headline -->
+          <label class="field-label">Primary Headline</label>
+          <textarea v-model="state.newsHeadlineText" placeholder="e.g. এখানে আপনার মূল সংবাদ শিরোনামটি লিখুন" style="margin-bottom:12px;"></textarea>
+
+          <!-- Footer fields -->
+          <label class="field-label">Footer Date</label>
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <input type="text" v-model="state.newsFooterDate" placeholder="e.g. ২২ জুলাই ২০২৬" style="flex:1; min-width:0; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 13px;">
+            <button type="button" class="btn" @click="useTodayDate" style="padding:6px 10px; font-size:11px; white-space:nowrap;">Use Today</button>
+          </div>
+
+          <label class="field-label">Footer Center Text / CTA</label>
+          <input type="text" v-model="state.newsFooterCta" placeholder="e.g. বিস্তারিত কমেন্টে" style="margin-bottom:12px; width:100%; box-sizing:border-box; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 13px;">
+
+          <label class="field-label">Footer Website / URL</label>
+          <input type="text" v-model="state.newsFooterUrl" placeholder="e.g. www.telepathicthoughts.com" style="margin-bottom:12px; width:100%; box-sizing:border-box; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 13px;">
+        </div>
+
+        <div v-else>
+          <label class="field-label">Title / Hook</label>
+          <textarea v-model="state.titleText" placeholder="e.g. যা মনে আছে সেটাই বলি"></textarea>
+
+          <label class="field-label">Body / Subtext (optional)</label>
+          <textarea v-model="state.bodyText" placeholder="Supporting line or leave blank"></textarea>
+        </div>
 
         <label class="field-label">Caption (for post)</label>
         <textarea v-model="state.captionText" placeholder="Write caption..."></textarea>
