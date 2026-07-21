@@ -128,7 +128,19 @@ const state = reactive({
   titleFontSize: 65,
   bodyFontSize: 30,
   
-  showLiveOverlay: false
+  showLiveOverlay: false,
+  
+  // News Card specific state
+  newsLogoVisible: true,
+  newsLogoSize: 60,
+  newsLogoOffset: 0,
+  newsHeadingMode: '2-line' as '1-line' | '2-line',
+  newsEyebrowText: 'BREAKING NEWS',
+  newsHeadlineText: 'এখানে আপনার মূল সংবাদ শিরোনামটি লিখুন',
+  newsFooterDate: '',
+  newsFooterCta: 'বিস্তারিত কমেন্টে',
+  newsFooterUrl: 'www.telepathicthoughts.com',
+  newsBannerColor: ''
 });
 
 type DraftItem = typeof state & {
