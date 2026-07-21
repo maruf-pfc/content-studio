@@ -636,7 +636,8 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
   const pad = w * 0.09;
   
   // 1. Draw Background
-  if (state.bgType === 'solid') {
+  if (state.template !== 'news') {
+    if (state.bgType === 'solid') {
     tempCtx.fillStyle = colors.bg;
     tempCtx.fillRect(0, 0, w, h);
   } else if (state.bgType === 'gradient') {
@@ -803,6 +804,7 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
     }
     tempCtx.restore();
   }
+  }
 
   // 4. Setup Alignment coordinates
   const align = state.align;
@@ -870,6 +872,209 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
     const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.5, startSize, font.titleFont, '800', 1.15, state.autoFit);
     drawLines(tempCtx, fit.lines, alignX, h * 0.5, fit.size * 1.15, align, fit.size, font.titleFont, '800', colors.accent, colors.text);
 
+  } else if (state.template === 'news') {
+    // 1. Calculate dimensions
+    const zoneH = h * 0.60;
+    const footerH = h * 0.08;
+    const textZoneY = zoneH;
+    const textZoneH = h - zoneH - footerH;
+    
+    // Banner background color
+    const bannerColor = state.newsBannerColor || colors.accent;
+    tempCtx.fillStyle = bannerColor;
+    tempCtx.fillRect(0, zoneH, w, h - zoneH);
+    
+    // Draw Photo
+    if (bgImageEl.value) {
+      const img = bgImageEl.value;
+      const imgW = img.width;
+      const imgH = img.height;
+      const zoneW = w;
+      const imgRatio = imgW / imgH;
+      const zoneRatio = zoneW / zoneH;
+      
+      let sx = 0, sy = 0, sw = imgW, sh = imgH;
+      if (imgRatio > zoneRatio) {
+        sw = imgH * zoneRatio;
+        sx = (imgW - sw) / 2;
+      } else {
+        sh = imgW / zoneRatio;
+        sy = (imgH - sh) / 2;
+      }
+      tempCtx.drawImage(img, sx, sy, sw, sh, 0, 0, zoneW, zoneH);
+    } else {
+      tempCtx.fillStyle = '#1d192f';
+      tempCtx.fillRect(0, 0, w, zoneH);
+      tempCtx.fillStyle = '#5c5470';
+      tempCtx.font = `600 ${w * 0.04}px "${font.bodyFont}", sans-serif`;
+      tempCtx.textAlign = 'center';
+      tempCtx.textBaseline = 'middle';
+      tempCtx.fillText('No Photo Uploaded', w / 2, zoneH / 2);
+    }
+    
+    // Seam logo badge circular overlay
+    if (state.newsLogoVisible && logoImageEl.value && !isThumbnail) {
+      tempCtx.save();
+      const logoImg = logoImageEl.value;
+      const badgeRadius = state.newsLogoSize;
+      const badgeX = w / 2;
+      const badgeY = zoneH + (state.newsLogoOffset || 0);
+      
+      // Draw white ring border
+      tempCtx.beginPath();
+      tempCtx.arc(badgeX, badgeY, badgeRadius + 4, 0, Math.PI * 2);
+      tempCtx.fillStyle = '#FFFFFF';
+      tempCtx.fill();
+      
+      // Clip badge
+      tempCtx.beginPath();
+      tempCtx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
+      tempCtx.clip();
+      
+      // Draw cover logo
+      const logoW = logoImg.width;
+      const logoH = logoImg.height;
+      const logoRatio = logoW / logoH;
+      
+      let lsw = logoW, lsh = logoH, lsx = 0, lsy = 0;
+      if (logoRatio > 1) {
+        lsw = logoH;
+        lsx = (logoW - logoH) / 2;
+      } else {
+        lsh = logoW;
+        lsy = (logoH - logoW) / 2;
+      }
+      
+      tempCtx.drawImage(
+        logoImg,
+        lsx, lsy, lsw, lsh,
+        badgeX - badgeRadius, badgeY - badgeRadius,
+        badgeRadius * 2, badgeRadius * 2
+      );
+      tempCtx.restore();
+    }
+    
+    // Banner texts
+    const textPad = w * 0.06;
+    const maxTextWidth = w - 2 * textPad;
+    
+    let newsAlignX = textPad;
+    if (align === 'center') {
+      newsAlignX = w / 2;
+    } else if (align === 'right') {
+      newsAlignX = w - textPad;
+    }
+    
+    const eyebrowText = state.newsEyebrowText.trim();
+    const headlineText = state.newsHeadlineText.trim() || 'সংবাদ শিরোনাম এখানে';
+    
+    const eyebrowFontSize = w * 0.035;
+    const eyebrowLineHeight = eyebrowFontSize * 1.3;
+    const eyebrowFontFamily = font.bodyFont;
+    
+    const headlineFontSizeStart = state.autoFit ? w * 0.075 : (state.titleFontSize / 1000) * w;
+    const headlineLineHeightMult = 1.25;
+    
+    tempCtx.font = `700 ${eyebrowFontSize}px "${eyebrowFontFamily}", sans-serif`;
+    const eyebrowLines = eyebrowText && state.newsHeadingMode === '2-line' ? wrapText(tempCtx, eyebrowText, maxTextWidth) : [];
+    
+    const fitHeadline = fitFontSize(
+      tempCtx,
+      headlineText,
+      maxTextWidth,
+      textZoneH - (eyebrowLines.length * eyebrowLineHeight) - 20,
+      headlineFontSizeStart,
+      font.titleFont,
+      '800',
+      headlineLineHeightMult,
+      state.autoFit
+    );
+    
+    const headlineHeight = fitHeadline.lines.length * fitHeadline.size * headlineLineHeightMult;
+    const eyebrowHeight = eyebrowLines.length * eyebrowLineHeight;
+    const totalTextHeight = headlineHeight + eyebrowHeight + (eyebrowLines.length > 0 ? 12 : 0);
+    
+    const textBlockCenterY = textZoneY + (textZoneH / 2);
+    let currentY = textBlockCenterY - (totalTextHeight / 2);
+    
+    // Draw Eyebrow
+    if (eyebrowLines.length > 0) {
+      const eyebrowColor = '#FFE600';
+      tempCtx.save();
+      tempCtx.fillStyle = eyebrowColor;
+      tempCtx.font = `700 ${eyebrowFontSize}px "${eyebrowFontFamily}", sans-serif`;
+      tempCtx.textBaseline = 'middle';
+      
+      let ey = currentY + (eyebrowLineHeight / 2);
+      for (const eline of eyebrowLines) {
+        drawRichLine(tempCtx, eline, newsAlignX, ey, eyebrowFontSize, eyebrowFontFamily, '700', colors.accent, eyebrowColor, align);
+        ey += eyebrowLineHeight;
+      }
+      tempCtx.restore();
+      currentY += eyebrowHeight + 12;
+    }
+    
+    // Draw Headline
+    tempCtx.save();
+    tempCtx.textBaseline = 'middle';
+    let headlineColor = colors.text;
+    if (state.newsBannerColor) {
+      headlineColor = '#FFFFFF';
+    }
+    
+    let hy = currentY + (fitHeadline.size * headlineLineHeightMult / 2);
+    for (const hline of fitHeadline.lines) {
+      drawRichLine(
+        tempCtx,
+        hline,
+        newsAlignX,
+        hy,
+        fitHeadline.size,
+        font.titleFont,
+        '800',
+        '#FFE600',
+        headlineColor,
+        align
+      );
+      hy += fitHeadline.size * headlineLineHeightMult;
+    }
+    tempCtx.restore();
+    
+    // Draw Footer strip
+    const footerY = h - footerH;
+    tempCtx.save();
+    tempCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    tempCtx.lineWidth = 1;
+    tempCtx.beginPath();
+    tempCtx.moveTo(textPad, footerY);
+    tempCtx.lineTo(w - textPad, footerY);
+    tempCtx.stroke();
+    
+    const footerFontSize = w * 0.026;
+    tempCtx.font = `600 ${footerFontSize}px "${font.bodyFont}", sans-serif`;
+    let footerTextColor = 'rgba(255, 255, 255, 0.8)';
+    if (!state.newsBannerColor && colors.text === '#14121A') {
+      footerTextColor = 'rgba(20, 18, 26, 0.8)';
+    }
+    tempCtx.fillStyle = footerTextColor;
+    tempCtx.textBaseline = 'middle';
+    
+    const footerTextY = footerY + (footerH / 2);
+    
+    if (state.newsFooterDate) {
+      tempCtx.textAlign = 'left';
+      tempCtx.fillText(state.newsFooterDate, textPad, footerTextY);
+    }
+    if (state.newsFooterCta) {
+      tempCtx.textAlign = 'center';
+      tempCtx.fillText(state.newsFooterCta, w / 2, footerTextY);
+    }
+    if (state.newsFooterUrl) {
+      tempCtx.textAlign = 'right';
+      tempCtx.fillText(state.newsFooterUrl, w - textPad, footerTextY);
+    }
+    tempCtx.restore();
+
   } else {
     // Quote layout (Default) - Always Centered Quote Style
     const quoteAlignX = w / 2;
@@ -904,7 +1109,7 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
   }
 
   // 6. Draw Logo Layer (if preset and not batch preview)
-  if (logoImageEl.value && !isThumbnail) {
+  if (state.template !== 'news' && logoImageEl.value && !isThumbnail) {
     tempCtx.save();
     tempCtx.globalAlpha = state.logoOpacity / 100;
     
