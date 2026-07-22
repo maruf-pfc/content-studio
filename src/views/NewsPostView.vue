@@ -3,7 +3,6 @@ import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { parseWordTokens, toggleWordHighlight } from '../utils/textHelper';
 import { 
   renderNewsCardCanvas, 
-  sampleBottomColor, 
   samplePhotoPalette, 
   type NewsCardState, 
   type ExtractedPalette 
@@ -118,7 +117,14 @@ const extractedPalette = ref<ExtractedPalette | null>(null);
 const toastMsg = ref('');
 const showToastFlag = ref(false);
 
-const drafts = ref<Record<string, any>>({});
+interface NewsDraftItem {
+  state: NewsCardState;
+  photoSrc: string | null;
+  logoSrc: string | null;
+  activeThemeId: string;
+}
+
+const drafts = ref<Record<string, NewsDraftItem>>({});
 const draftName = ref('');
 
 /* ---------------- COMPUTED ---------------- */

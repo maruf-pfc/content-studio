@@ -430,25 +430,6 @@ function getActiveFontPair(): FontPairing {
   return (FONT_PAIRINGS.find(f => f.id === state.fontPairing) || FONT_PAIRINGS[0]) as FontPairing;
 }
 
-function hexToRgba(hex: string, alpha: number) {
-  if (!hex) return `rgba(0,0,0,${alpha})`;
-  if (hex.startsWith('rgb')) {
-    return hex.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
-  }
-  hex = hex.replace('#', '');
-  let r, g, b;
-  if (hex.length === 3) {
-    r = parseInt(hex.substring(0, 1) + hex.substring(0, 1), 16);
-    g = parseInt(hex.substring(1, 2) + hex.substring(1, 2), 16);
-    b = parseInt(hex.substring(2, 3) + hex.substring(2, 3), 16);
-  } else {
-    r = parseInt(hex.substring(0, 2), 16);
-    g = parseInt(hex.substring(2, 4), 16);
-    b = parseInt(hex.substring(4, 6), 16);
-  }
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 function drawLines(
   context: CanvasRenderingContext2D,
   lines: string[],
