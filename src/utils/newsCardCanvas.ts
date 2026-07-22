@@ -403,8 +403,14 @@ export function renderNewsCardCanvas(
 
   // 6. Render Footer Copyright Strip
   const footerY = h - footerH;
+  const bgLuma = (bgRgb.r * 299 + bgRgb.g * 587 + bgRgb.b * 114) / 1000;
+  const isLightBg = bgLuma >= 128;
+
+  const footerLineColor = isLightBg ? 'rgba(18, 16, 25, 0.15)' : 'rgba(255, 255, 255, 0.15)';
+  const footerTextColor = isLightBg ? 'rgba(18, 16, 25, 0.75)' : 'rgba(255, 255, 255, 0.75)';
+
   ctx.save();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.strokeStyle = footerLineColor;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(textPad, footerY);
@@ -414,7 +420,7 @@ export function renderNewsCardCanvas(
   const footerText = state.copyrightText.trim() || '© TelepathicThoughts';
   const footerFontSize = w * 0.024;
   ctx.font = `600 ${footerFontSize}px "${fontFam}", sans-serif`;
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.fillStyle = footerTextColor;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(footerText, w / 2, footerY + footerH / 2);
