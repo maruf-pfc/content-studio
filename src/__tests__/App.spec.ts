@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { wrapText, fitFontSize, parseWordTokens, toggleWordHighlight } from '../utils/textHelper'
-import { calculateBadgePosition } from '../utils/newsCardCanvas'
+import { calculateBadgePosition, parseRgb } from '../utils/newsCardCanvas'
 
 describe('Text Wrapping & Word Highlight Utilities', () => {
   it('correctly splits multi-line text input into separate lines', () => {
@@ -99,5 +99,17 @@ describe('News Card Dedicated View & Canvas Mechanics', () => {
     expect(datePos).toBe(64.8)
     expect(ctaPos).toBe(540)
     expect(urlPos).toBe(1015.2)
+  })
+
+  it('parses hex and rgb color strings accurately for smooth gradient math', () => {
+    const hex = parseRgb('#180407')
+    expect(hex.r).toBe(24)
+    expect(hex.g).toBe(4)
+    expect(hex.b).toBe(7)
+
+    const rgb = parseRgb('rgb(18, 16, 25)')
+    expect(rgb.r).toBe(18)
+    expect(rgb.g).toBe(16)
+    expect(rgb.b).toBe(25)
   })
 })

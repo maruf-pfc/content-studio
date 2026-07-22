@@ -64,6 +64,35 @@ export function sampleBottomColor(img: HTMLImageElement): string {
   }
 }
 
+export function parseRgb(colorStr: string): { r: number; g: number; b: number } {
+  if (!colorStr) return { r: 20, g: 18, b: 26 };
+  
+  if (colorStr.startsWith('rgb')) {
+    const matches = colorStr.match(/\d+/g);
+    if (matches && matches.length >= 3) {
+      return {
+        r: parseInt(matches[0] ?? '20', 10),
+        g: parseInt(matches[1] ?? '18', 10),
+        b: parseInt(matches[2] ?? '26', 10)
+      };
+    }
+  }
+
+  let hex = colorStr.replace('#', '');
+  if (hex.length === 3) {
+    hex = (hex[0] ?? '') + (hex[0] ?? '') + (hex[1] ?? '') + (hex[1] ?? '') + (hex[2] ?? '') + (hex[2] ?? '');
+  }
+  if (hex.length >= 6) {
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+      return { r, g, b };
+    }
+  }
+  return { r: 20, g: 18, b: 26 };
+}
+
 export function calculateBadgePosition(
   anchor: NewsCardState['logoAnchor'],
   w: number,
@@ -195,29 +224,30 @@ export function renderNewsCardCanvas(
   }
 
   // 3. Render Blended Transition Zone
-  const blendHeight = h * 0.22;
+  const blendHeight = h * 0.28;
   const blendStartY = Math.max(0, photoZoneH - blendHeight * 0.45);
   const blendEndY = Math.min(h - footerH, photoZoneH + blendHeight * 0.55);
+
+  const topColor = parseRgb(sampledEdgeColor);
+  const bgRgb = parseRgb(bgColor);
 
   ctx.save();
   const grad = ctx.createLinearGradient(0, blendStartY, 0, blendEndY);
 
-  const rgbMatch = sampledEdgeColor.match(/\d+/g);
-  const r = rgbMatch ? rgbMatch[0] : '20';
-  const g = rgbMatch ? rgbMatch[1] : '18';
-  const b = rgbMatch ? rgbMatch[2] : '26';
-
-  grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.0)`);
-  grad.addColorStop(0.35, `rgba(${r}, ${g}, ${b}, 0.75)`);
-  grad.addColorStop(0.7, bgColor);
-  grad.addColorStop(1.0, bgColor);
+  // Multi-stop 100% smooth gradient curve
+  grad.addColorStop(0.0, `rgba(${topColor.r}, ${topColor.g}, ${topColor.b}, 0.0)`);
+  grad.addColorStop(0.3, `rgba(${topColor.r}, ${topColor.g}, ${topColor.b}, 0.50)`);
+  grad.addColorStop(0.5, `rgba(${topColor.r}, ${topColor.g}, ${topColor.b}, 0.90)`);
+  grad.addColorStop(0.75, `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 0.98)`);
+  grad.addColorStop(1.0, `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 1.0)`);
 
   ctx.fillStyle = grad;
   ctx.fillRect(0, blendStartY, w, blendEndY - blendStartY);
   ctx.restore();
 
+  // Solid fill below blend with subpixel overlap guard
   ctx.fillStyle = bgColor;
-  ctx.fillRect(0, blendEndY, w, h - blendEndY);
+  ctx.fillRect(0, Math.floor(blendEndY) - 1, w, h - blendEndY + 1);
 
   // 4. Render Headline Text in Text Zone
   const textPad = w * 0.07;
