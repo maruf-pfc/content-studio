@@ -44,21 +44,30 @@ const TEMPLATES: Template[] = [
 interface Theme {
   id: string;
   name: string;
+  category: 'dark' | 'light' | 'vibrant';
   bg: string;
   bg2?: string;
   text: string;
   accent: string;
   fontPair: string;
-  mode: 'dark' | 'light';
+  badge?: string;
 }
 
 const THEMES: Theme[] = [
-  { id: 'midnight', name: 'Midnight Violet', bg: '#14121A', bg2: '#221E30', text: '#F5F3FF', accent: '#7C5CFC', fontPair: 'outfit_plus', mode: 'dark' },
-  { id: 'cream', name: 'Cream Editorial', bg: '#F4EFE6', bg2: '#EAE1D0', text: '#241F1A', accent: '#C1552E', fontPair: 'georgia_serif', mode: 'light' },
-  { id: 'neon', name: 'Neon Night', bg: '#0A0A0A', bg2: '#151515', text: '#F2FFEA', accent: '#B6FF3C', fontPair: 'syne_space', mode: 'dark' },
-  { id: 'pastel', name: 'Soft Pastel', bg: '#FDEFF4', bg2: '#F6E4EE', text: '#3B2A34', accent: '#FF8FAB', fontPair: 'outfit_plus', mode: 'light' },
-  { id: 'mono', name: 'Bold Mono', bg: '#0E0E0E', bg2: '#1a1a1a', text: '#FFFFFF', accent: '#FFFFFF', fontPair: 'jetbrains_mono', mode: 'dark' },
-  { id: 'ocean', name: 'Ocean Gradient', bg: '#062B3F', bg2: '#0A4A66', text: '#EAF7FF', accent: '#4FD1C5', fontPair: 'syne_space', mode: 'dark' }
+  { id: 'midnight', name: 'Midnight Violet', category: 'dark', bg: '#14121A', bg2: '#221E30', text: '#F5F3FF', accent: '#7C5CFC', fontPair: 'outfit_plus', badge: 'Popular' },
+  { id: 'cream', name: 'Cream Editorial', category: 'light', bg: '#F4EFE6', bg2: '#EAE1D0', text: '#241F1A', accent: '#C1552E', fontPair: 'georgia_serif', badge: 'Light Mode' },
+  { id: 'neon', name: 'Neon Night', category: 'vibrant', bg: '#0A0A0A', bg2: '#151515', text: '#F2FFEA', accent: '#B6FF3C', fontPair: 'syne_space', badge: 'Vibrant' },
+  { id: 'pastel', name: 'Soft Pastel', category: 'light', bg: '#FDEFF4', bg2: '#F6E4EE', text: '#3B2A34', accent: '#FF8FAB', fontPair: 'outfit_plus', badge: 'Pastel' },
+  { id: 'mono', name: 'Bold Mono', category: 'dark', bg: '#0E0E0E', bg2: '#1a1a1a', text: '#FFFFFF', accent: '#FFFFFF', fontPair: 'jetbrains_mono', badge: 'Minimal' },
+  { id: 'ocean', name: 'Ocean Cyan', category: 'dark', bg: '#062B3F', bg2: '#0A4A66', text: '#EAF7FF', accent: '#4FD1C5', fontPair: 'syne_space', badge: 'Cool' },
+  { id: 'crimson_red', name: 'Channel Red', category: 'vibrant', bg: '#180407', bg2: '#2A0B10', text: '#FFFFFF', accent: '#FF2E4C', fontPair: 'outfit_plus', badge: 'Breaking' },
+  { id: 'amber_flame', name: 'Amber Flame', category: 'vibrant', bg: '#160B05', bg2: '#2A1409', text: '#FFFFFF', accent: '#FF7D3B', fontPair: 'outfit_plus' },
+  { id: 'emerald_deep', name: 'Emerald Forest', category: 'dark', bg: '#051A14', bg2: '#0A2E24', text: '#FFFFFF', accent: '#20E298', fontPair: 'syne_space' },
+  { id: 'royal_indigo', name: 'Royal Indigo', category: 'dark', bg: '#0D1126', bg2: '#181E40', text: '#FFFFFF', accent: '#5C7CFF', fontPair: 'outfit_plus' }
+];
+
+const PRESET_ACCENTS = [
+  '#7C5CFC', '#C1552E', '#B6FF3C', '#FF8FAB', '#4FD1C5', '#FF2E4C', '#FF7D3B', '#20E298', '#FFFFFF'
 ];
 
 interface FontPairing {
@@ -131,6 +140,8 @@ const state = reactive({
   showLiveOverlay: false
 });
 
+const themeCategoryFilter = ref<'all' | 'dark' | 'vibrant' | 'light'>('all');
+
 type DraftItem = typeof state & {
   bgImageSrc: string | null;
   logoImageSrc: string | null;
@@ -162,12 +173,9 @@ const currentPlatformRatioDims = computed(() => {
   return RATIO_DIMS[state.ratio] || [1080, 1080];
 });
 
-const currentCaptionLength = computed(() => {
-  return state.captionText.length;
-});
-
-const isCaptionLengthWarning = computed(() => {
-  return currentCaptionLength.value > currentPlatformObject.value.maxChars;
+const filteredThemes = computed(() => {
+  if (themeCategoryFilter.value === 'all') return THEMES;
+  return THEMES.filter(t => t.category === themeCategoryFilter.value);
 });
 
 const parsedCaption = computed(() => {
@@ -244,33 +252,13 @@ const setCustomColor = (type: 'accent' | 'bg' | 'text', value: string) => {
   } else {
     state.customText = value;
   }
-  trackColorHistory(value);
-};
-
-const trackColorHistory = (color: string) => {
-  if (!state.recentColors.includes(color)) {
-    state.recentColors.unshift(color);
-    if (state.recentColors.length > 8) state.recentColors.pop();
-    localStorage.setItem('studio_recent_colors', JSON.stringify(state.recentColors));
-  }
-};
-
-const loadStoredColors = () => {
-  const cached = localStorage.getItem('studio_recent_colors');
-  if (cached) {
-    state.recentColors = JSON.parse(cached);
-  }
 };
 
 const resetCustomColors = () => {
   state.customBg = '';
   state.customAccent = '';
   state.customText = '';
-  showToast('Colors reset to theme defaults ✓');
-};
-
-const applyRecentColor = (color: string) => {
-  state.customAccent = color;
+  showToast('Colors reset to active theme defaults');
 };
 
 const selectAlignment = (align: 'left' | 'center' | 'right') => {
@@ -738,7 +726,6 @@ const downloadAllBatch = () => {
 };
 
 onMounted(() => {
-  loadStoredColors();
   loadDrafts();
   render();
 });
@@ -817,27 +804,89 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Theme & Colors -->
+      <!-- Professional Theme & Color System -->
       <div class="section">
-        <div class="section-label">Theme</div>
-        <div class="theme-grid">
+        <div class="section-label">Theme & Color System</div>
+
+        <!-- Filter Category Tabs -->
+        <div class="theme-cat-tabs">
+          <button 
+            v-for="cat in ['all', 'dark', 'vibrant', 'light'] as const" 
+            :key="cat"
+            class="cat-tab"
+            :class="{ active: themeCategoryFilter === cat }"
+            @click="themeCategoryFilter = cat"
+          >
+            {{ cat.toUpperCase() }}
+          </button>
+        </div>
+
+        <!-- Palette Card Grid -->
+        <div class="theme-card-grid">
           <div 
-            v-for="th in THEMES" 
+            v-for="th in filteredThemes" 
             :key="th.id"
-            class="theme-swatch"
+            class="palette-card"
             :class="{ active: th.id === state.theme }"
-            :style="{ background: `linear-gradient(135deg, ${th.bg}, ${th.accent})` }"
             @click="selectTheme(th)"
           >
-            <span>{{ th.name }}</span>
+            <div class="palette-bar">
+              <div class="bar-bg" :style="{ backgroundColor: th.bg }"></div>
+              <div class="bar-accent" :style="{ backgroundColor: th.accent }"></div>
+            </div>
+            <div class="palette-meta">
+              <span class="palette-title">{{ th.name }}</span>
+              <span v-if="th.badge" class="palette-badge">{{ th.badge }}</span>
+            </div>
+            <div v-if="th.id === state.theme" class="active-badge">✓</div>
           </div>
         </div>
-        
-        <div class="color-row" style="display:flex; gap:8px; margin-top:8px;">
-          <input type="color" :value="state.customAccent || '#7C5CFC'" @input="e => setCustomColor('accent', (e.target as HTMLInputElement).value)" title="Custom accent color">
-          <input type="color" :value="state.customBg || '#14121A'" @input="e => setCustomColor('bg', (e.target as HTMLInputElement).value)" title="Custom background color">
-          <input type="color" :value="state.customText || '#FFFFFF'" @input="e => setCustomColor('text', (e.target as HTMLInputElement).value)" title="Custom text color">
-          <button class="btn" style="padding:6px 12px; font-size:11px;" @click="resetCustomColors">Reset</button>
+
+        <!-- Custom Color Overrides Box -->
+        <div class="color-overrides-box">
+          <div class="override-header">
+            <span>Custom Color Overrides</span>
+            <button class="btn tiny" @click="resetCustomColors">Reset Colors</button>
+          </div>
+
+          <div class="color-picker-grid">
+            <div class="picker-item">
+              <label>Background</label>
+              <div class="picker-row">
+                <input type="color" :value="state.customBg || getThemeDetails().bg" @input="e => setCustomColor('bg', (e.target as HTMLInputElement).value)">
+                <span class="hex-val">{{ state.customBg || getThemeDetails().bg }}</span>
+              </div>
+            </div>
+
+            <div class="picker-item">
+              <label>Accent</label>
+              <div class="picker-row">
+                <input type="color" :value="state.customAccent || getThemeDetails().accent" @input="e => setCustomColor('accent', (e.target as HTMLInputElement).value)">
+                <span class="hex-val">{{ state.customAccent || getThemeDetails().accent }}</span>
+              </div>
+            </div>
+
+            <div class="picker-item">
+              <label>Text</label>
+              <div class="picker-row">
+                <input type="color" :value="state.customText || getThemeDetails().text" @input="e => setCustomColor('text', (e.target as HTMLInputElement).value)">
+                <span class="hex-val">{{ state.customText || getThemeDetails().text }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="quick-swatches">
+            <span style="font-size:10.5px; color:var(--text-dim);">Quick Accent:</span>
+            <div class="swatch-dots">
+              <span 
+                v-for="col in PRESET_ACCENTS" 
+                :key="col"
+                class="dot-btn"
+                :style="{ backgroundColor: col }"
+                @click="setCustomColor('accent', col)"
+              ></span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -959,7 +1008,7 @@ onMounted(() => {
 <style scoped>
 .app {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: 420px 1fr;
   min-height: calc(100vh - 56px);
 }
 
@@ -1021,10 +1070,62 @@ input[type=text], textarea, select {
 .tpl-btn strong { display: block; font-size: 12.5px; color: var(--text); margin-bottom: 2px; }
 .tpl-btn.active { border-color: var(--accent-2); background: rgba(255, 107, 74, 0.10); }
 
-.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.theme-swatch { height: 48px; border-radius: 8px; cursor: pointer; position: relative; overflow: hidden; border: 2px solid transparent; }
-.theme-swatch.active { border-color: var(--text); }
-.theme-swatch span { position: absolute; bottom: 4px; left: 6px; font-family: var(--mono); font-size: 9px; background: rgba(0,0,0,0.4); padding: 1px 5px; border-radius: 4px; color: #fff; }
+/* ---- Theme & Colors Professional UI/UX ---- */
+.theme-cat-tabs {
+  display: flex; gap: 4px; background: var(--panel-2); padding: 3px;
+  border-radius: 8px; border: 1px solid var(--line); margin-bottom: 12px;
+}
+.cat-tab {
+  flex: 1; background: transparent; border: none; color: var(--text-dim);
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; padding: 5px 0;
+  border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.cat-tab.active { background: var(--accent); color: #fff; }
+
+.theme-card-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;
+}
+
+.palette-card {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px; cursor: pointer; position: relative; transition: all 0.18s ease;
+  display: flex; flex-direction: column; gap: 6px; text-align: left;
+}
+.palette-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.palette-card.active { border-color: var(--accent); background: rgba(124, 92, 252, 0.12); box-shadow: 0 0 12px rgba(124, 92, 252, 0.25); }
+
+.palette-bar {
+  height: 20px; border-radius: 6px; display: flex; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
+}
+.bar-bg { flex: 2; height: 100%; }
+.bar-accent { flex: 1; height: 100%; }
+
+.palette-meta { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.palette-title { font-size: 11px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-badge { font-family: var(--mono); font-size: 8px; background: rgba(255,255,255,0.12); padding: 1px 4px; border-radius: 3px; color: var(--text-dim); }
+
+.active-badge {
+  position: absolute; top: 4px; right: 4px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 9px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.color-overrides-box {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px; display: flex; flex-direction: column; gap: 10px;
+}
+.override-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; }
+
+.color-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.picker-item label { display: block; font-size: 9.5px; color: var(--text-dim); margin-bottom: 3px; font-family: var(--mono); }
+.picker-row { display: flex; align-items: center; gap: 4px; background: var(--panel); border: 1px solid var(--line); padding: 3px 5px; border-radius: 6px; }
+.picker-row input[type=color] { width: 20px; height: 20px; border-radius: 4px; border: none; background: none; cursor: pointer; padding: 0; }
+.hex-val { font-family: var(--mono); font-size: 9px; color: var(--text-dim); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
+
+.quick-swatches { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+.swatch-dots { display: flex; gap: 4px; }
+.dot-btn { width: 14px; height: 14px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
+.dot-btn:hover { transform: scale(1.25); }
 
 .align-row { display: flex; gap: 6px; }
 .align-btn { flex: 1; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 0; cursor: pointer; color: var(--text-dim); font-size: 14px; text-align: center; }
@@ -1039,8 +1140,6 @@ input[type=text], textarea, select {
 .hashtag-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .hchip { font-family: var(--mono); font-size: 10.5px; background: var(--panel-2); border: 1px solid var(--line); padding: 4px 9px; border-radius: 14px; cursor: pointer; color: var(--text-dim); }
 
-.color-row input[type=color] { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: none; cursor: pointer; padding: 0; }
-
 .canvas-area {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
   padding: 32px 24px 60px; background: var(--bg); overflow-y: auto; height: calc(100vh - 56px); box-sizing: border-box;
@@ -1054,6 +1153,7 @@ input[type=text], textarea, select {
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn.secondary { background: var(--panel); border-color: var(--line); }
 .btn.ghost { background: transparent; border-color: var(--line); color: var(--text-dim); }
+.btn.tiny { padding: 4px 8px; font-size: 11px; }
 
 .caption-preview { max-width: 520px; width: 100%; margin-top: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; box-sizing: border-box; }
 .caption-preview .lbl { font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; }

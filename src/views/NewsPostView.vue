@@ -30,23 +30,37 @@ const RATIO_DIMS: Record<string, [number, number]> = {
 interface Theme {
   id: string;
   name: string;
+  category: 'dark' | 'light' | 'vibrant';
   bg: string;
   accent: string;
   text: string;
+  badge?: string;
 }
 
 const THEMES: Theme[] = [
-  { id: 'midnight', name: 'Midnight Dark', bg: '#14121A', accent: '#FFE600', text: '#FFFFFF' },
-  { id: 'news_red', name: 'Crimson Red', bg: '#17090C', accent: '#FFD700', text: '#FFFFFF' },
-  { id: 'deep_blue', name: 'Navy Channel', bg: '#0A1128', accent: '#00E5FF', text: '#FFFFFF' },
-  { id: 'monochrome', name: 'Solid Black', bg: '#080808', accent: '#FFE600', text: '#FFFFFF' },
-  { id: 'emerald', name: 'Deep Emerald', bg: '#071A14', accent: '#A3FFD6', text: '#FFFFFF' }
+  { id: 'midnight', name: 'Midnight Gold', category: 'dark', bg: '#121019', accent: '#FFE600', text: '#FFFFFF', badge: 'Popular' },
+  { id: 'channel_red', name: 'Channel 24 Red', category: 'vibrant', bg: '#180407', accent: '#FF2E4C', text: '#FFFFFF', badge: 'Breaking' },
+  { id: 'jamuna_blue', name: 'Jamuna Broadcast', category: 'dark', bg: '#0A1128', accent: '#00E5FF', text: '#FFFFFF', badge: 'TV Style' },
+  { id: 'emerald_times', name: 'Emerald Times', category: 'dark', bg: '#051A14', accent: '#20E298', text: '#FFFFFF', badge: 'Editorial' },
+  { id: 'cyber_dark', name: 'Cyber OLED', category: 'dark', bg: '#080808', accent: '#FFD700', text: '#F0F0F0', badge: 'OLED' },
+  { id: 'cream_editorial', name: 'Editorial Cream', category: 'light', bg: '#F5F0E6', accent: '#D94E28', text: '#1F1A17', badge: 'Light Mode' },
+  { id: 'sunset_crimson', name: 'Sunset Amber', category: 'vibrant', bg: '#160810', accent: '#FF7D3B', text: '#FFFFFF' },
+  { id: 'neon_magenta', name: 'Neon Magenta', category: 'vibrant', bg: '#13091F', accent: '#F72585', text: '#FFFFFF' },
+  { id: 'teal_horizon', name: 'Teal Horizon', category: 'dark', bg: '#041B24', accent: '#1BE7D4', text: '#FFFFFF' },
+  { id: 'monochrome', name: 'Monochrome Jet', category: 'dark', bg: '#0D0D0D', accent: '#FFFFFF', text: '#F0F0F0', badge: 'Minimal' },
+  { id: 'royal_indigo', name: 'Royal Indigo', category: 'dark', bg: '#0D1126', accent: '#5C7CFF', text: '#FFFFFF' },
+  { id: 'soft_pastel', name: 'Soft Pastel', category: 'light', bg: '#FBF0F4', accent: '#FF4D8D', text: '#2E1E26', badge: 'Pastel' }
+];
+
+const PRESET_ACCENTS = [
+  '#FFE600', '#FF2E4C', '#00E5FF', '#20E298', '#FF7D3B', '#F72585', '#1BE7D4', '#5C7CFF', '#FFFFFF'
 ];
 
 /* ---------------- STATE ---------------- */
 const platform = ref('instagram');
 const ratio = ref('1:1');
 const activeThemeId = ref('midnight');
+const themeFilter = ref<'all' | 'dark' | 'vibrant' | 'light'>('all');
 
 const newsState = reactive<NewsCardState>({
   headlineText: 'এখানে আপনার সংবাদ *শিরোনাম* লিখুন',
@@ -100,6 +114,11 @@ const draftName = ref('');
 /* ---------------- COMPUTED ---------------- */
 const currentTheme = computed(() => {
   return THEMES.find(t => t.id === activeThemeId.value) || THEMES[0];
+});
+
+const filteredThemes = computed(() => {
+  if (themeFilter.value === 'all') return THEMES;
+  return THEMES.filter(t => t.category === themeFilter.value);
 });
 
 const wordTokens = computed(() => {
@@ -221,6 +240,20 @@ const resetPhotoPan = () => {
 /* Word Highlight Controls */
 const toggleHighlightToken = (index: number) => {
   newsState.headlineText = toggleWordHighlight(newsState.headlineText, index);
+};
+
+/* Color Overrides */
+const applyAutoSampledColor = () => {
+  newsState.bannerColorOverride = autoSampledColor.value;
+  showToast(`Banner color set to auto edge color (${autoSampledColor.value})`);
+};
+
+const resetColorOverrides = () => {
+  newsState.bannerColorOverride = '';
+  newsState.accentColorOverride = '';
+  newsState.textColorOverride = '';
+  newsState.sampledColorOverride = '';
+  showToast('Colors reset to active theme defaults');
 };
 
 /* Auto Fill Buttons */
@@ -478,34 +511,102 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 5. Theme & Color Sampling Overrides -->
+      <!-- 5. Professional Theme & Color System -->
       <div class="section">
-        <div class="section-label">4. Theme & Colors</div>
-        <div class="theme-grid">
+        <div class="section-label">4. Theme & Color System</div>
+
+        <!-- Filter Category Tabs -->
+        <div class="theme-cat-tabs">
+          <button 
+            v-for="cat in ['all', 'dark', 'vibrant', 'light'] as const" 
+            :key="cat"
+            class="cat-tab"
+            :class="{ active: themeFilter === cat }"
+            @click="themeFilter = cat"
+          >
+            {{ cat.toUpperCase() }}
+          </button>
+        </div>
+
+        <!-- Palette Card Grid -->
+        <div class="theme-card-grid">
           <div 
-            v-for="th in THEMES" 
+            v-for="th in filteredThemes" 
             :key="th.id"
-            class="theme-swatch"
+            class="palette-card"
             :class="{ active: th.id === activeThemeId }"
-            :style="{ background: `linear-gradient(135deg, ${th.bg}, ${th.accent})` }"
             @click="activeThemeId = th.id"
           >
-            <span>{{ th.name }}</span>
+            <div class="palette-bar">
+              <div class="bar-bg" :style="{ backgroundColor: th.bg }"></div>
+              <div class="bar-accent" :style="{ backgroundColor: th.accent }"></div>
+            </div>
+            <div class="palette-meta">
+              <span class="palette-title">{{ th.name }}</span>
+              <span v-if="th.badge" class="palette-badge">{{ th.badge }}</span>
+            </div>
+            <div v-if="th.id === activeThemeId" class="active-badge">✓</div>
           </div>
         </div>
 
-        <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
-          <div class="ctrl-row">
-            <span class="ctrl-label">Auto Edge Color:</span>
-            <span class="swatch-dot" :style="{ backgroundColor: autoSampledColor }"></span>
+        <!-- Color Sampling & Custom Overrides -->
+        <div class="color-overrides-box">
+          <div class="override-header">
+            <span>Color Overrides & Sampling</span>
+            <button class="btn tiny" @click="resetColorOverrides">Reset Overrides</button>
           </div>
-          <div class="ctrl-row">
-            <span class="ctrl-label">Banner Background Color</span>
-            <input type="color" v-model="newsState.bannerColorOverride">
+
+          <!-- Auto Color Sampling Strip -->
+          <div class="auto-color-bar">
+            <div class="auto-color-preview">
+              <span class="swatch-ring" :style="{ backgroundColor: autoSampledColor }"></span>
+              <div style="display:flex; flex-direction:column; text-align:left;">
+                <span style="font-size:11px; font-weight:700;">Image Edge Color</span>
+                <span style="font-size:10px; color:var(--text-dim);">{{ autoSampledColor }}</span>
+              </div>
+            </div>
+            <button class="btn tiny primary" @click="applyAutoSampledColor">Apply to Banner</button>
           </div>
-          <div class="ctrl-row">
-            <span class="ctrl-label">Accent Highlight Color</span>
-            <input type="color" v-model="newsState.accentColorOverride">
+
+          <!-- Color Pickers -->
+          <div class="color-picker-grid">
+            <div class="picker-item">
+              <label>Banner Bg</label>
+              <div class="picker-row">
+                <input type="color" v-model="newsState.bannerColorOverride">
+                <span class="hex-val">{{ newsState.bannerColorOverride || currentTheme?.bg }}</span>
+              </div>
+            </div>
+
+            <div class="picker-item">
+              <label>Accent Highlight</label>
+              <div class="picker-row">
+                <input type="color" v-model="newsState.accentColorOverride">
+                <span class="hex-val">{{ newsState.accentColorOverride || currentTheme?.accent }}</span>
+              </div>
+            </div>
+
+            <div class="picker-item">
+              <label>Base Text</label>
+              <div class="picker-row">
+                <input type="color" v-model="newsState.textColorOverride">
+                <span class="hex-val">{{ newsState.textColorOverride || currentTheme?.text }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Swatch Palette Dots -->
+          <div class="quick-swatches">
+            <span style="font-size:10.5px; color:var(--text-dim);">Quick Accent:</span>
+            <div class="swatch-dots">
+              <span 
+                v-for="col in PRESET_ACCENTS" 
+                :key="col"
+                class="dot-btn"
+                :style="{ backgroundColor: col }"
+                @click="newsState.accentColorOverride = col"
+              ></span>
+            </div>
           </div>
         </div>
       </div>
@@ -569,7 +670,7 @@ onMounted(() => {
 <style scoped>
 .news-app {
   display: grid;
-  grid-template-columns: 400px 1fr;
+  grid-template-columns: 420px 1fr;
   min-height: calc(100vh - 56px);
 }
 
@@ -654,13 +755,71 @@ textarea { min-height: 70px; line-height: 1.4; }
 }
 .switch.on::after { left: 18px; }
 
-.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.theme-swatch { height: 42px; border-radius: 6px; cursor: pointer; position: relative; border: 2px solid transparent; }
-.theme-swatch.active { border-color: #fff; }
-.theme-swatch span { position: absolute; bottom: 2px; left: 4px; font-size: 8.5px; font-family: var(--mono); color: #fff; background: rgba(0,0,0,0.5); padding: 1px 4px; border-radius: 3px; }
+/* ---- Theme & Colors Professional UI/UX ---- */
+.theme-cat-tabs {
+  display: flex; gap: 4px; background: var(--panel-2); padding: 3px;
+  border-radius: 8px; border: 1px solid var(--line); margin-bottom: 12px;
+}
+.cat-tab {
+  flex: 1; background: transparent; border: none; color: var(--text-dim);
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; padding: 5px 0;
+  border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.cat-tab.active { background: var(--accent); color: #fff; }
 
-.swatch-dot { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); display: inline-block; }
+.theme-card-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;
+}
 
+.palette-card {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px; cursor: pointer; position: relative; transition: all 0.18s ease;
+  display: flex; flex-direction: column; gap: 6px; text-align: left;
+}
+.palette-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.palette-card.active { border-color: var(--accent); background: rgba(124, 92, 252, 0.12); box-shadow: 0 0 12px rgba(124, 92, 252, 0.25); }
+
+.palette-bar {
+  height: 20px; border-radius: 6px; display: flex; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
+}
+.bar-bg { flex: 2; height: 100%; }
+.bar-accent { flex: 1; height: 100%; }
+
+.palette-meta { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.palette-title { font-size: 11px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-badge { font-family: var(--mono); font-size: 8px; background: rgba(255,255,255,0.12); padding: 1px 4px; border-radius: 3px; color: var(--text-dim); }
+
+.active-badge {
+  position: absolute; top: 4px; right: 4px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 9px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.color-overrides-box {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px; display: flex; flex-direction: column; gap: 10px;
+}
+.override-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; }
+
+.auto-color-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(0,0,0,0.25); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
+}
+.auto-color-preview { display: flex; align-items: center; gap: 8px; }
+.swatch-ring { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+
+.color-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.picker-item label { display: block; font-size: 9.5px; color: var(--text-dim); margin-bottom: 3px; font-family: var(--mono); }
+.picker-row { display: flex; align-items: center; gap: 4px; background: var(--panel); border: 1px solid var(--line); padding: 3px 5px; border-radius: 6px; }
+.picker-row input[type=color] { width: 20px; height: 20px; border-radius: 4px; border: none; background: none; cursor: pointer; padding: 0; }
+.hex-val { font-family: var(--mono); font-size: 9px; color: var(--text-dim); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
+
+.quick-swatches { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+.swatch-dots { display: flex; gap: 4px; }
+.dot-btn { width: 14px; height: 14px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
+.dot-btn:hover { transform: scale(1.25); }
+
+/* Canvas Area */
 .news-canvas-area {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
   padding: 24px; background: var(--bg); overflow-y: auto; height: calc(100vh - 56px); box-sizing: border-box;
