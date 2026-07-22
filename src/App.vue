@@ -913,16 +913,17 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, platformId:
     }
     
     // Seam logo badge circular overlay
-    if (state.newsLogoVisible && logoImageEl.value && !isThumbnail) {
+    if (state.newsLogoVisible && logoImageEl.value) {
       tempCtx.save();
       const logoImg = logoImageEl.value;
       const badgeRadius = state.newsLogoSize;
+      const ringThickness = Math.max(4, Math.round(badgeRadius * 0.08));
       const badgeX = w / 2;
       const badgeY = zoneH + (state.newsLogoOffset || 0);
       
       // Draw white ring border
       tempCtx.beginPath();
-      tempCtx.arc(badgeX, badgeY, badgeRadius + 4, 0, Math.PI * 2);
+      tempCtx.arc(badgeX, badgeY, badgeRadius + ringThickness, 0, Math.PI * 2);
       tempCtx.fillStyle = '#FFFFFF';
       tempCtx.fill();
       
@@ -1908,6 +1909,11 @@ defineExpose({
   
   .char-count { font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-align: right; margin-top: 4px; }
   .char-count.warn { color: var(--accent-2); }
+
+  .drag-drop-zone.dragging {
+    border-color: var(--accent) !important;
+    background: rgba(124, 92, 252, 0.18) !important;
+  }
 
   /* Platform grid */
   .platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
