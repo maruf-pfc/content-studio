@@ -324,7 +324,7 @@ export function renderNewsCardCanvas(
   ctx.lineTo(w - textPad, footerY);
   ctx.stroke();
 
-  const footerText = state.copyrightText.trim() || '© TelepathicThoughts 2026';
+  const footerText = state.copyrightText.trim() || '© TelepathicThoughts';
   const footerFontSize = w * 0.024;
   ctx.font = `600 ${footerFontSize}px "${fontFam}", sans-serif`;
   ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';

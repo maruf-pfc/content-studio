@@ -64,7 +64,7 @@ const themeFilter = ref<'all' | 'dark' | 'vibrant' | 'light'>('all');
 
 const newsState = reactive<NewsCardState>({
   headlineText: 'এখানে আপনার সংবাদ *শিরোনাম* লিখুন',
-  copyrightText: '© TelepathicThoughts 2026',
+  copyrightText: '© TelepathicThoughts',
   
   photoZonePercent: 55,
   photoOffsetX: 0,
@@ -260,7 +260,7 @@ const resetColorOverrides = () => {
 const autofillCopyrightHandle = () => {
   const h = pageHandle.value.trim() || '@TelepathicThoughts';
   const clean = h.replace(/^@/, '');
-  newsState.copyrightText = `© ${clean} 2026`;
+  newsState.copyrightText = `© ${clean}`;
   showToast('Copyright updated from handle');
 };
 
@@ -614,7 +614,7 @@ onMounted(() => {
       <!-- 6. Footer / Copyright Controls -->
       <div class="section">
         <div class="section-label">5. Footer / Copyright</div>
-        <input type="text" v-model="newsState.copyrightText" placeholder="e.g. © TelepathicThoughts 2026">
+        <input type="text" v-model="newsState.copyrightText" placeholder="e.g. © TelepathicThoughts">
         <div style="display:flex; gap:8px; margin-top:8px;">
           <button class="btn tiny" @click="autofillCopyrightHandle">Use Handle</button>
           <button class="btn tiny" @click="autofillDate">Append Date</button>
