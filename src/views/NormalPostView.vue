@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
-import { wrapText, fitFontSize, drawRichLine } from '../utils/textHelper';
+import { fitFontSize, drawRichLine } from '../utils/textHelper';
 
 /* ---------------- DATA PRESETS ---------------- */
 interface Platform {
@@ -141,6 +141,7 @@ const state = reactive({
 });
 
 const themeCategoryFilter = ref<'all' | 'dark' | 'vibrant' | 'light'>('all');
+const isMobileDrawerOpen = ref(false);
 
 type DraftItem = typeof state & {
   bgImageSrc: string | null;
@@ -165,14 +166,6 @@ const showBatchModal = ref(false);
 const batchGrid = ref<HTMLDivElement | null>(null);
 
 /* ---------------- COMPUTED PROPERTIES ---------------- */
-const currentPlatformObject = computed((): Platform => {
-  return (PLATFORMS.find(p => p.id === state.platform) || PLATFORMS[0]) as Platform;
-});
-
-const currentPlatformRatioDims = computed(() => {
-  return RATIO_DIMS[state.ratio] || [1080, 1080];
-});
-
 const filteredThemes = computed(() => {
   if (themeCategoryFilter.value === 'all') return THEMES;
   return THEMES.filter(t => t.category === themeCategoryFilter.value);
@@ -202,18 +195,16 @@ const parsedCaption = computed(() => {
   return html;
 });
 
-/* ---------------- WATCHERS FOR AUTO-RENDERING ---------------- */
+/* ---------------- WATCHERS ---------------- */
 watch(() => state, () => {
   render();
 }, { deep: true });
 
-/* ---------------- METHODS & ACTIONS ---------------- */
+/* ---------------- METHODS ---------------- */
 const showToast = (msg: string) => {
   toastMsg.value = msg;
   showToastFlag.value = true;
-  setTimeout(() => {
-    showToastFlag.value = false;
-  }, 2200);
+  setTimeout(() => { showToastFlag.value = false; }, 2200);
 };
 
 const selectPlatform = (platformId: string) => {
@@ -426,7 +417,7 @@ const copyCaption = async () => {
   }
 };
 
-/* ---------------- CANVAS DRAWING PIPELINE ---------------- */
+/* ---------------- CANVAS ENGINE ---------------- */
 function getThemeDetails() {
   const th = { ...THEMES.find(t => t.id === state.theme) } as Theme;
   if (state.customAccent) th.accent = state.customAccent;
@@ -495,50 +486,11 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, _platformId
   const bodyText = state.bodyText.trim();
   const pad = w * 0.09;
   
-  // 1. Draw Background
-  if (state.bgType === 'solid') {
-    tempCtx.fillStyle = colors.bg;
-    tempCtx.fillRect(0, 0, w, h);
-  } else if (state.bgType === 'gradient') {
-    const angleRad = ((state.bgGradientAngle || 135) * Math.PI) / 180;
-    const cx = w / 2;
-    const cy = h / 2;
-    const x1 = cx - Math.cos(angleRad) * w * 0.5;
-    const y1 = cy - Math.sin(angleRad) * h * 0.5;
-    const x2 = cx + Math.cos(angleRad) * w * 0.5;
-    const y2 = cy + Math.sin(angleRad) * h * 0.5;
-    
-    const grad = tempCtx.createLinearGradient(x1, y1, x2, y2);
-    grad.addColorStop(0, colors.bg);
-    grad.addColorStop(1, state.bgGradientColor2 || colors.bg2 || '#1a162b');
-    tempCtx.fillStyle = grad;
-    tempCtx.fillRect(0, 0, w, h);
-  } else if (state.bgType === 'radial') {
-    const grad = tempCtx.createRadialGradient(w/2, h/2, w * 0.05, w/2, h/2, Math.max(w,h) * 0.6);
-    grad.addColorStop(0, state.bgGradientColor2 || colors.bg2 || '#1a162b');
-    grad.addColorStop(1, colors.bg);
-    tempCtx.fillStyle = grad;
-    tempCtx.fillRect(0, 0, w, h);
-  }
+  // Background Fill
+  tempCtx.fillStyle = colors.bg;
+  tempCtx.fillRect(0, 0, w, h);
 
-  // Ambient Glows
-  if (state.ambientGlow) {
-    tempCtx.save();
-    const rad1 = tempCtx.createRadialGradient(w * 0.85, h * 0.15, 20, w * 0.85, h * 0.15, w * 0.45);
-    rad1.addColorStop(0, hexToRgba(colors.accent, 0.22));
-    rad1.addColorStop(1, 'rgba(0,0,0,0)');
-    tempCtx.fillStyle = rad1;
-    tempCtx.fillRect(0, 0, w, h);
-
-    const rad2 = tempCtx.createRadialGradient(w * 0.15, h * 0.88, 20, w * 0.15, h * 0.88, w * 0.4);
-    rad2.addColorStop(0, hexToRgba(colors.accent, 0.16));
-    rad2.addColorStop(1, 'rgba(0,0,0,0)');
-    tempCtx.fillStyle = rad2;
-    tempCtx.fillRect(0, 0, w, h);
-    tempCtx.restore();
-  }
-
-  // Background Image Layer
+  // Background Image
   if (bgImageEl.value) {
     tempCtx.save();
     tempCtx.globalCompositeOperation = (state.bgImageBlend || 'source-over') as GlobalCompositeOperation;
@@ -733,42 +685,56 @@ onMounted(() => {
 
 <template>
   <div class="app">
-    <!-- SIDEBAR -->
-    <div class="sidebar">
+    <!-- Mobile Backdrop -->
+    <div 
+      class="mobile-backdrop" 
+      :class="{ open: isMobileDrawerOpen }" 
+      @click="isMobileDrawerOpen = false"
+    ></div>
+
+    <!-- SIDEBAR CONTROLS -->
+    <aside class="sidebar" :class="{ 'drawer-open': isMobileDrawerOpen }">
+      <div class="mobile-drawer-handle" @click="isMobileDrawerOpen = !isMobileDrawerOpen">
+        <span class="handle-bar"></span>
+        <span class="handle-txt">{{ isMobileDrawerOpen ? 'Close Controls' : 'Tap to Open Controls' }}</span>
+      </div>
+
       <!-- Platform & Ratio -->
-      <div class="section">
-        <div class="section-label">Platform</div>
+      <section class="section">
+        <h2 class="section-label">Platform</h2>
         <div class="platform-grid">
-          <div 
+          <button 
             v-for="p in PLATFORMS" 
             :key="p.id" 
             class="platform-btn"
             :class="{ active: p.id === state.platform }"
             @click="selectPlatform(p.id)"
+            :aria-label="`Select platform ${p.label}`"
           >
-            <span class="pico">{{ p.icon }}</span>{{ p.label }}
-          </div>
+            <span class="pico" aria-hidden="true">{{ p.icon }}</span>{{ p.label }}
+          </button>
         </div>
-      </div>
+      </section>
 
-      <div class="section">
-        <div class="section-label">Image Ratio</div>
+      <section class="section">
+        <h2 class="section-label">Image Ratio</h2>
         <div class="ratio-row">
-          <div 
+          <button 
             v-for="r in PLATFORMS.find(x => x.id === state.platform)?.ratios" 
             :key="r"
             class="ratio-chip"
             :class="{ active: r === state.ratio }"
             @click="selectRatio(r)"
+            :aria-label="`Select ratio ${r}`"
           >
             {{ r }}
-          </div>
+          </button>
         </div>
-      </div>
+      </section>
 
       <!-- Template & Fonts -->
-      <div class="section">
-        <div class="section-label">Layout Template</div>
+      <section class="section">
+        <h2 class="section-label">Layout Template</h2>
         <div class="template-grid">
           <div 
             v-for="t in TEMPLATES" 
@@ -776,16 +742,18 @@ onMounted(() => {
             class="tpl-btn"
             :class="{ active: t.id === state.template }"
             @click="selectTemplate(t.id)"
+            role="button"
+            tabindex="0"
           >
             <strong>{{ t.name }}</strong>{{ t.desc }}
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="section">
-        <div class="section-label">Typography</div>
-        <label class="field-label">Font Pairing</label>
-        <select v-model="state.fontPairing">
+      <section class="section">
+        <h2 class="section-label">Typography</h2>
+        <label class="field-label" for="font-pairing-select">Font Pairing</label>
+        <select id="font-pairing-select" v-model="state.fontPairing">
           <option v-for="f in FONT_PAIRINGS" :key="f.id" :value="f.id">
             {{ f.name }}
           </option>
@@ -793,20 +761,20 @@ onMounted(() => {
         
         <label class="field-label">Alignment</label>
         <div class="align-row">
-          <div class="align-btn" :class="{ active: state.align === 'left' }" @click="selectAlignment('left')">⯇</div>
-          <div class="align-btn" :class="{ active: state.align === 'center' }" @click="selectAlignment('center')">☰</div>
-          <div class="align-btn" :class="{ active: state.align === 'right' }" @click="selectAlignment('right')">⯈</div>
+          <button class="align-btn" :class="{ active: state.align === 'left' }" @click="selectAlignment('left')" aria-label="Align left">⯇</button>
+          <button class="align-btn" :class="{ active: state.align === 'center' }" @click="selectAlignment('center')" aria-label="Align center">☰</button>
+          <button class="align-btn" :class="{ active: state.align === 'right' }" @click="selectAlignment('right')" aria-label="Align right">⯈</button>
         </div>
         
         <div class="toggle-row">
-          <label class="field-label">Auto-fit text size</label>
-          <div class="switch" :class="{ on: state.autoFit }" @click="state.autoFit = !state.autoFit"></div>
+          <label class="field-label" style="margin:0;">Auto-fit text size</label>
+          <div class="switch" :class="{ on: state.autoFit }" @click="state.autoFit = !state.autoFit" role="switch" :aria-checked="state.autoFit"></div>
         </div>
-      </div>
+      </section>
 
       <!-- Professional Theme & Color System -->
-      <div class="section">
-        <div class="section-label">Theme & Color System</div>
+      <section class="section">
+        <h2 class="section-label">Theme & Color System</h2>
 
         <!-- Filter Category Tabs -->
         <div class="theme-cat-tabs">
@@ -829,6 +797,8 @@ onMounted(() => {
             class="palette-card"
             :class="{ active: th.id === state.theme }"
             @click="selectTheme(th)"
+            role="button"
+            tabindex="0"
           >
             <div class="palette-bar">
               <div class="bar-bg" :style="{ backgroundColor: th.bg }"></div>
@@ -853,7 +823,7 @@ onMounted(() => {
             <div class="picker-item">
               <label>Background</label>
               <div class="picker-row">
-                <input type="color" :value="state.customBg || getThemeDetails().bg" @input="e => setCustomColor('bg', (e.target as HTMLInputElement).value)">
+                <input type="color" :value="state.customBg || getThemeDetails().bg" @input="e => setCustomColor('bg', (e.target as HTMLInputElement).value)" aria-label="Custom Background Color">
                 <span class="hex-val">{{ state.customBg || getThemeDetails().bg }}</span>
               </div>
             </div>
@@ -861,7 +831,7 @@ onMounted(() => {
             <div class="picker-item">
               <label>Accent</label>
               <div class="picker-row">
-                <input type="color" :value="state.customAccent || getThemeDetails().accent" @input="e => setCustomColor('accent', (e.target as HTMLInputElement).value)">
+                <input type="color" :value="state.customAccent || getThemeDetails().accent" @input="e => setCustomColor('accent', (e.target as HTMLInputElement).value)" aria-label="Custom Accent Color">
                 <span class="hex-val">{{ state.customAccent || getThemeDetails().accent }}</span>
               </div>
             </div>
@@ -869,14 +839,14 @@ onMounted(() => {
             <div class="picker-item">
               <label>Text</label>
               <div class="picker-row">
-                <input type="color" :value="state.customText || getThemeDetails().text" @input="e => setCustomColor('text', (e.target as HTMLInputElement).value)">
+                <input type="color" :value="state.customText || getThemeDetails().text" @input="e => setCustomColor('text', (e.target as HTMLInputElement).value)" aria-label="Custom Text Color">
                 <span class="hex-val">{{ state.customText || getThemeDetails().text }}</span>
               </div>
             </div>
           </div>
 
           <div class="quick-swatches">
-            <span style="font-size:10.5px; color:var(--text-dim);">Quick Accent:</span>
+            <span style="font-size:10.5px; color:var(--studio-text-muted);">Quick Accent:</span>
             <div class="swatch-dots">
               <span 
                 v-for="col in PRESET_ACCENTS" 
@@ -884,86 +854,97 @@ onMounted(() => {
                 class="dot-btn"
                 :style="{ backgroundColor: col }"
                 @click="setCustomColor('accent', col)"
+                role="button"
+                :aria-label="`Select accent color ${col}`"
               ></span>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- Media Overlays -->
-      <div class="section">
-        <div class="section-label">Media Overlays</div>
+      <section class="section">
+        <h2 class="section-label">Media Overlays</h2>
         <label class="field-label">Background Photo</label>
         <div style="display:flex; gap:8px;">
           <input type="file" ref="bgFileInput" accept="image/*" style="display:none;" @change="onBgFileChange">
           <button class="btn" @click="bgFileInput?.click()" style="padding:6px 12px; font-size:12px; flex:1;">Upload Photo</button>
-          <button v-if="bgImageSrc" class="btn" @click="removeBgImage" style="padding:6px 12px; font-size:12px;">Remove</button>
+          <button v-if="bgImageSrc" class="btn tiny danger" @click="removeBgImage">Remove</button>
         </div>
 
         <label class="field-label" style="margin-top:12px;">Brand Logo Overlay</label>
         <div style="display:flex; gap:8px;">
           <input type="file" ref="logoFileInput" accept="image/*" style="display:none;" @change="onLogoFileChange">
           <button class="btn" @click="logoFileInput?.click()" style="padding:6px 12px; font-size:12px; flex:1;">Upload Logo</button>
-          <button v-if="logoImageSrc" class="btn" @click="removeLogo" style="padding:6px 12px; font-size:12px;">Remove</button>
+          <button v-if="logoImageSrc" class="btn tiny danger" @click="removeLogo">Remove</button>
         </div>
-      </div>
+      </section>
 
       <!-- Content Input -->
-      <div class="section">
-        <div class="section-label">Content</div>
+      <section class="section">
+        <h2 class="section-label">Content</h2>
         <div v-if="state.template === 'stat'">
-          <label class="field-label">Hero Stat Number (e.g. 99%, 10x, #1)</label>
-          <input type="text" v-model="state.statNumber" placeholder="e.g. 10x or 99%">
+          <label class="field-label" for="stat-input">Hero Stat Number (e.g. 99%, 10x, #1)</label>
+          <input id="stat-input" type="text" v-model="state.statNumber" placeholder="e.g. 10x or 99%">
         </div>
         
         <div>
-          <label class="field-label">Title / Hook (*bold accent*)</label>
-          <textarea v-model="state.titleText" placeholder="e.g. যা মনে আছে সেটাই বলি"></textarea>
+          <label class="field-label" for="title-input">Title / Hook (*bold accent*)</label>
+          <textarea id="title-input" v-model="state.titleText" placeholder="e.g. যা মনে আছে সেটাই বলি"></textarea>
 
-          <label class="field-label">Body / Subtext (optional)</label>
-          <textarea v-model="state.bodyText" placeholder="Supporting line or leave blank"></textarea>
+          <label class="field-label" for="body-input">Body / Subtext (optional)</label>
+          <textarea id="body-input" v-model="state.bodyText" placeholder="Supporting line or leave blank"></textarea>
         </div>
 
-        <label class="field-label">Caption (for post)</label>
-        <textarea v-model="state.captionText" placeholder="Write caption..."></textarea>
+        <label class="field-label" for="caption-input">Caption (for post)</label>
+        <textarea id="caption-input" v-model="state.captionText" placeholder="Write caption..."></textarea>
 
-        <label class="field-label">Hashtags</label>
-        <textarea v-model="state.hashtagsText" placeholder="#Hashtags"></textarea>
+        <label class="field-label" for="hashtags-input">Hashtags</label>
+        <textarea id="hashtags-input" v-model="state.hashtagsText" placeholder="#Hashtags"></textarea>
         <div class="hashtag-chips">
-          <div v-for="tag in HASHTAG_PRESETS" :key="tag" class="hchip" @click="addHashtag(tag)">{{ tag }}</div>
+          <button v-for="tag in HASHTAG_PRESETS" :key="tag" class="hchip" @click="addHashtag(tag)">{{ tag }}</button>
         </div>
-      </div>
+      </section>
 
       <!-- Saved Drafts -->
-      <div class="section">
-        <div class="section-label">Saved Drafts</div>
+      <section class="section">
+        <h2 class="section-label">Saved Drafts</h2>
         <div style="display:flex; gap:8px; margin-bottom:8px;">
-          <input type="text" v-model="draftName" placeholder="Draft name..." style="flex:1;">
+          <input type="text" v-model="draftName" placeholder="Draft name..." style="flex:1;" aria-label="Draft Name">
           <button class="btn" @click="saveDraft">Save</button>
         </div>
         <div class="draft-list-container">
-          <div v-if="Object.keys(drafts).length === 0" style="font-size:11px; color:var(--text-dim); text-align:center;">No saved drafts</div>
+          <div v-if="Object.keys(drafts).length === 0" style="font-size:11px; color:var(--studio-text-muted); text-align:center;">
+            No drafts yet — create your first graphic
+          </div>
           <div v-for="(d, name) in drafts" :key="name" class="draft-item">
             <span class="draft-name" @click="selectDraft(name.toString())">{{ name }}</span>
-            <button class="draft-del-btn" @click="deleteDraft(name.toString())">✕</button>
+            <button class="draft-del-btn" @click="deleteDraft(name.toString())" aria-label="Delete draft">✕</button>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </aside>
 
-    <!-- CANVAS AREA -->
+    <!-- CANVAS WORKSTATION AREA -->
     <div class="canvas-area">
+      <!-- Mobile Drawer Open Toggle Bar -->
+      <div class="mobile-drawer-toggle-bar">
+        <button class="btn primary" @click="isMobileDrawerOpen = !isMobileDrawerOpen">
+          ⚡ {{ isMobileDrawerOpen ? 'Close Controls Sheet' : 'Open Controls Drawer' }}
+        </button>
+      </div>
+
       <div class="frame-wrap" id="frameWrap">
         <canvas ref="mainCanvas"></canvas>
       </div>
 
       <div class="actions">
         <button class="btn primary" @click="downloadPNG">⬇ Download PNG</button>
-        <button class="btn" @click="copyImage">⧉ Copy Image</button>
+        <button class="btn secondary" @click="copyImage">⧉ Copy Image</button>
         <button class="btn secondary" @click="copyCaption">📋 Copy Caption</button>
       </div>
 
-      <button class="btn ghost" style="width:100%; max-width:520px; justify-content:center; margin-top:8px;" @click="openBatchModal">
+      <button class="btn secondary" style="width:100%; max-width:520px; justify-content:center; margin-top:12px;" @click="openBatchModal">
         ⚡ Multi-Format Batch Export Previews
       </button>
 
@@ -974,32 +955,32 @@ onMounted(() => {
     </div>
 
     <!-- BATCH EXPORT MODAL -->
-    <div class="modal-overlay" :class="{ show: showBatchModal }">
+    <div class="modal-overlay" :class="{ show: showBatchModal }" role="dialog" aria-modal="true">
       <div class="modal-container">
         <div class="modal-header">
           <div class="modal-title">Multi-Format Batch Export Previews</div>
-          <button class="modal-close" @click="showBatchModal = false">&times;</button>
+          <button class="modal-close" @click="showBatchModal = false" aria-label="Close modal">&times;</button>
         </div>
         <div class="modal-body">
           <div class="batch-grid" ref="batchGrid">
-            <div v-for="(dims, ratio) in RATIO_DIMS" :key="ratio" class="batch-card">
-              <div class="batch-card-title">{{ ratio }} Ratio</div>
+            <div v-for="(dims, ratioKey) in RATIO_DIMS" :key="ratioKey" class="batch-card">
+              <div class="batch-card-title">{{ ratioKey }} Ratio</div>
               <div class="batch-canvas-wrap">
-                <canvas :id="`batch-canvas-${ratio.replace(':', '-')}`"></canvas>
+                <canvas :id="`batch-canvas-${ratioKey.toString().replace(':', '-')}`"></canvas>
               </div>
-              <button class="btn secondary" style="width:100%; font-size:11px;" @click="downloadBatchItem(ratio.toString())">Download Format</button>
+              <button class="btn secondary" style="width:100%; font-size:11px;" @click="downloadBatchItem(ratioKey.toString())">Download Format</button>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn ghost" @click="showBatchModal = false">Close</button>
-          <button class="btn secondary" @click="downloadAllBatch">⬇ Download All Formats</button>
+          <button class="btn secondary" @click="showBatchModal = false">Close</button>
+          <button class="btn primary" @click="downloadAllBatch">⬇ Download All Formats</button>
         </div>
       </div>
     </div>
 
     <!-- Toast system -->
-    <div class="toast" :class="{ show: showToastFlag }">
+    <div class="toast" :class="{ show: showToastFlag }" role="status" aria-live="polite">
       <span>{{ toastMsg }}</span>
     </div>
   </div>
@@ -1009,172 +990,275 @@ onMounted(() => {
 .app {
   display: grid;
   grid-template-columns: 420px 1fr;
-  min-height: calc(100vh - 56px);
-}
-
-@media (max-width: 1024px) {
-  .app { grid-template-columns: 1fr; }
-  .canvas-area { order: -1; padding: 24px 16px 40px; }
+  min-height: calc(100vh - 60px);
+  background: var(--studio-bg);
 }
 
 .sidebar {
-  background: var(--panel);
-  border-right: 1px solid var(--line);
-  padding: 24px;
+  background: var(--studio-surface);
+  border-right: 1px solid var(--studio-border);
+  padding: var(--space-6);
   overflow-y: auto;
-  height: calc(100vh - 56px);
+  height: calc(100vh - 60px);
+  box-shadow: var(--elevation-1);
 }
 
-.section { margin-bottom: 24px; }
+.mobile-drawer-handle, .mobile-backdrop, .mobile-drawer-toggle-bar {
+  display: none;
+}
+
+.section { margin-bottom: var(--space-6); }
 .section-label {
-  font-family: var(--mono);
-  font-size: 10.5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-dim);
-  margin-bottom: 10px;
+  color: var(--studio-text-muted);
+  margin-bottom: var(--space-3);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
-.section-label::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--studio-border); }
 
-label.field-label { display: block; font-size: 12px; color: var(--text-dim); margin: 12px 0 6px; }
+label.field-label { display: block; font-size: var(--text-xs); color: var(--studio-text-secondary); margin: var(--space-3) 0 var(--space-1); font-weight: 600; }
 
 input[type=text], textarea, select {
-  width: 100%; background: var(--panel-2); border: 1px solid var(--line);
-  color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 13.5px;
-  font-family: var(--body); resize: vertical; box-sizing: border-box;
+  width: 100%; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border);
+  color: var(--studio-text-primary); padding: 10px 12px; border-radius: var(--radius-sharp); font-size: var(--text-sm);
+  font-family: var(--font-body); resize: vertical; box-sizing: border-box; min-height: var(--min-touch-target);
+  transition: border-color 0.15s;
+}
+input[type=text]:focus, textarea:focus, select:focus {
+  border-color: var(--studio-accent-primary);
 }
 
-.platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
 .platform-btn {
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
-  padding: 10px 4px; cursor: pointer; color: var(--text-dim); font-size: 10.5px;
-  font-family: var(--mono); text-align: center;
+  min-height: var(--min-touch-target);
+  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp);
+  padding: 8px 4px; cursor: pointer; color: var(--studio-text-secondary); font-size: 11px;
+  font-family: var(--font-mono); text-align: center; transition: all 0.15s;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
 }
-.platform-btn.active { border-color: var(--accent); color: var(--text); background: rgba(124, 92, 252, 0.14); }
+.platform-btn:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
+.platform-btn.active { border-color: var(--studio-accent-primary); color: var(--studio-text-primary); background: rgba(230, 57, 70, 0.15); font-weight: 700; }
 
-.ratio-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.ratio-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .ratio-chip {
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px;
-  padding: 6px 12px; font-size: 11.5px; font-family: var(--mono); cursor: pointer; color: var(--text-dim);
+  min-height: 36px;
+  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-pill);
+  padding: 6px 14px; font-size: 11.5px; font-family: var(--font-mono); cursor: pointer; color: var(--studio-text-secondary);
+  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
 }
-.ratio-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ratio-chip:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
+.ratio-chip.active { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; font-weight: 700; }
 
-.template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 .tpl-btn {
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
-  padding: 10px; cursor: pointer; font-size: 12px; color: var(--text-dim); text-align: left;
+  min-height: 54px;
+  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
+  padding: 10px; cursor: pointer; font-size: 12px; color: var(--studio-text-secondary); text-align: left; transition: all 0.15s;
 }
-.tpl-btn strong { display: block; font-size: 12.5px; color: var(--text); margin-bottom: 2px; }
-.tpl-btn.active { border-color: var(--accent-2); background: rgba(255, 107, 74, 0.10); }
+.tpl-btn:hover { border-color: var(--studio-border-strong); }
+.tpl-btn strong { display: block; font-size: 12.5px; color: var(--studio-text-primary); margin-bottom: 2px; }
+.tpl-btn.active { border-color: var(--studio-accent-primary); background: rgba(230, 57, 70, 0.12); }
 
-/* ---- Theme & Colors Professional UI/UX ---- */
+/* Theme UI */
 .theme-cat-tabs {
-  display: flex; gap: 4px; background: var(--panel-2); padding: 3px;
-  border-radius: 8px; border: 1px solid var(--line); margin-bottom: 12px;
+  display: flex; gap: 4px; background: var(--studio-bg); padding: 3px;
+  border-radius: var(--radius-sharp); border: 1px solid var(--studio-border); margin-bottom: var(--space-3);
 }
 .cat-tab {
-  flex: 1; background: transparent; border: none; color: var(--text-dim);
-  font-family: var(--mono); font-size: 9.5px; font-weight: 700; padding: 5px 0;
-  border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.15s;
+  flex: 1; min-height: 32px; background: transparent; border: none; color: var(--studio-text-secondary);
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 4px 0;
+  border-radius: var(--radius-sharp); cursor: pointer; text-align: center; transition: all 0.15s;
 }
-.cat-tab.active { background: var(--accent); color: #fff; }
+.cat-tab.active { background: var(--studio-accent-primary); color: #fff; }
 
 .theme-card-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-bottom: var(--space-3);
 }
 
 .palette-card {
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+  min-height: 54px;
+  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
   padding: 8px; cursor: pointer; position: relative; transition: all 0.18s ease;
   display: flex; flex-direction: column; gap: 6px; text-align: left;
 }
-.palette-card:hover { border-color: var(--accent); transform: translateY(-1px); }
-.palette-card.active { border-color: var(--accent); background: rgba(124, 92, 252, 0.12); box-shadow: 0 0 12px rgba(124, 92, 252, 0.25); }
+.palette-card:hover { border-color: var(--studio-accent-primary); transform: translateY(-1px); }
+.palette-card.active { border-color: var(--studio-accent-primary); background: rgba(230, 57, 70, 0.12); box-shadow: 0 0 12px rgba(230, 57, 70, 0.25); }
 
 .palette-bar {
-  height: 20px; border-radius: 6px; display: flex; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
+  height: 18px; border-radius: 4px; display: flex; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
 }
 .bar-bg { flex: 2; height: 100%; }
 .bar-accent { flex: 1; height: 100%; }
 
 .palette-meta { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
-.palette-title { font-size: 11px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.palette-badge { font-family: var(--mono); font-size: 8px; background: rgba(255,255,255,0.12); padding: 1px 4px; border-radius: 3px; color: var(--text-dim); }
+.palette-title { font-size: 11px; font-weight: 700; color: var(--studio-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-badge { font-family: var(--font-mono); font-size: 8px; background: rgba(255,255,255,0.12); padding: 1px 4px; border-radius: 3px; color: var(--studio-text-secondary); }
 
 .active-badge {
   position: absolute; top: 4px; right: 4px; width: 16px; height: 16px; border-radius: 50%;
-  background: var(--accent); color: #fff; font-size: 9px; font-weight: 900;
+  background: var(--studio-accent-primary); color: #fff; font-size: 9px; font-weight: 900;
   display: flex; align-items: center; justify-content: center;
 }
 
 .color-overrides-box {
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
-  padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
+  padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);
 }
 .override-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; }
 
 .color-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.picker-item label { display: block; font-size: 9.5px; color: var(--text-dim); margin-bottom: 3px; font-family: var(--mono); }
-.picker-row { display: flex; align-items: center; gap: 4px; background: var(--panel); border: 1px solid var(--line); padding: 3px 5px; border-radius: 6px; }
-.picker-row input[type=color] { width: 20px; height: 20px; border-radius: 4px; border: none; background: none; cursor: pointer; padding: 0; }
-.hex-val { font-family: var(--mono); font-size: 9px; color: var(--text-dim); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
+.picker-item label { display: block; font-size: 9.5px; color: var(--studio-text-secondary); margin-bottom: 3px; font-family: var(--font-mono); }
+.picker-row { display: flex; align-items: center; gap: 4px; background: var(--studio-surface); border: 1px solid var(--studio-border); padding: 3px 5px; border-radius: var(--radius-sharp); min-height: 36px; }
+.picker-row input[type=color] { width: 22px; height: 22px; border-radius: 4px; border: none; background: none; cursor: pointer; padding: 0; }
+.hex-val { font-family: var(--font-mono); font-size: 9px; color: var(--studio-text-secondary); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
 
 .quick-swatches { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
-.swatch-dots { display: flex; gap: 4px; }
-.dot-btn { width: 14px; height: 14px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
+.swatch-dots { display: flex; gap: 6px; }
+.dot-btn { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
 .dot-btn:hover { transform: scale(1.25); }
 
 .align-row { display: flex; gap: 6px; }
-.align-btn { flex: 1; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 0; cursor: pointer; color: var(--text-dim); font-size: 14px; text-align: center; }
-.align-btn.active { border-color: var(--accent); color: var(--text); }
+.align-btn { flex: 1; min-height: var(--min-touch-target); background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 0; cursor: pointer; color: var(--studio-text-secondary); font-size: 14px; text-align: center; }
+.align-btn.active { border-color: var(--studio-accent-primary); color: var(--studio-text-primary); }
 
-.toggle-row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
-.switch { width: 38px; height: 22px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px; position: relative; cursor: pointer; }
-.switch.on { background: var(--accent); border-color: var(--accent); }
-.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: left .15s; }
-.switch.on::after { left: 18px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; min-height: var(--min-touch-target); margin-top: 10px; }
+.switch { width: 44px; height: 24px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-pill); position: relative; cursor: pointer; transition: all 0.2s; }
+.switch.on { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); }
+.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: left 0.15s; }
+.switch.on::after { left: 22px; }
 
 .hashtag-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.hchip { font-family: var(--mono); font-size: 10.5px; background: var(--panel-2); border: 1px solid var(--line); padding: 4px 9px; border-radius: 14px; cursor: pointer; color: var(--text-dim); }
+.hchip { min-height: 32px; font-family: var(--font-mono); font-size: 10.5px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); padding: 4px 10px; border-radius: var(--radius-pill); cursor: pointer; color: var(--studio-text-secondary); display: flex; align-items: center; }
+.hchip:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
 
 .canvas-area {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-  padding: 32px 24px 60px; background: var(--bg); overflow-y: auto; height: calc(100vh - 56px); box-sizing: border-box;
+  padding: var(--space-6) var(--space-6) var(--space-12); background: var(--studio-bg); overflow-y: auto; height: calc(100vh - 60px); box-sizing: border-box;
 }
 
 .frame-wrap { max-width: 520px; width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; }
-.frame-wrap canvas { width: 100% !important; height: auto !important; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--line); display: block; }
+.frame-wrap canvas { width: 100% !important; height: auto !important; border-radius: var(--radius-card); box-shadow: var(--elevation-3); border: 1px solid var(--studio-border); display: block; }
 
 .actions { display: flex; gap: 10px; width: 100%; max-width: 520px; flex-wrap: wrap; }
-.btn { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn.secondary { background: var(--panel); border-color: var(--line); }
-.btn.ghost { background: transparent; border-color: var(--line); color: var(--text-dim); }
-.btn.tiny { padding: 4px 8px; font-size: 11px; }
+.btn {
+  min-height: var(--min-touch-target);
+  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); color: var(--studio-text-primary);
+  padding: 10px 18px; border-radius: var(--radius-sharp); font-weight: 700; font-size: var(--text-sm);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s;
+}
+.btn:hover { border-color: var(--studio-border-strong); }
+.btn.primary { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; flex: 1; box-shadow: 0 4px 14px rgba(230, 57, 70, 0.35); }
+.btn.secondary { background: var(--studio-surface); border-color: var(--studio-border); }
+.btn.tiny { min-height: 32px; padding: 4px 10px; font-size: 11px; }
+.btn.danger { background: rgba(255,77,77,0.15); color: #ff4d4d; border-color: rgba(255,77,77,0.3); }
 
-.caption-preview { max-width: 520px; width: 100%; margin-top: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; box-sizing: border-box; }
-.caption-preview .lbl { font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; }
-.caption-preview .txt { font-size: 13px; line-height: 1.5; color: var(--text); word-break: break-word; }
+.caption-preview { max-width: 520px; width: 100%; margin-top: 20px; background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-card); padding: var(--space-4); box-sizing: border-box; }
+.caption-preview .lbl { font-family: var(--font-mono); font-size: 10px; color: var(--studio-text-muted); text-transform: uppercase; margin-bottom: 8px; }
+.caption-preview .txt { font-size: 13px; line-height: 1.5; color: var(--studio-text-primary); word-break: break-word; }
 
 /* Modal & Toast */
 .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 .modal-overlay.show { opacity: 1; pointer-events: auto; }
-.modal-container { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; width: 90%; max-width: 900px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
-.modal-header { padding: 16px 24px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
-.modal-title { font-weight: 700; font-size: 16px; }
-.modal-close { background: none; border: none; color: var(--text-dim); font-size: 24px; cursor: pointer; }
+.modal-container { background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-modal); width: 90%; max-width: 900px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--elevation-3); }
+.modal-header { padding: 16px 24px; border-bottom: 1px solid var(--studio-border); display: flex; justify-content: space-between; align-items: center; }
+.modal-title { font-weight: 800; font-size: 16px; font-family: var(--font-display); }
+.modal-close { background: none; border: none; color: var(--studio-text-muted); font-size: 24px; cursor: pointer; }
 .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
 .batch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
-.batch-card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
-.batch-card-title { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+.batch-card { background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-card); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.batch-card-title { font-family: var(--font-mono); font-size: 11px; color: var(--studio-text-muted); }
 .batch-canvas-wrap canvas { width: 100% !important; height: auto !important; border-radius: 6px; display: block; }
-.modal-footer { padding: 16px 24px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 12px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid var(--studio-border); display: flex; justify-content: flex-end; gap: 12px; }
 
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--panel-2); border: 1px solid var(--accent); color: var(--text); padding: 12px 20px; border-radius: 10px; font-weight: 600; font-size: 13px; opacity: 0; transform: translateY(20px); transition: all 0.25s; pointer-events: none; z-index: 2000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-accent-primary); color: var(--studio-text-primary); padding: 12px 20px; border-radius: var(--radius-card); font-weight: 700; font-size: var(--text-sm); opacity: 0; transform: translateY(20px); transition: all 0.25s; pointer-events: none; z-index: 2000; box-shadow: var(--elevation-3); }
 .toast.show { opacity: 1; transform: translateY(0); }
-.draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 12px; cursor: pointer; }
-.draft-del-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; }
+.draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 12px; margin-bottom: 6px; font-size: 12px; cursor: pointer; min-height: 40px; }
+.draft-del-btn { background: none; border: none; color: var(--studio-text-muted); cursor: pointer; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
+
+/* Responsive Drawer for Screens < 1024px */
+@media (max-width: 1023px) {
+  .app {
+    grid-template-columns: 1fr;
+    position: relative;
+  }
+
+  .canvas-area {
+    order: -1;
+    padding: var(--space-4) var(--space-3) var(--space-12);
+    height: auto;
+    min-height: calc(100vh - 60px);
+  }
+
+  .mobile-drawer-toggle-bar {
+    display: block;
+    width: 100%;
+    max-width: 520px;
+    margin-bottom: var(--space-4);
+  }
+
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80vh;
+    z-index: 500;
+    border-radius: var(--radius-modal) var(--radius-modal) 0 0;
+    border-top: 1px solid var(--studio-border);
+    transform: translateY(calc(100% - 48px));
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: var(--elevation-3);
+  }
+
+  .sidebar.drawer-open {
+    transform: translateY(0);
+  }
+
+  .mobile-drawer-handle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 0 var(--space-3);
+    cursor: pointer;
+  }
+
+  .handle-bar {
+    width: 40px;
+    height: 4px;
+    border-radius: var(--radius-pill);
+    background: var(--studio-border-strong);
+  }
+
+  .handle-txt {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--studio-accent-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+
+  .mobile-backdrop {
+    display: block;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 450;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .mobile-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
 </style>

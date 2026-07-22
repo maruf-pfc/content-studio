@@ -68,6 +68,7 @@ const platform = ref('instagram');
 const ratio = ref('1:1');
 const activeThemeId = ref('auto');
 const themeFilter = ref<'all' | 'dark' | 'vibrant' | 'light'>('all');
+const isMobileDrawerOpen = ref(false);
 
 const newsState = reactive<NewsCardState>({
   headlineText: 'এখানে আপনার সংবাদ *শিরোনাম* লিখুন',
@@ -429,27 +430,40 @@ onMounted(() => {
 
 <template>
   <div class="news-app">
-    <!-- SIDEBAR CONTROLS -->
-    <div class="sidebar">
+    <!-- Mobile Sheet Backdrop -->
+    <div 
+      class="mobile-backdrop" 
+      :class="{ open: isMobileDrawerOpen }" 
+      @click="isMobileDrawerOpen = false"
+    ></div>
+
+    <!-- SIDEBAR CONTROLS (Desktop & Mobile Drawer) -->
+    <aside class="sidebar" :class="{ 'drawer-open': isMobileDrawerOpen }">
+      <div class="mobile-drawer-handle" @click="isMobileDrawerOpen = !isMobileDrawerOpen">
+        <span class="handle-bar"></span>
+        <span class="handle-txt">{{ isMobileDrawerOpen ? 'Close Controls' : 'Tap to Open Controls' }}</span>
+      </div>
+
       <div class="mode-title">
-        <span>📰 News Post Card Mode</span>
-        <span class="mode-badge">Bangladeshi News Card Style</span>
+        <span>📰 NEWS POST STUDIO</span>
+        <span class="mode-badge">Broadcast Newsroom Layout</span>
       </div>
 
       <!-- 1. Photo Zone Upload & Scale -->
-      <div class="section">
-        <div class="section-label">1. Photo Zone & Layout</div>
+      <section class="section">
+        <h2 class="section-label">1. Photo Zone & Layout</h2>
         
-        <label class="field-label">Upload News Photo</label>
+        <label class="field-label" id="photo-upload-label">Upload News Photo</label>
         <div 
           class="drop-zone"
           :class="{ 'drop-active': isDropHover, 'has-file': !!photoSrc }"
           @dragover.prevent="isDropHover = true"
           @dragleave.prevent="isDropHover = false"
           @drop.prevent="onPhotoDrop"
+          aria-labelledby="photo-upload-label"
         >
           <input type="file" ref="photoFileInput" accept="image/*" style="display:none;" @change="onPhotoFileChange">
-          <div v-if="!photoSrc" class="drop-msg" @click="photoFileInput?.click()">
+          <div v-if="!photoSrc" class="drop-msg" @click="photoFileInput?.click()" tabindex="0" role="button" aria-label="Upload photo file">
             <span class="drop-icon">📸</span>
             <strong>Click or Drag Photo Here</strong>
             <span class="sub">Auto cover-cropped, zero distortion</span>
@@ -466,90 +480,93 @@ onMounted(() => {
         <div v-if="photoSrc" class="photo-controls">
           <div class="slider-field">
             <div class="lbl-row">
-              <label>Photo Zone Height</label>
+              <label for="photo-height-range">Photo Zone Height</label>
               <span>{{ newsState.photoZonePercent }}%</span>
             </div>
-            <input type="range" min="35" max="75" v-model.number="newsState.photoZonePercent">
+            <input id="photo-height-range" type="range" min="35" max="75" v-model.number="newsState.photoZonePercent">
           </div>
 
           <div class="slider-field">
             <div class="lbl-row">
-              <label>Photo Zoom Scale</label>
+              <label for="photo-scale-range">Photo Zoom Scale</label>
               <span>{{ newsState.photoScale.toFixed(2) }}x</span>
             </div>
-            <input type="range" min="0.5" max="3.0" step="0.05" v-model.number="newsState.photoScale">
+            <input id="photo-scale-range" type="range" min="0.5" max="3.0" step="0.05" v-model.number="newsState.photoScale">
           </div>
 
           <button class="btn tiny" style="width:100%; justify-content:center; margin-top:4px;" @click="resetPhotoTransform">
             ↺ Reset Photo Pan/Zoom Position
           </button>
         </div>
-      </div>
+      </section>
 
       <!-- 2. Platform & Aspect Ratio -->
-      <div class="section">
-        <div class="section-label">2. Platform & Ratio</div>
+      <section class="section">
+        <h2 class="section-label">2. Platform & Ratio</h2>
         <div class="platform-grid">
-          <div 
+          <button 
             v-for="p in PLATFORMS" 
             :key="p.id" 
             class="platform-btn"
             :class="{ active: p.id === platform }"
             @click="platform = p.id; ratio = PLATFORMS.find(x => x.id === p.id)?.ratios[0] || '1:1';"
+            :aria-label="`Select platform ${p.label}`"
           >
-            <span class="pico">{{ p.icon }}</span>{{ p.label }}
-          </div>
+            <span class="pico" aria-hidden="true">{{ p.icon }}</span>{{ p.label }}
+          </button>
         </div>
 
         <div class="ratio-row" style="margin-top:10px;">
-          <div 
+          <button 
             v-for="r in PLATFORMS.find(x => x.id === platform)?.ratios" 
             :key="r"
             class="ratio-chip"
             :class="{ active: r === ratio }"
             @click="ratio = r"
+            :aria-label="`Select ratio ${r}`"
           >
             {{ r }}
-          </div>
+          </button>
         </div>
-      </div>
+      </section>
 
       <!-- 3. Headline Text & Word Highlight Editor -->
-      <div class="section">
-        <div class="section-label">3. News Headline</div>
-        <label class="field-label">Headline Text (*word* for accent highlight)</label>
-        <textarea v-model="newsState.headlineText" placeholder="এখানে আপনার সংবাদ শিরোনাম লিখুন..." rows="3"></textarea>
+      <section class="section">
+        <h2 class="section-label">3. News Headline</h2>
+        <label class="field-label" for="headline-input">Headline Text (*word* for accent highlight)</label>
+        <textarea id="headline-input" v-model="newsState.headlineText" placeholder="এখানে আপনার সংবাদ শিরোনাম লিখুন..." rows="3"></textarea>
 
         <label class="field-label">Interactive Word Highlight Chips</label>
         <div class="word-chip-grid">
-          <span 
+          <button 
             v-for="(t, idx) in wordTokens" 
             :key="idx"
             class="wtoken-chip"
             :class="{ highlighted: t.highlighted }"
             @click="toggleWordToken(idx)"
+            :aria-label="`Toggle highlight for word ${t.cleanWord}`"
           >
             {{ t.cleanWord }}
-          </span>
+          </button>
         </div>
 
         <div class="toggle-row" style="margin-top:12px;">
           <label class="field-label" style="margin:0;">Auto-fit Headline Font Size</label>
-          <div class="switch" :class="{ on: newsState.autoFit }" @click="newsState.autoFit = !newsState.autoFit"></div>
+          <div class="switch" :class="{ on: newsState.autoFit }" @click="newsState.autoFit = !newsState.autoFit" role="switch" :aria-checked="newsState.autoFit"></div>
         </div>
 
         <div v-if="!newsState.autoFit" class="slider-field" style="margin-top:10px;">
           <div class="lbl-row">
-            <label>Headline Font Size</label>
+            <label for="headline-size-range">Headline Font Size</label>
             <span>{{ newsState.titleFontSize }}px</span>
           </div>
-          <input type="range" min="30" max="120" v-model.number="newsState.titleFontSize">
+          <input id="headline-size-range" type="range" min="30" max="120" v-model.number="newsState.titleFontSize">
         </div>
-      </div>
+      </section>
 
       <!-- 4. Theme & Colors System -->
-      <div class="section">
-        <div class="section-label">4. Theme & Color System</div>
+      <section class="section">
+        <h2 class="section-label">4. Theme & Color System</h2>
 
         <!-- Filter Category Tabs -->
         <div class="theme-cat-tabs">
@@ -572,6 +589,8 @@ onMounted(() => {
             class="palette-card"
             :class="{ active: th.id === activeThemeId }"
             @click="activeThemeId = th.id"
+            role="button"
+            tabindex="0"
           >
             <div class="palette-bar">
               <div class="bar-bg" :style="{ backgroundColor: th.id === 'auto' && extractedPalette ? extractedPalette.darkBg : th.bg }"></div>
@@ -596,7 +615,7 @@ onMounted(() => {
             <div class="auto-swatch-item">
               <label>Banner Background</label>
               <div class="swatch-picker-row">
-                <input type="color" :value="newsState.bannerColorOverride || extractedPalette.darkBg" @input="e => newsState.bannerColorOverride = (e.target as HTMLInputElement).value">
+                <input type="color" :value="newsState.bannerColorOverride || extractedPalette.darkBg" @input="e => newsState.bannerColorOverride = (e.target as HTMLInputElement).value" aria-label="Banner Background Color">
                 <span class="swatch-hex">{{ newsState.bannerColorOverride || extractedPalette.darkBg }}</span>
               </div>
             </div>
@@ -604,7 +623,7 @@ onMounted(() => {
             <div class="auto-swatch-item">
               <label>Fade Start Color</label>
               <div class="swatch-picker-row">
-                <input type="color" :value="newsState.sampledColorOverride || extractedPalette.dominant" @input="e => newsState.sampledColorOverride = (e.target as HTMLInputElement).value">
+                <input type="color" :value="newsState.sampledColorOverride || extractedPalette.dominant" @input="e => newsState.sampledColorOverride = (e.target as HTMLInputElement).value" aria-label="Fade Start Color">
                 <span class="swatch-hex">{{ newsState.sampledColorOverride || extractedPalette.dominant }}</span>
               </div>
             </div>
@@ -612,7 +631,7 @@ onMounted(() => {
             <div class="auto-swatch-item">
               <label>Headline Highlight</label>
               <div class="swatch-picker-row">
-                <input type="color" :value="newsState.accentColorOverride || extractedPalette.accent" @input="e => newsState.accentColorOverride = (e.target as HTMLInputElement).value">
+                <input type="color" :value="newsState.accentColorOverride || extractedPalette.accent" @input="e => newsState.accentColorOverride = (e.target as HTMLInputElement).value" aria-label="Headline Highlight Color">
                 <span class="swatch-hex">{{ newsState.accentColorOverride || extractedPalette.accent }}</span>
               </div>
             </div>
@@ -620,12 +639,12 @@ onMounted(() => {
             <div class="auto-swatch-item">
               <label>Base Headline Text</label>
               <div class="swatch-picker-row">
-                <input type="color" :value="newsState.textColorOverride || extractedPalette.textColor" @input="e => newsState.textColorOverride = (e.target as HTMLInputElement).value">
+                <input type="color" :value="newsState.textColorOverride || extractedPalette.textColor" @input="e => newsState.textColorOverride = (e.target as HTMLInputElement).value" aria-label="Headline Text Color">
                 <span class="swatch-hex">{{ newsState.textColorOverride || extractedPalette.textColor }}</span>
               </div>
             </div>
           </div>
-          <div v-else style="font-size:11px; color:var(--text-dim); text-align:center; padding:8px;">
+          <div v-else style="font-size:11px; color:var(--studio-text-muted); text-align:center; padding:8px;">
             Upload a photo to see auto-extracted live colors!
           </div>
         </div>
@@ -642,15 +661,15 @@ onMounted(() => {
             <div class="picker-item">
               <label>Banner Bg</label>
               <div class="picker-row">
-                <input type="color" v-model="newsState.bannerColorOverride">
+                <input type="color" v-model="newsState.bannerColorOverride" aria-label="Banner Background Override">
                 <span class="hex-val">{{ newsState.bannerColorOverride || currentTheme?.bg }}</span>
               </div>
             </div>
 
             <div class="picker-item">
-              <label>Accent Highlight</label>
+              <label>Accent</label>
               <div class="picker-row">
-                <input type="color" v-model="newsState.accentColorOverride">
+                <input type="color" v-model="newsState.accentColorOverride" aria-label="Accent Highlight Override">
                 <span class="hex-val">{{ newsState.accentColorOverride || currentTheme?.accent }}</span>
               </div>
             </div>
@@ -658,7 +677,7 @@ onMounted(() => {
             <div class="picker-item">
               <label>Base Text</label>
               <div class="picker-row">
-                <input type="color" v-model="newsState.textColorOverride">
+                <input type="color" v-model="newsState.textColorOverride" aria-label="Base Text Color Override">
                 <span class="hex-val">{{ newsState.textColorOverride || currentTheme?.text }}</span>
               </div>
             </div>
@@ -666,7 +685,7 @@ onMounted(() => {
 
           <!-- Quick Swatch Palette Dots -->
           <div class="quick-swatches">
-            <span style="font-size:10.5px; color:var(--text-dim);">Quick Accent:</span>
+            <span style="font-size:10.5px; color:var(--studio-text-muted);">Quick Accent:</span>
             <div class="swatch-dots">
               <span 
                 v-for="col in PRESET_ACCENTS" 
@@ -674,18 +693,20 @@ onMounted(() => {
                 class="dot-btn"
                 :style="{ backgroundColor: col }"
                 @click="newsState.accentColorOverride = col"
+                role="button"
+                :aria-label="`Select accent swatch ${col}`"
               ></span>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- 5. Brand Logo Badge Controls -->
-      <div class="section">
-        <div class="section-label">5. Brand Logo Badge</div>
+      <section class="section">
+        <h2 class="section-label">5. Brand Logo Badge</h2>
         <div class="toggle-row">
           <label class="field-label" style="margin:0;">Show Logo Badge</label>
-          <div class="switch" :class="{ on: newsState.logoVisible }" @click="newsState.logoVisible = !newsState.logoVisible"></div>
+          <div class="switch" :class="{ on: newsState.logoVisible }" @click="newsState.logoVisible = !newsState.logoVisible" role="switch" :aria-checked="newsState.logoVisible"></div>
         </div>
 
         <div v-if="newsState.logoVisible" style="margin-top:12px;">
@@ -698,8 +719,8 @@ onMounted(() => {
             <button v-if="logoSrc" class="btn tiny danger" @click="removeLogo">Remove</button>
           </div>
 
-          <label class="field-label">Logo Position Preset</label>
-          <select v-model="newsState.logoAnchor">
+          <label class="field-label" for="logo-anchor-select">Logo Position Preset</label>
+          <select id="logo-anchor-select" v-model="newsState.logoAnchor">
             <option value="seam-center">Center Seam (Reference Style)</option>
             <option value="seam-left">Left Seam</option>
             <option value="seam-right">Right Seam</option>
@@ -712,61 +733,70 @@ onMounted(() => {
 
           <div class="slider-field">
             <div class="lbl-row">
-              <label>Logo Size Radius</label>
+              <label for="logo-size-range">Logo Size Radius</label>
               <span>{{ newsState.logoSize }}px</span>
             </div>
-            <input type="range" min="20" max="100" v-model.number="newsState.logoSize">
+            <input id="logo-size-range" type="range" min="20" max="100" v-model.number="newsState.logoSize">
           </div>
 
           <div class="slider-field">
             <div class="lbl-row">
-              <label>Fine Offset X</label>
+              <label for="logo-offset-x">Fine Offset X</label>
               <span>{{ newsState.logoOffsetX }}px</span>
             </div>
-            <input type="range" min="-200" max="200" v-model.number="newsState.logoOffsetX">
+            <input id="logo-offset-x" type="range" min="-200" max="200" v-model.number="newsState.logoOffsetX">
           </div>
 
           <div class="slider-field">
             <div class="lbl-row">
-              <label>Fine Offset Y</label>
+              <label for="logo-offset-y">Fine Offset Y</label>
               <span>{{ newsState.logoOffsetY }}px</span>
             </div>
-            <input type="range" min="-200" max="200" v-model.number="newsState.logoOffsetY">
+            <input id="logo-offset-y" type="range" min="-200" max="200" v-model.number="newsState.logoOffsetY">
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- 6. Footer / Copyright Controls -->
-      <div class="section">
-        <div class="section-label">6. Footer / Copyright</div>
-        <input type="text" v-model="newsState.copyrightText" placeholder="e.g. © TelepathicThoughts">
+      <section class="section">
+        <h2 class="section-label">6. Footer / Copyright</h2>
+        <input type="text" v-model="newsState.copyrightText" placeholder="e.g. © TelepathicThoughts" aria-label="Copyright Text">
         <div style="display:flex; gap:8px; margin-top:8px;">
           <button class="btn tiny" @click="autofillCopyrightHandle">Use Handle</button>
           <button class="btn tiny" @click="autofillDate">Append Date</button>
         </div>
-      </div>
+      </section>
 
       <!-- 7. Saved Drafts -->
-      <div class="section">
-        <div class="section-label">7. Saved News Drafts</div>
+      <section class="section">
+        <h2 class="section-label">7. Saved News Drafts</h2>
         <div style="display:flex; gap:8px; margin-bottom:8px;">
-          <input type="text" v-model="draftName" placeholder="News draft name..." style="flex:1;">
-          <button class="btn" @click="saveDraft">Save</button>
+          <input type="text" v-model="draftName" placeholder="News draft name..." style="flex:1;" aria-label="Draft Name">
+          <button class="btn" @click="saveDraft">Save Draft</button>
         </div>
         <div class="draft-list-container">
-          <div v-if="Object.keys(drafts).length === 0" style="font-size:11px; color:var(--text-dim); text-align:center;">No saved drafts</div>
+          <div v-if="Object.keys(drafts).length === 0" style="font-size:11px; color:var(--studio-text-muted); text-align:center;">
+            No drafts yet — create your first graphic
+          </div>
           <div v-for="(d, name) in drafts" :key="name" class="draft-item">
             <span class="draft-name" @click="selectDraft(name.toString())">{{ name }}</span>
-            <button class="draft-del-btn" @click="deleteDraft(name.toString())">✕</button>
+            <button class="draft-del-btn" @click="deleteDraft(name.toString())" aria-label="Delete draft">✕</button>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </aside>
 
-    <!-- CANVAS PREVIEW & INTERACTION AREA -->
+    <!-- CANVAS PREVIEW & WORKSTATION -->
     <div class="canvas-area">
+      <!-- Mobile Drawer Open Toggle Bar -->
+      <div class="mobile-drawer-toggle-bar">
+        <button class="btn primary" @click="isMobileDrawerOpen = !isMobileDrawerOpen">
+          ⚡ {{ isMobileDrawerOpen ? 'Close Controls Sheet' : 'Open Controls Drawer' }}
+        </button>
+      </div>
+
       <div class="canvas-header-hint">
-        <span>💡 Click & Drag canvas to pan photo | Scroll scale slider in sidebar to zoom</span>
+        <span>💡 Click & Drag canvas to pan photo | Use sidebar slider to zoom</span>
       </div>
 
       <div 
@@ -782,12 +812,12 @@ onMounted(() => {
 
       <div class="actions">
         <button class="btn primary" @click="downloadPNG">⬇ Download PNG Graphic</button>
-        <button class="btn" @click="copyImage">⧉ Copy Image</button>
+        <button class="btn secondary" @click="copyImage">⧉ Copy Image</button>
       </div>
     </div>
 
     <!-- Toast system -->
-    <div class="toast" :class="{ show: showToastFlag }">
+    <div class="toast" :class="{ show: showToastFlag }" role="status" aria-live="polite">
       <span>{{ toastMsg }}</span>
     </div>
   </div>
@@ -797,191 +827,296 @@ onMounted(() => {
 .news-app {
   display: grid;
   grid-template-columns: 440px 1fr;
-  min-height: calc(100vh - 56px);
-}
-
-@media (max-width: 1024px) {
-  .news-app { grid-template-columns: 1fr; }
-  .canvas-area { order: -1; padding: 24px 16px 40px; }
+  min-height: calc(100vh - 60px);
+  background: var(--studio-bg);
 }
 
 .sidebar {
-  background: var(--panel);
-  border-right: 1px solid var(--line);
-  padding: 24px;
+  background: var(--studio-surface);
+  border-right: 1px solid var(--studio-border);
+  padding: var(--space-6);
   overflow-y: auto;
-  height: calc(100vh - 56px);
+  height: calc(100vh - 60px);
+  box-shadow: var(--elevation-1);
+}
+
+.mobile-drawer-handle, .mobile-backdrop, .mobile-drawer-toggle-bar {
+  display: none;
 }
 
 .mode-title {
-  display: flex; flex-direction: column; gap: 4px; margin-bottom: 20px;
+  display: flex; flex-direction: column; gap: 4px; margin-bottom: var(--space-6);
 }
-.mode-title span { font-size: 15px; font-weight: 800; color: var(--text); }
-.mode-badge { font-family: var(--mono); font-size: 10.5px; color: var(--accent); }
+.mode-title span { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 900; color: var(--studio-text-primary); }
+.mode-badge { font-family: var(--font-mono); font-size: 10px; color: var(--studio-accent-primary); letter-spacing: 0.08em; text-transform: uppercase; }
 
-.section { margin-bottom: 24px; }
+.section { margin-bottom: var(--space-6); }
 .section-label {
-  font-family: var(--mono);
-  font-size: 10.5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-dim);
-  margin-bottom: 10px;
+  color: var(--studio-text-muted);
+  margin-bottom: var(--space-3);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
-.section-label::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--studio-border); }
 
-label.field-label { display: block; font-size: 12px; color: var(--text-dim); margin: 12px 0 6px; }
+label.field-label { display: block; font-size: var(--text-xs); color: var(--studio-text-secondary); margin: var(--space-3) 0 var(--space-1); font-weight: 600; }
 
 input[type=text], textarea, select {
-  width: 100%; background: var(--panel-2); border: 1px solid var(--line);
-  color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 13.5px;
-  font-family: var(--body); resize: vertical; box-sizing: border-box;
+  width: 100%; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border);
+  color: var(--studio-text-primary); padding: 10px 12px; border-radius: var(--radius-sharp); font-size: var(--text-sm);
+  font-family: var(--font-body); resize: vertical; box-sizing: border-box; min-height: var(--min-touch-target);
+  transition: border-color 0.15s;
+}
+input[type=text]:focus, textarea:focus, select:focus {
+  border-color: var(--studio-accent-primary);
 }
 
 .drop-zone {
-  border: 2px dashed var(--line); border-radius: 12px; padding: 16px;
-  text-align: center; background: var(--panel-2); transition: all 0.2s ease; cursor: pointer;
+  border: 2px dashed var(--studio-border-strong); border-radius: var(--radius-card); padding: var(--space-4);
+  text-align: center; background: var(--studio-surface-elevated); transition: all 0.2s ease; cursor: pointer;
+  min-height: 80px; display: flex; align-items: center; justify-content: center;
 }
-.drop-zone.drop-active { border-color: var(--accent); background: rgba(124, 92, 252, 0.12); }
-.drop-zone.has-file { border-style: solid; border-color: var(--line); padding: 12px; }
-.drop-msg { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-dim); }
-.drop-icon { font-size: 24px; margin-bottom: 2px; }
-.sub { font-size: 11px; }
+.drop-zone.drop-active { border-color: var(--studio-accent-primary); background: rgba(230, 57, 70, 0.12); }
+.drop-zone.has-file { border-style: solid; border-color: var(--studio-border); padding: var(--space-3); }
+.drop-msg { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--studio-text-secondary); }
+.drop-icon { font-size: 24px; }
+.sub { font-size: 11px; color: var(--studio-text-muted); }
 
-.file-loaded-info { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: var(--text); }
+.file-loaded-info { display: flex; justify-content: space-between; align-items: center; font-size: var(--text-sm); font-weight: 700; color: var(--studio-text-primary); width: 100%; }
 
-.photo-controls { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.photo-controls { margin-top: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
 .slider-field { display: flex; flex-direction: column; gap: 4px; }
-.lbl-row { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-dim); }
-.slider-field input[type=range] { width: 100%; cursor: pointer; }
+.lbl-row { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--studio-text-secondary); font-family: var(--font-mono); }
+.slider-field input[type=range] { width: 100%; cursor: pointer; min-height: 32px; accent-color: var(--studio-accent-primary); }
 
-.platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
 .platform-btn {
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
-  padding: 10px 4px; cursor: pointer; color: var(--text-dim); font-size: 10.5px;
-  font-family: var(--mono); text-align: center;
+  min-height: var(--min-touch-target);
+  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp);
+  padding: 8px 4px; cursor: pointer; color: var(--studio-text-secondary); font-size: 11px;
+  font-family: var(--font-mono); text-align: center; transition: all 0.15s;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
 }
-.platform-btn.active { border-color: var(--accent); color: var(--text); background: rgba(124, 92, 252, 0.14); }
+.platform-btn:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
+.platform-btn.active { border-color: var(--studio-accent-primary); color: var(--studio-text-primary); background: rgba(230, 57, 70, 0.15); font-weight: 700; }
 
-.ratio-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.ratio-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .ratio-chip {
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px;
-  padding: 6px 12px; font-size: 11.5px; font-family: var(--mono); cursor: pointer; color: var(--text-dim);
+  min-height: 36px;
+  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-pill);
+  padding: 6px 14px; font-size: 11.5px; font-family: var(--font-mono); cursor: pointer; color: var(--studio-text-secondary);
+  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
 }
-.ratio-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ratio-chip:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
+.ratio-chip.active { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; font-weight: 700; }
 
-.word-chip-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.word-chip-grid { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: 6px; }
 .wtoken-chip {
-  font-family: var(--body); font-size: 12px; background: var(--panel-2);
-  border: 1px solid var(--line); padding: 5px 10px; border-radius: 6px;
-  cursor: pointer; color: var(--text-dim); transition: all 0.15s;
+  min-height: 36px;
+  font-family: var(--font-body); font-size: var(--text-xs); background: var(--studio-surface-elevated);
+  border: 1px solid var(--studio-border); padding: 6px 12px; border-radius: var(--radius-sharp);
+  cursor: pointer; color: var(--studio-text-secondary); transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
 }
-.wtoken-chip.highlighted { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.wtoken-chip:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
+.wtoken-chip.highlighted { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; font-weight: 700; }
 
 /* Theme UI */
 .theme-cat-tabs {
-  display: flex; gap: 4px; background: var(--panel-2); padding: 3px;
-  border-radius: 8px; border: 1px solid var(--line); margin-bottom: 12px;
+  display: flex; gap: 4px; background: var(--studio-bg); padding: 3px;
+  border-radius: var(--radius-sharp); border: 1px solid var(--studio-border); margin-bottom: var(--space-3);
 }
 .cat-tab {
-  flex: 1; background: transparent; border: none; color: var(--text-dim);
-  font-family: var(--mono); font-size: 9.5px; font-weight: 700; padding: 5px 0;
-  border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.15s;
+  flex: 1; min-height: 32px; background: transparent; border: none; color: var(--studio-text-secondary);
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 4px 0;
+  border-radius: var(--radius-sharp); cursor: pointer; text-align: center; transition: all 0.15s;
 }
-.cat-tab.active { background: var(--accent); color: #fff; }
+.cat-tab.active { background: var(--studio-accent-primary); color: #fff; }
 
 .theme-card-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-bottom: var(--space-3);
 }
 
 .palette-card {
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+  min-height: 54px;
+  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
   padding: 8px; cursor: pointer; position: relative; transition: all 0.18s ease;
   display: flex; flex-direction: column; gap: 6px; text-align: left;
 }
-.palette-card:hover { border-color: var(--accent); transform: translateY(-1px); }
-.palette-card.active { border-color: var(--accent); background: rgba(124, 92, 252, 0.12); box-shadow: 0 0 12px rgba(124, 92, 252, 0.25); }
+.palette-card:hover { border-color: var(--studio-accent-primary); transform: translateY(-1px); }
+.palette-card.active { border-color: var(--studio-accent-primary); background: rgba(230, 57, 70, 0.12); box-shadow: 0 0 12px rgba(230, 57, 70, 0.25); }
 
 .palette-bar {
-  height: 20px; border-radius: 6px; display: flex; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
+  height: 18px; border-radius: 4px; display: flex; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
 }
 .bar-bg { flex: 2; height: 100%; }
 .bar-accent { flex: 1; height: 100%; }
 
 .palette-meta { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
-.palette-title { font-size: 11px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.palette-badge { font-family: var(--mono); font-size: 8px; background: rgba(255,255,255,0.12); padding: 1px 4px; border-radius: 3px; color: var(--text-dim); }
+.palette-title { font-size: 11px; font-weight: 700; color: var(--studio-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-badge { font-family: var(--font-mono); font-size: 8px; background: rgba(255,255,255,0.12); padding: 1px 4px; border-radius: 3px; color: var(--studio-text-secondary); }
 
 .active-badge {
   position: absolute; top: 4px; right: 4px; width: 16px; height: 16px; border-radius: 50%;
-  background: var(--accent); color: #fff; font-size: 9px; font-weight: 900;
+  background: var(--studio-accent-primary); color: #fff; font-size: 9px; font-weight: 900;
   display: flex; align-items: center; justify-content: center;
 }
 
 /* Auto Extracted Palette Card */
 .auto-palette-card {
-  background: var(--panel-2); border: 1px solid var(--accent); border-radius: 10px;
-  padding: 12px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px;
-  box-shadow: 0 4px 14px rgba(124, 92, 252, 0.15);
+  background: var(--studio-surface-elevated); border: 1px solid var(--studio-accent-primary); border-radius: var(--radius-card);
+  padding: var(--space-3); margin-bottom: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);
+  box-shadow: 0 4px 14px rgba(230, 57, 70, 0.15);
 }
-.auto-card-title { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: var(--text); }
-.auto-swatches-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.auto-swatch-item label { display: block; font-size: 9.5px; color: var(--text-dim); margin-bottom: 3px; font-family: var(--mono); }
-.swatch-picker-row { display: flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line); padding: 4px 6px; border-radius: 6px; }
-.swatch-picker-row input[type=color] { width: 22px; height: 22px; border-radius: 4px; border: none; background: none; cursor: pointer; padding: 0; }
-.swatch-hex { font-family: var(--mono); font-size: 9.5px; color: var(--text-dim); text-transform: uppercase; }
+.auto-card-title { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: var(--studio-text-primary); }
+.auto-swatches-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.auto-swatch-item label { display: block; font-size: 9.5px; color: var(--studio-text-secondary); margin-bottom: 3px; font-family: var(--font-mono); }
+.swatch-picker-row { display: flex; align-items: center; gap: 6px; background: var(--studio-surface); border: 1px solid var(--studio-border); padding: 4px 6px; border-radius: var(--radius-sharp); min-height: 36px; }
+.swatch-picker-row input[type=color] { width: 24px; height: 24px; border-radius: 4px; border: none; background: none; cursor: pointer; padding: 0; }
+.swatch-hex { font-family: var(--font-mono); font-size: 9.5px; color: var(--studio-text-secondary); text-transform: uppercase; }
 
 .color-overrides-box {
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
-  padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
+  padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);
 }
 .override-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; }
 
 .color-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.picker-item label { display: block; font-size: 9.5px; color: var(--text-dim); margin-bottom: 3px; font-family: var(--mono); }
-.picker-row { display: flex; align-items: center; gap: 4px; background: var(--panel); border: 1px solid var(--line); padding: 3px 5px; border-radius: 6px; }
-.picker-row input[type=color] { width: 20px; height: 20px; border-radius: 4px; border: none; background: none; cursor: pointer; padding: 0; }
-.hex-val { font-family: var(--mono); font-size: 9px; color: var(--text-dim); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
+.picker-item label { display: block; font-size: 9.5px; color: var(--studio-text-secondary); margin-bottom: 3px; font-family: var(--font-mono); }
+.picker-row { display: flex; align-items: center; gap: 4px; background: var(--studio-surface); border: 1px solid var(--studio-border); padding: 3px 5px; border-radius: var(--radius-sharp); min-height: 36px; }
+.picker-row input[type=color] { width: 22px; height: 22px; border-radius: 4px; border: none; background: none; cursor: pointer; padding: 0; }
+.hex-val { font-family: var(--font-mono); font-size: 9px; color: var(--studio-text-secondary); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
 
 .quick-swatches { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
-.swatch-dots { display: flex; gap: 4px; }
-.dot-btn { width: 14px; height: 14px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
+.swatch-dots { display: flex; gap: 6px; }
+.dot-btn { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
 .dot-btn:hover { transform: scale(1.25); }
 
-.toggle-row { display: flex; align-items: center; justify-content: space-between; }
-.switch { width: 38px; height: 22px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px; position: relative; cursor: pointer; }
-.switch.on { background: var(--accent); border-color: var(--accent); }
-.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: left .15s; }
-.switch.on::after { left: 18px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; min-height: var(--min-touch-target); }
+.switch { width: 44px; height: 24px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-pill); position: relative; cursor: pointer; transition: all 0.2s; }
+.switch.on { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); }
+.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: left 0.15s; }
+.switch.on::after { left: 22px; }
 
 .canvas-area {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-  padding: 24px 24px 60px; background: var(--bg); overflow-y: auto; height: calc(100vh - 56px); box-sizing: border-box;
+  padding: var(--space-6) var(--space-6) var(--space-12); background: var(--studio-bg); overflow-y: auto; height: calc(100vh - 60px); box-sizing: border-box;
 }
 
-.canvas-header-hint { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-bottom: 12px; }
+.canvas-header-hint { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--studio-text-muted); margin-bottom: var(--space-3); }
 
 .frame-wrap {
   max-width: 540px; width: 100%; position: relative; display: flex; justify-content: center;
-  align-items: center; margin-bottom: 20px; cursor: grab; user-select: none; touch-action: none;
+  align-items: center; margin-bottom: var(--space-6); cursor: grab; user-select: none; touch-action: none;
 }
 .frame-wrap.is-dragging { cursor: grabbing; }
 .frame-wrap canvas {
-  width: 100% !important; height: auto !important; border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--line); display: block;
+  width: 100% !important; height: auto !important; border-radius: var(--radius-card);
+  box-shadow: var(--elevation-3); border: 1px solid var(--studio-border); display: block;
 }
 
-.actions { display: flex; gap: 10px; width: 100%; max-width: 540px; }
-.btn { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; flex: 1; justify-content: center; }
-.btn.tiny { padding: 4px 8px; font-size: 11px; }
+.actions { display: flex; gap: var(--space-3); width: 100%; max-width: 540px; }
+.btn {
+  min-height: var(--min-touch-target);
+  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); color: var(--studio-text-primary);
+  padding: 10px 18px; border-radius: var(--radius-sharp); font-weight: 700; font-size: var(--text-sm);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s;
+}
+.btn:hover { border-color: var(--studio-border-strong); }
+.btn.primary { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; flex: 1; box-shadow: 0 4px 14px rgba(230, 57, 70, 0.35); }
+.btn.secondary { background: var(--studio-surface); border-color: var(--studio-border); }
+.btn.tiny { min-height: 32px; padding: 4px 10px; font-size: 11px; }
 .btn.danger { background: rgba(255,77,77,0.15); color: #ff4d4d; border-color: rgba(255,77,77,0.3); }
 
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--panel-2); border: 1px solid var(--accent); color: var(--text); padding: 12px 20px; border-radius: 10px; font-weight: 600; font-size: 13px; opacity: 0; transform: translateY(20px); transition: all 0.25s; pointer-events: none; z-index: 2000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-accent-primary); color: var(--studio-text-primary); padding: 12px 20px; border-radius: var(--radius-card); font-weight: 700; font-size: var(--text-sm); opacity: 0; transform: translateY(20px); transition: all 0.25s; pointer-events: none; z-index: 2000; box-shadow: var(--elevation-3); }
 .toast.show { opacity: 1; transform: translateY(0); }
-.draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 12px; cursor: pointer; }
-.draft-del-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; }
+.draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 12px; margin-bottom: 6px; font-size: 12px; cursor: pointer; min-height: 40px; }
+.draft-del-btn { background: none; border: none; color: var(--studio-text-muted); cursor: pointer; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
+
+/* Responsive Drawer for Screens < 1024px */
+@media (max-width: 1023px) {
+  .news-app {
+    grid-template-columns: 1fr;
+    position: relative;
+  }
+
+  .canvas-area {
+    order: -1;
+    padding: var(--space-4) var(--space-3) var(--space-12);
+    height: auto;
+    min-height: calc(100vh - 60px);
+  }
+
+  .mobile-drawer-toggle-bar {
+    display: block;
+    width: 100%;
+    max-width: 540px;
+    margin-bottom: var(--space-4);
+  }
+
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80vh;
+    z-index: 500;
+    border-radius: var(--radius-modal) var(--radius-modal) 0 0;
+    border-top: 1px solid var(--studio-border);
+    transform: translateY(calc(100% - 48px));
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: var(--elevation-3);
+  }
+
+  .sidebar.drawer-open {
+    transform: translateY(0);
+  }
+
+  .mobile-drawer-handle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 0 var(--space-3);
+    cursor: pointer;
+  }
+
+  .handle-bar {
+    width: 40px;
+    height: 4px;
+    border-radius: var(--radius-pill);
+    background: var(--studio-border-strong);
+  }
+
+  .handle-txt {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--studio-accent-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+
+  .mobile-backdrop {
+    display: block;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 450;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .mobile-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
 </style>

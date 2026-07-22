@@ -1,0 +1,99 @@
+/* Content Studio — Design Token System */
+:root {
+  /* Color Tokens */
+  --studio-bg: #0B0D12;
+  --studio-surface: #141720;
+  --studio-surface-elevated: #1D2230;
+  --studio-surface-active: #262D3E;
+  --studio-border: #2A3142;
+  --studio-border-strong: #3F4961;
+
+  --studio-text-primary: #F0F4FC;
+  --studio-text-secondary: #8E98B0;
+  --studio-text-muted: #5C657A;
+
+  --studio-accent-primary: #E63946;     /* Broadcast Red */
+  --studio-accent-secondary: #FFB703;   /* Broadcast Amber */
+  --studio-accent-cyan: #00E5FF;        /* Live Broadcast Cyan */
+
+  --studio-status-success: #20E298;
+  --studio-status-warning: #FFB703;
+  --studio-status-error: #FF4D4D;
+
+  /* Typography Scale */
+  --font-display: 'Outfit', -apple-system, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+  --text-3xl: 48px;
+
+  /* Spacing Scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radius Language */
+  --radius-sharp: 4px;     /* Inputs, textareas, code chips */
+  --radius-card: 10px;     /* Surface cards, theme tiles */
+  --radius-modal: 16px;    /* Dialogs & bottom sheets */
+  --radius-pill: 9999px;   /* Mode badges & filter pills */
+
+  /* Elevation / Depth Shadows */
+  --elevation-1: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --elevation-2: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --elevation-3: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.1);
+
+  /* Touch Target Standard */
+  --min-touch-target: 44px;
+}
+
+/* Global Reset & Base Utility Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--studio-bg);
+  color: var(--studio-text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Accessible Focus Ring */
+:focus-visible {
+  outline: 2px solid var(--studio-accent-primary);
+  outline-offset: 2px;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--studio-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--studio-border);
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--studio-border-strong);
+}
