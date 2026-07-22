@@ -224,30 +224,31 @@ export function renderNewsCardCanvas(
   }
 
   // 3. Render Blended Transition Zone
-  const blendHeight = h * 0.28;
-  const blendStartY = Math.max(0, photoZoneH - blendHeight * 0.45);
-  const blendEndY = Math.min(h - footerH, photoZoneH + blendHeight * 0.55);
+  const blendHeight = h * 0.24;
+  const blendStartY = Math.max(0, photoZoneH - blendHeight * 0.6);
+  const blendEndY = Math.min(h - footerH, photoZoneH + blendHeight * 0.4);
 
-  const topColor = parseRgb(sampledEdgeColor);
   const bgRgb = parseRgb(bgColor);
+  const { r, g, b } = bgRgb;
 
   ctx.save();
   const grad = ctx.createLinearGradient(0, blendStartY, 0, blendEndY);
 
-  // Multi-stop 100% smooth gradient curve
-  grad.addColorStop(0.0, `rgba(${topColor.r}, ${topColor.g}, ${topColor.b}, 0.0)`);
-  grad.addColorStop(0.3, `rgba(${topColor.r}, ${topColor.g}, ${topColor.b}, 0.50)`);
-  grad.addColorStop(0.5, `rgba(${topColor.r}, ${topColor.g}, ${topColor.b}, 0.90)`);
-  grad.addColorStop(0.75, `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 0.98)`);
-  grad.addColorStop(1.0, `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 1.0)`);
+  // Smooth ease-in-out alpha curve fading photo directly into banner background color
+  grad.addColorStop(0.0, `rgba(${r}, ${g}, ${b}, 0.0)`);
+  grad.addColorStop(0.2, `rgba(${r}, ${g}, ${b}, 0.10)`);
+  grad.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, 0.38)`);
+  grad.addColorStop(0.65, `rgba(${r}, ${g}, ${b}, 0.78)`);
+  grad.addColorStop(0.88, `rgba(${r}, ${g}, ${b}, 0.96)`);
+  grad.addColorStop(1.0, `rgba(${r}, ${g}, ${b}, 1.0)`);
 
   ctx.fillStyle = grad;
-  ctx.fillRect(0, blendStartY, w, blendEndY - blendStartY);
+  ctx.fillRect(0, blendStartY, w, blendEndY - blendStartY + 1);
   ctx.restore();
 
-  // Solid fill below blend with subpixel overlap guard
+  // Solid fill below blend
   ctx.fillStyle = bgColor;
-  ctx.fillRect(0, Math.floor(blendEndY) - 1, w, h - blendEndY + 1);
+  ctx.fillRect(0, Math.floor(blendEndY), w, h - blendEndY);
 
   // 4. Render Headline Text in Text Zone
   const textPad = w * 0.07;
