@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { parseWordTokens, toggleWordHighlight } from '../utils/textHelper';
-import { renderNewsCardCanvas, sampleBottomColor, type NewsCardState } from '../utils/newsCardCanvas';
+import { 
+  renderNewsCardCanvas, 
+  sampleBottomColor, 
+  samplePhotoPalette, 
+  type NewsCardState, 
+  type ExtractedPalette 
+} from '../utils/newsCardCanvas';
 
 /* ---------------- DATA PRESETS ---------------- */
 interface Platform {
@@ -38,6 +44,7 @@ interface Theme {
 }
 
 const THEMES: Theme[] = [
+  { id: 'auto', name: 'Auto (Photo Extracted)', category: 'vibrant', bg: '#121019', accent: '#FFE600', text: '#FFFFFF', badge: 'Default ✨' },
   { id: 'midnight', name: 'Midnight Gold', category: 'dark', bg: '#121019', accent: '#FFE600', text: '#FFFFFF', badge: 'Popular' },
   { id: 'channel_red', name: 'Channel 24 Red', category: 'vibrant', bg: '#180407', accent: '#FF2E4C', text: '#FFFFFF', badge: 'Breaking' },
   { id: 'jamuna_blue', name: 'Jamuna Broadcast', category: 'dark', bg: '#0A1128', accent: '#00E5FF', text: '#FFFFFF', badge: 'TV Style' },
@@ -59,7 +66,7 @@ const PRESET_ACCENTS = [
 /* ---------------- STATE ---------------- */
 const platform = ref('instagram');
 const ratio = ref('1:1');
-const activeThemeId = ref('midnight');
+const activeThemeId = ref('auto');
 const themeFilter = ref<'all' | 'dark' | 'vibrant' | 'light'>('all');
 
 const newsState = reactive<NewsCardState>({
@@ -105,6 +112,8 @@ const dragStartOffset = { x: 0, y: 0 };
 const isDropHover = ref(false);
 
 const autoSampledColor = ref('#14121A');
+const extractedPalette = ref<ExtractedPalette | null>(null);
+
 const toastMsg = ref('');
 const showToastFlag = ref(false);
 
@@ -146,7 +155,9 @@ const handlePhotoUpload = (file: File) => {
     const img = new Image();
     img.onload = () => {
       photoEl.value = img;
-      autoSampledColor.value = sampleBottomColor(img);
+      const palette = samplePhotoPalette(img);
+      extractedPalette.value = palette;
+      autoSampledColor.value = palette.dominant;
       newsState.photoOffsetX = 0;
       newsState.photoOffsetY = 0;
       newsState.photoScale = 1.0;
@@ -172,6 +183,7 @@ const removePhoto = () => {
   photoSrc.value = null;
   photoEl.value = null;
   autoSampledColor.value = '#14121A';
+  extractedPalette.value = null;
   if (photoFileInput.value) photoFileInput.value.value = '';
   render();
 };
@@ -224,28 +236,37 @@ const onCanvasPointerMove = (e: PointerEvent) => {
 };
 
 const onCanvasPointerUp = (e: PointerEvent) => {
-  isDraggingPhoto.value = false;
-  try {
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-  } catch {}
+  if (isDraggingPhoto.value && mainCanvas.value) {
+    isDraggingPhoto.value = false;
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+  }
 };
 
-const resetPhotoPan = () => {
+const resetPhotoTransform = () => {
   newsState.photoOffsetX = 0;
   newsState.photoOffsetY = 0;
   newsState.photoScale = 1.0;
   showToast('Photo position reset');
 };
 
-/* Word Highlight Controls */
-const toggleHighlightToken = (index: number) => {
+/* Word Highlight Toggle */
+const toggleWordToken = (index: number) => {
   newsState.headlineText = toggleWordHighlight(newsState.headlineText, index);
 };
 
-/* Color Overrides */
+/* Color Actions */
 const applyAutoSampledColor = () => {
-  newsState.bannerColorOverride = autoSampledColor.value;
-  showToast(`Banner color set to auto edge color (${autoSampledColor.value})`);
+  if (extractedPalette.value) {
+    newsState.bannerColorOverride = extractedPalette.value.darkBg;
+    newsState.sampledColorOverride = extractedPalette.value.dominant;
+    newsState.textColorOverride = extractedPalette.value.textColor;
+    newsState.accentColorOverride = extractedPalette.value.accent;
+  } else {
+    newsState.bannerColorOverride = autoSampledColor.value;
+  }
+  showToast('Extracted photo colors applied');
 };
 
 const resetColorOverrides = () => {
@@ -253,7 +274,7 @@ const resetColorOverrides = () => {
   newsState.accentColorOverride = '';
   newsState.textColorOverride = '';
   newsState.sampledColorOverride = '';
-  showToast('Colors reset to active theme defaults');
+  showToast('Color overrides reset');
 };
 
 /* Auto Fill Buttons */
@@ -273,33 +294,82 @@ const autofillDate = () => {
   } catch {
     dateStr = d.toLocaleDateString('en-US', options);
   }
+  
   const current = newsState.copyrightText ? `${newsState.copyrightText} · ${dateStr}` : `© ${dateStr}`;
   newsState.copyrightText = current;
   showToast('Date appended to copyright');
 };
 
-/* Render Engine Trigger */
-const render = () => {
-  nextTick(() => {
-    if (!mainCanvas.value) return;
-    const dims = RATIO_DIMS[ratio.value] || [1080, 1080];
-    const bg = currentTheme.value?.bg || '#14121A';
-    const accent = currentTheme.value?.accent || '#FFE600';
-    const text = currentTheme.value?.text || '#FFFFFF';
-    renderNewsCardCanvas(
-      mainCanvas.value,
-      newsState,
-      photoEl.value,
-      logoEl.value,
-      bg,
-      accent,
-      text,
-      dims
-    );
-  });
+/* Draft Actions */
+const loadDrafts = () => {
+  const cached = localStorage.getItem('news_studio_drafts');
+  drafts.value = cached ? JSON.parse(cached) : {};
 };
 
-/* Exports & Drafts */
+const saveDraft = () => {
+  const name = draftName.value.trim();
+  if (!name) {
+    showToast('Enter a draft name first!');
+    return;
+  }
+  drafts.value[name] = {
+    state: { ...newsState },
+    photoSrc: photoSrc.value,
+    logoSrc: logoSrc.value,
+    activeThemeId: activeThemeId.value
+  };
+  localStorage.setItem('news_studio_drafts', JSON.stringify(drafts.value));
+  draftName.value = '';
+  showToast(`News Draft "${name}" saved ✓`);
+};
+
+const deleteDraft = (name: string) => {
+  delete drafts.value[name];
+  localStorage.setItem('news_studio_drafts', JSON.stringify(drafts.value));
+  showToast(`Draft "${name}" deleted`);
+};
+
+const selectDraft = (name: string) => {
+  const d = drafts.value[name];
+  if (!d) return;
+
+  Object.assign(newsState, d.state);
+  if (d.activeThemeId) activeThemeId.value = d.activeThemeId;
+
+  if (d.photoSrc) {
+    photoSrc.value = d.photoSrc;
+    const img = new Image();
+    img.onload = () => {
+      photoEl.value = img;
+      const palette = samplePhotoPalette(img);
+      extractedPalette.value = palette;
+      autoSampledColor.value = palette.dominant;
+      render();
+    };
+    img.src = d.photoSrc;
+  } else {
+    photoSrc.value = null;
+    photoEl.value = null;
+    extractedPalette.value = null;
+  }
+
+  if (d.logoSrc) {
+    logoSrc.value = d.logoSrc;
+    const img = new Image();
+    img.onload = () => {
+      logoEl.value = img;
+      render();
+    };
+    img.src = d.logoSrc;
+  } else {
+    logoSrc.value = null;
+    logoEl.value = null;
+  }
+
+  showToast(`Loaded draft "${name}"`);
+};
+
+/* Exports */
 const downloadPNG = () => {
   if (!mainCanvas.value) return;
   const link = document.createElement('a');
@@ -315,64 +385,40 @@ const copyImage = async () => {
     mainCanvas.value.toBlob(async (blob) => {
       if (!blob) return;
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      showToast('Copied graphic to clipboard!');
+      showToast('Copied news graphic to clipboard!');
     }, 'image/png');
   } catch {
-    showToast('Download PNG instead');
+    showToast('Clipboard copy unsupported — please download');
   }
 };
 
-const saveDraft = () => {
-  const name = draftName.value.trim();
-  if (!name) {
-    showToast('Enter draft name first');
-    return;
-  }
-  drafts.value[name] = {
-    state: { ...newsState },
-    platform: platform.value,
-    ratio: ratio.value,
-    themeId: activeThemeId.value,
-    photoSrc: photoSrc.value,
-    logoSrc: logoSrc.value
-  };
-  localStorage.setItem('studio_news_drafts', JSON.stringify(drafts.value));
-  draftName.value = '';
-  showToast(`News draft "${name}" saved ✓`);
-};
+/* Render Engine */
+const render = () => {
+  nextTick(() => {
+    if (!mainCanvas.value) return;
+    const dims = RATIO_DIMS[ratio.value] || [1080, 1080];
+    
+    let thBg = currentTheme.value?.bg || '#121019';
+    let thAccent = currentTheme.value?.accent || '#FFE600';
+    let thText = currentTheme.value?.text || '#FFFFFF';
 
-const loadDrafts = () => {
-  const cached = localStorage.getItem('studio_news_drafts');
-  drafts.value = cached ? JSON.parse(cached) : {};
-};
+    if (activeThemeId.value === 'auto' && extractedPalette.value) {
+      thBg = extractedPalette.value.darkBg;
+      thAccent = extractedPalette.value.accent;
+      thText = extractedPalette.value.textColor;
+    }
 
-const selectDraft = (name: string) => {
-  const d = drafts.value[name];
-  if (!d) return;
-  Object.assign(newsState, d.state);
-  platform.value = d.platform || 'instagram';
-  ratio.value = d.ratio || '1:1';
-  activeThemeId.value = d.themeId || 'midnight';
-
-  if (d.photoSrc) {
-    photoSrc.value = d.photoSrc;
-    const img = new Image();
-    img.onload = () => { photoEl.value = img; render(); };
-    img.src = d.photoSrc;
-  } else {
-    photoSrc.value = null; photoEl.value = null;
-  }
-
-  if (d.logoSrc) {
-    logoSrc.value = d.logoSrc;
-    const img = new Image();
-    img.onload = () => { logoEl.value = img; render(); };
-    img.src = d.logoSrc;
-  } else {
-    logoSrc.value = null; logoEl.value = null;
-  }
-
-  showToast(`Loaded draft "${name}"`);
+    renderNewsCardCanvas(
+      mainCanvas.value,
+      newsState,
+      photoEl.value,
+      logoEl.value,
+      thBg,
+      thAccent,
+      thText,
+      dims
+    );
+  });
 };
 
 onMounted(() => {
@@ -383,135 +429,125 @@ onMounted(() => {
 
 <template>
   <div class="news-app">
-    <!-- SIDEBAR -->
-    <div class="news-sidebar">
-      <!-- 1. Platform & Ratio -->
+    <!-- SIDEBAR CONTROLS -->
+    <div class="sidebar">
+      <div class="mode-title">
+        <span>📰 News Post Card Mode</span>
+        <span class="mode-badge">Bangladeshi News Card Style</span>
+      </div>
+
+      <!-- 1. Photo Zone Upload & Scale -->
       <div class="section">
-        <div class="section-label">Platform & Ratio</div>
-        <div class="ratio-row">
-          <button 
-            v-for="r in RATIO_DIMS ? Object.keys(RATIO_DIMS) : []" 
+        <div class="section-label">1. Photo Zone & Layout</div>
+        
+        <label class="field-label">Upload News Photo</label>
+        <div 
+          class="drop-zone"
+          :class="{ 'drop-active': isDropHover, 'has-file': !!photoSrc }"
+          @dragover.prevent="isDropHover = true"
+          @dragleave.prevent="isDropHover = false"
+          @drop.prevent="onPhotoDrop"
+        >
+          <input type="file" ref="photoFileInput" accept="image/*" style="display:none;" @change="onPhotoFileChange">
+          <div v-if="!photoSrc" class="drop-msg" @click="photoFileInput?.click()">
+            <span class="drop-icon">📸</span>
+            <strong>Click or Drag Photo Here</strong>
+            <span class="sub">Auto cover-cropped, zero distortion</span>
+          </div>
+          <div v-else class="file-loaded-info">
+            <span>✓ Photo Loaded</span>
+            <div style="display:flex; gap:6px;">
+              <button class="btn tiny" @click="photoFileInput?.click()">Change</button>
+              <button class="btn tiny danger" @click="removePhoto">Remove</button>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="photoSrc" class="photo-controls">
+          <div class="slider-field">
+            <div class="lbl-row">
+              <label>Photo Zone Height</label>
+              <span>{{ newsState.photoZonePercent }}%</span>
+            </div>
+            <input type="range" min="35" max="75" v-model.number="newsState.photoZonePercent">
+          </div>
+
+          <div class="slider-field">
+            <div class="lbl-row">
+              <label>Photo Zoom Scale</label>
+              <span>{{ newsState.photoScale.toFixed(2) }}x</span>
+            </div>
+            <input type="range" min="0.5" max="3.0" step="0.05" v-model.number="newsState.photoScale">
+          </div>
+
+          <button class="btn tiny" style="width:100%; justify-content:center; margin-top:4px;" @click="resetPhotoTransform">
+            ↺ Reset Photo Pan/Zoom Position
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Platform & Aspect Ratio -->
+      <div class="section">
+        <div class="section-label">2. Platform & Ratio</div>
+        <div class="platform-grid">
+          <div 
+            v-for="p in PLATFORMS" 
+            :key="p.id" 
+            class="platform-btn"
+            :class="{ active: p.id === platform }"
+            @click="platform = p.id; ratio = PLATFORMS.find(x => x.id === p.id)?.ratios[0] || '1:1';"
+          >
+            <span class="pico">{{ p.icon }}</span>{{ p.label }}
+          </div>
+        </div>
+
+        <div class="ratio-row" style="margin-top:10px;">
+          <div 
+            v-for="r in PLATFORMS.find(x => x.id === platform)?.ratios" 
             :key="r"
             class="ratio-chip"
             :class="{ active: r === ratio }"
             @click="ratio = r"
           >
             {{ r }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 2. Photo Zone Controls (Pan / Zoom / Height) -->
-      <div class="section">
-        <div class="section-label">1. Photo Zone & Controls</div>
-        
-        <div 
-          class="drag-drop-zone"
-          @dragover.prevent="isDropHover = true"
-          @dragleave.prevent="isDropHover = false"
-          @drop.prevent="onPhotoDrop"
-          @click="photoFileInput?.click()"
-          :class="{ dragging: isDropHover }"
-        >
-          <input type="file" ref="photoFileInput" accept="image/*" style="display:none;" @change="onPhotoFileChange">
-          <div v-if="!photoSrc" style="display:flex; flex-direction:column; align-items:center; gap:6px;">
-            <span style="font-size:24px;">📸</span>
-            <span style="font-size:11px; font-weight:600; color:var(--text-dim);">Drag & Drop News Photo or Click to Browse</span>
-          </div>
-          <div v-else style="display:flex; align-items:center; gap:10px;">
-            <img :src="photoSrc" style="width:50px; height:50px; object-fit:cover; border-radius:6px;">
-            <div style="flex:1; text-align:left;">
-              <div style="font-size:11px; font-weight:700;">Photo Uploaded</div>
-              <div style="font-size:10px; color:var(--text-dim);">Drag canvas to pan · Use slider to zoom</div>
-            </div>
-            <button class="btn tiny" @click.stop="removePhoto">Remove</button>
-          </div>
-        </div>
-
-        <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
-          <div class="ctrl-row">
-            <span class="ctrl-label">Photo Zone Height ({{ newsState.photoZonePercent }}%)</span>
-            <input type="range" v-model.number="newsState.photoZonePercent" min="35" max="75" style="width:130px;">
-          </div>
-
-          <div class="ctrl-row">
-            <span class="ctrl-label">Zoom Scale ({{ newsState.photoScale.toFixed(2) }}x)</span>
-            <input type="range" v-model.number="newsState.photoScale" min="0.5" max="3.0" step="0.05" style="width:130px;">
-          </div>
-
-          <div class="ctrl-row">
-            <button class="btn tiny" @click="resetPhotoPan" style="width:100%; justify-content:center;">Reset Pan & Zoom</button>
           </div>
         </div>
       </div>
 
-      <!-- 3. Headline Editor & Word Highlight Selector -->
+      <!-- 3. Headline Text & Word Highlight Editor -->
       <div class="section">
-        <div class="section-label">2. Headline & Word Highlight</div>
-
+        <div class="section-label">3. News Headline</div>
         <label class="field-label">Headline Text (*word* for accent highlight)</label>
-        <textarea v-model="newsState.headlineText" placeholder="Enter news headline..."></textarea>
+        <textarea v-model="newsState.headlineText" placeholder="এখানে আপনার সংবাদ শিরোনাম লিখুন..." rows="3"></textarea>
 
-        <label class="field-label" style="margin-top:8px;">Click word to toggle accent highlight:</label>
+        <label class="field-label">Interactive Word Highlight Chips</label>
         <div class="word-chip-grid">
-          <button 
-            v-for="t in wordTokens" 
-            :key="t.index"
-            class="word-chip"
+          <span 
+            v-for="(t, idx) in wordTokens" 
+            :key="idx"
+            class="wtoken-chip"
             :class="{ highlighted: t.highlighted }"
-            @click="toggleHighlightToken(t.index)"
+            @click="toggleWordToken(idx)"
           >
             {{ t.cleanWord }}
-          </button>
+          </span>
+        </div>
+
+        <div class="toggle-row" style="margin-top:12px;">
+          <label class="field-label" style="margin:0;">Auto-fit Headline Font Size</label>
+          <div class="switch" :class="{ on: newsState.autoFit }" @click="newsState.autoFit = !newsState.autoFit"></div>
+        </div>
+
+        <div v-if="!newsState.autoFit" class="slider-field" style="margin-top:10px;">
+          <div class="lbl-row">
+            <label>Headline Font Size</label>
+            <span>{{ newsState.titleFontSize }}px</span>
+          </div>
+          <input type="range" min="30" max="120" v-model.number="newsState.titleFontSize">
         </div>
       </div>
 
-      <!-- 4. Logo / Badge Placement & Anchor Points -->
-      <div class="section">
-        <div class="section-label">3. Brand Logo Badge</div>
-
-        <div style="display:flex; gap:8px; margin-bottom:10px;">
-          <input type="file" ref="logoFileInput" accept="image/*" style="display:none;" @change="onLogoFileChange">
-          <button class="btn" @click="logoFileInput?.click()" style="flex:1; justify-content:center;">Upload Brand Logo</button>
-          <button v-if="logoSrc" class="btn" @click="removeLogo">Remove</button>
-        </div>
-
-        <div v-if="logoSrc" class="control-box">
-          <div class="toggle-row">
-            <span class="ctrl-label">Show Badge</span>
-            <div class="switch" :class="{ on: newsState.logoVisible }" @click="newsState.logoVisible = !newsState.logoVisible"></div>
-          </div>
-
-          <label class="field-label" style="margin-top:8px;">Badge Anchor Position</label>
-          <select v-model="newsState.logoAnchor">
-            <option value="top-left">Top Left</option>
-            <option value="top-center">Top Center</option>
-            <option value="top-right">Top Right</option>
-            <option value="seam-left">Seam Left</option>
-            <option value="seam-center">Seam Center (Default)</option>
-            <option value="seam-right">Seam Right</option>
-            <option value="bottom-left">Bottom Left</option>
-            <option value="bottom-right">Bottom Right</option>
-          </select>
-
-          <div class="ctrl-row" style="margin-top:8px;">
-            <span class="ctrl-label">Badge Size</span>
-            <input type="range" v-model.number="newsState.logoSize" min="20" max="120" style="width:120px;">
-          </div>
-
-          <div class="ctrl-row">
-            <span class="ctrl-label">Offset X</span>
-            <input type="range" v-model.number="newsState.logoOffsetX" min="-150" max="150" style="width:120px;">
-          </div>
-
-          <div class="ctrl-row">
-            <span class="ctrl-label">Offset Y</span>
-            <input type="range" v-model.number="newsState.logoOffsetY" min="-150" max="150" style="width:120px;">
-          </div>
-        </div>
-      </div>
-
-      <!-- 5. Professional Theme & Color System -->
+      <!-- 4. Theme & Colors System -->
       <div class="section">
         <div class="section-label">4. Theme & Color System</div>
 
@@ -538,8 +574,8 @@ onMounted(() => {
             @click="activeThemeId = th.id"
           >
             <div class="palette-bar">
-              <div class="bar-bg" :style="{ backgroundColor: th.bg }"></div>
-              <div class="bar-accent" :style="{ backgroundColor: th.accent }"></div>
+              <div class="bar-bg" :style="{ backgroundColor: th.id === 'auto' && extractedPalette ? extractedPalette.darkBg : th.bg }"></div>
+              <div class="bar-accent" :style="{ backgroundColor: th.id === 'auto' && extractedPalette ? extractedPalette.accent : th.accent }"></div>
             </div>
             <div class="palette-meta">
               <span class="palette-title">{{ th.name }}</span>
@@ -549,23 +585,56 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Color Sampling & Custom Overrides -->
-        <div class="color-overrides-box">
-          <div class="override-header">
-            <span>Color Overrides & Sampling</span>
-            <button class="btn tiny" @click="resetColorOverrides">Reset Overrides</button>
+        <!-- Live Auto-Extracted Palette Card -->
+        <div v-if="activeThemeId === 'auto'" class="auto-palette-card">
+          <div class="auto-card-title">
+            <span>✨ Live Extracted Photo Palette</span>
+            <button class="btn tiny" @click="applyAutoSampledColor">Apply Extracted</button>
           </div>
 
-          <!-- Auto Color Sampling Strip -->
-          <div class="auto-color-bar">
-            <div class="auto-color-preview">
-              <span class="swatch-ring" :style="{ backgroundColor: autoSampledColor }"></span>
-              <div style="display:flex; flex-direction:column; text-align:left;">
-                <span style="font-size:11px; font-weight:700;">Image Edge Color</span>
-                <span style="font-size:10px; color:var(--text-dim);">{{ autoSampledColor }}</span>
+          <div v-if="extractedPalette" class="auto-swatches-grid">
+            <div class="auto-swatch-item">
+              <label>Banner Background</label>
+              <div class="swatch-picker-row">
+                <input type="color" :value="newsState.bannerColorOverride || extractedPalette.darkBg" @input="e => newsState.bannerColorOverride = (e.target as HTMLInputElement).value">
+                <span class="swatch-hex">{{ newsState.bannerColorOverride || extractedPalette.darkBg }}</span>
               </div>
             </div>
-            <button class="btn tiny primary" @click="applyAutoSampledColor">Apply to Banner</button>
+
+            <div class="auto-swatch-item">
+              <label>Fade Start Color</label>
+              <div class="swatch-picker-row">
+                <input type="color" :value="newsState.sampledColorOverride || extractedPalette.dominant" @input="e => newsState.sampledColorOverride = (e.target as HTMLInputElement).value">
+                <span class="swatch-hex">{{ newsState.sampledColorOverride || extractedPalette.dominant }}</span>
+              </div>
+            </div>
+
+            <div class="auto-swatch-item">
+              <label>Headline Highlight</label>
+              <div class="swatch-picker-row">
+                <input type="color" :value="newsState.accentColorOverride || extractedPalette.accent" @input="e => newsState.accentColorOverride = (e.target as HTMLInputElement).value">
+                <span class="swatch-hex">{{ newsState.accentColorOverride || extractedPalette.accent }}</span>
+              </div>
+            </div>
+
+            <div class="auto-swatch-item">
+              <label>Base Headline Text</label>
+              <div class="swatch-picker-row">
+                <input type="color" :value="newsState.textColorOverride || extractedPalette.textColor" @input="e => newsState.textColorOverride = (e.target as HTMLInputElement).value">
+                <span class="swatch-hex">{{ newsState.textColorOverride || extractedPalette.textColor }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else style="font-size:11px; color:var(--text-dim); text-align:center; padding:8px;">
+            Upload a photo to see auto-extracted live colors!
+          </div>
+        </div>
+
+        <!-- Manual Color Sampling & Custom Overrides -->
+        <div class="color-overrides-box">
+          <div class="override-header">
+            <span>Color Overrides & Pickers</span>
+            <button class="btn tiny" @click="resetColorOverrides">Reset Overrides</button>
           </div>
 
           <!-- Color Pickers -->
@@ -611,9 +680,65 @@ onMounted(() => {
         </div>
       </div>
 
+      <!-- 5. Brand Logo Badge Controls -->
+      <div class="section">
+        <div class="section-label">5. Brand Logo Badge</div>
+        <div class="toggle-row">
+          <label class="field-label" style="margin:0;">Show Logo Badge</label>
+          <div class="switch" :class="{ on: newsState.logoVisible }" @click="newsState.logoVisible = !newsState.logoVisible"></div>
+        </div>
+
+        <div v-if="newsState.logoVisible" style="margin-top:12px;">
+          <label class="field-label">Upload Brand Logo</label>
+          <div style="display:flex; gap:8px;">
+            <input type="file" ref="logoFileInput" accept="image/*" style="display:none;" @change="onLogoFileChange">
+            <button class="btn" @click="logoFileInput?.click()" style="padding:6px 12px; font-size:12px; flex:1;">
+              {{ logoSrc ? '✓ Change Logo' : 'Upload Logo Image' }}
+            </button>
+            <button v-if="logoSrc" class="btn tiny danger" @click="removeLogo">Remove</button>
+          </div>
+
+          <label class="field-label">Logo Position Preset</label>
+          <select v-model="newsState.logoAnchor">
+            <option value="seam-center">Center Seam (Reference Style)</option>
+            <option value="seam-left">Left Seam</option>
+            <option value="seam-right">Right Seam</option>
+            <option value="top-left">Top Left</option>
+            <option value="top-center">Top Center</option>
+            <option value="top-right">Top Right</option>
+            <option value="bottom-left">Bottom Left</option>
+            <option value="bottom-right">Bottom Right</option>
+          </select>
+
+          <div class="slider-field">
+            <div class="lbl-row">
+              <label>Logo Size Radius</label>
+              <span>{{ newsState.logoSize }}px</span>
+            </div>
+            <input type="range" min="20" max="100" v-model.number="newsState.logoSize">
+          </div>
+
+          <div class="slider-field">
+            <div class="lbl-row">
+              <label>Fine Offset X</label>
+              <span>{{ newsState.logoOffsetX }}px</span>
+            </div>
+            <input type="range" min="-200" max="200" v-model.number="newsState.logoOffsetX">
+          </div>
+
+          <div class="slider-field">
+            <div class="lbl-row">
+              <label>Fine Offset Y</label>
+              <span>{{ newsState.logoOffsetY }}px</span>
+            </div>
+            <input type="range" min="-200" max="200" v-model.number="newsState.logoOffsetY">
+          </div>
+        </div>
+      </div>
+
       <!-- 6. Footer / Copyright Controls -->
       <div class="section">
-        <div class="section-label">5. Footer / Copyright</div>
+        <div class="section-label">6. Footer / Copyright</div>
         <input type="text" v-model="newsState.copyrightText" placeholder="e.g. © TelepathicThoughts">
         <div style="display:flex; gap:8px; margin-top:8px;">
           <button class="btn tiny" @click="autofillCopyrightHandle">Use Handle</button>
@@ -623,44 +748,45 @@ onMounted(() => {
 
       <!-- 7. Saved Drafts -->
       <div class="section">
-        <div class="section-label">Saved Drafts</div>
+        <div class="section-label">7. Saved News Drafts</div>
         <div style="display:flex; gap:8px; margin-bottom:8px;">
           <input type="text" v-model="draftName" placeholder="News draft name..." style="flex:1;">
           <button class="btn" @click="saveDraft">Save</button>
         </div>
         <div class="draft-list-container">
-          <div v-if="Object.keys(drafts).length === 0" style="font-size:11px; color:var(--text-dim); text-align:center;">No saved news drafts</div>
-          <div v-for="(_d, name) in drafts" :key="name" class="draft-item">
-            <span @click="selectDraft(name.toString())">{{ name }}</span>
+          <div v-if="Object.keys(drafts).length === 0" style="font-size:11px; color:var(--text-dim); text-align:center;">No saved drafts</div>
+          <div v-for="(d, name) in drafts" :key="name" class="draft-item">
+            <span class="draft-name" @click="selectDraft(name.toString())">{{ name }}</span>
+            <button class="draft-del-btn" @click="deleteDraft(name.toString())">✕</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- CANVAS PREVIEW AREA -->
-    <div class="news-canvas-area">
-      <div class="canvas-hint">
-        💡 <strong>Interactive Canvas:</strong> Drag directly on the preview image to pan photo. Use controls in sidebar to zoom or position logo.
+    <!-- CANVAS PREVIEW & INTERACTION AREA -->
+    <div class="canvas-area">
+      <div class="canvas-header-hint">
+        <span>💡 Click & Drag canvas to pan photo | Scroll scale slider in sidebar to zoom</span>
       </div>
 
-      <div class="frame-wrap">
-        <canvas 
-          ref="mainCanvas"
-          @pointerdown="onCanvasPointerDown"
-          @pointermove="onCanvasPointerMove"
-          @pointerup="onCanvasPointerUp"
-          @pointercancel="onCanvasPointerUp"
-          class="interactive-canvas"
-        ></canvas>
+      <div 
+        class="frame-wrap" 
+        id="newsFrameWrap"
+        :class="{ 'is-dragging': isDraggingPhoto }"
+        @pointerdown="onCanvasPointerDown"
+        @pointermove="onCanvasPointerMove"
+        @pointerup="onCanvasPointerUp"
+      >
+        <canvas ref="mainCanvas"></canvas>
       </div>
 
       <div class="actions">
         <button class="btn primary" @click="downloadPNG">⬇ Download PNG Graphic</button>
-        <button class="btn secondary" @click="copyImage">⧉ Copy Image to Clipboard</button>
+        <button class="btn" @click="copyImage">⧉ Copy Image</button>
       </div>
     </div>
 
-    <!-- Toast notification -->
+    <!-- Toast system -->
     <div class="toast" :class="{ show: showToastFlag }">
       <span>{{ toastMsg }}</span>
     </div>
@@ -670,26 +796,30 @@ onMounted(() => {
 <style scoped>
 .news-app {
   display: grid;
-  grid-template-columns: 420px 1fr;
+  grid-template-columns: 440px 1fr;
   min-height: calc(100vh - 56px);
 }
 
 @media (max-width: 1024px) {
   .news-app { grid-template-columns: 1fr; }
-  .news-canvas-area { order: -1; padding: 20px; }
+  .canvas-area { order: -1; padding: 24px 16px 40px; }
 }
 
-.news-sidebar {
+.sidebar {
   background: var(--panel);
   border-right: 1px solid var(--line);
   padding: 24px;
   overflow-y: auto;
   height: calc(100vh - 56px);
-  box-sizing: border-box;
 }
 
-.section { margin-bottom: 24px; }
+.mode-title {
+  display: flex; flex-direction: column; gap: 4px; margin-bottom: 20px;
+}
+.mode-title span { font-size: 15px; font-weight: 800; color: var(--text); }
+.mode-badge { font-family: var(--mono); font-size: 10.5px; color: var(--accent); }
 
+.section { margin-bottom: 24px; }
 .section-label {
   font-family: var(--mono);
   font-size: 10.5px;
@@ -703,59 +833,55 @@ onMounted(() => {
 }
 .section-label::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 
-label.field-label { display: block; font-size: 11.5px; color: var(--text-dim); margin: 8px 0 4px; }
+label.field-label { display: block; font-size: 12px; color: var(--text-dim); margin: 12px 0 6px; }
 
 input[type=text], textarea, select {
   width: 100%; background: var(--panel-2); border: 1px solid var(--line);
-  color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 13px;
+  color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 13.5px;
   font-family: var(--body); resize: vertical; box-sizing: border-box;
 }
 
-textarea { min-height: 70px; line-height: 1.4; }
+.drop-zone {
+  border: 2px dashed var(--line); border-radius: 12px; padding: 16px;
+  text-align: center; background: var(--panel-2); transition: all 0.2s ease; cursor: pointer;
+}
+.drop-zone.drop-active { border-color: var(--accent); background: rgba(124, 92, 252, 0.12); }
+.drop-zone.has-file { border-style: solid; border-color: var(--line); padding: 12px; }
+.drop-msg { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-dim); }
+.drop-icon { font-size: 24px; margin-bottom: 2px; }
+.sub { font-size: 11px; }
 
-.ratio-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.file-loaded-info { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: var(--text); }
+
+.photo-controls { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.slider-field { display: flex; flex-direction: column; gap: 4px; }
+.lbl-row { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-dim); }
+.slider-field input[type=range] { width: 100%; cursor: pointer; }
+
+.platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.platform-btn {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 4px; cursor: pointer; color: var(--text-dim); font-size: 10.5px;
+  font-family: var(--mono); text-align: center;
+}
+.platform-btn.active { border-color: var(--accent); color: var(--text); background: rgba(124, 92, 252, 0.14); }
+
+.ratio-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .ratio-chip {
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px;
-  padding: 5px 12px; font-size: 11px; font-family: var(--mono); cursor: pointer; color: var(--text-dim);
+  padding: 6px 12px; font-size: 11.5px; font-family: var(--mono); cursor: pointer; color: var(--text-dim);
 }
 .ratio-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-.drag-drop-zone {
-  border: 2px dashed var(--line); border-radius: 10px; padding: 16px;
-  text-align: center; cursor: pointer; background: var(--panel-2); transition: all 0.2s;
-}
-.drag-drop-zone.dragging { border-color: var(--accent); background: rgba(124,92,252,0.15); }
-
-.ctrl-row { display: flex; justify-content: space-between; align-items: center; }
-.ctrl-label { font-size: 11px; color: var(--text-dim); }
-
 .word-chip-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.word-chip {
-  background: var(--panel-2); border: 1px solid var(--line); color: var(--text-dim);
-  padding: 4px 10px; border-radius: 14px; font-size: 11.5px; cursor: pointer; transition: all 0.15s;
+.wtoken-chip {
+  font-family: var(--body); font-size: 12px; background: var(--panel-2);
+  border: 1px solid var(--line); padding: 5px 10px; border-radius: 6px;
+  cursor: pointer; color: var(--text-dim); transition: all 0.15s;
 }
-.word-chip.highlighted {
-  background: #FFE600; border-color: #FFE600; color: #000; font-weight: 700;
-}
+.wtoken-chip.highlighted { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
 
-.control-box {
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
-  padding: 12px; display: flex; flex-direction: column; gap: 8px;
-}
-
-.toggle-row { display: flex; justify-content: space-between; align-items: center; }
-.switch {
-  width: 36px; height: 20px; background: var(--panel-2); border: 1px solid var(--line);
-  border-radius: 20px; position: relative; cursor: pointer;
-}
-.switch.on { background: var(--accent); border-color: var(--accent); }
-.switch::after {
-  content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
-  background: #fff; border-radius: 50%; transition: left 0.15s;
-}
-.switch.on::after { left: 18px; }
-
-/* ---- Theme & Colors Professional UI/UX ---- */
+/* Theme UI */
 .theme-cat-tabs {
   display: flex; gap: 4px; background: var(--panel-2); padding: 3px;
   border-radius: 8px; border: 1px solid var(--line); margin-bottom: 12px;
@@ -795,18 +921,24 @@ textarea { min-height: 70px; line-height: 1.4; }
   display: flex; align-items: center; justify-content: center;
 }
 
+/* Auto Extracted Palette Card */
+.auto-palette-card {
+  background: var(--panel-2); border: 1px solid var(--accent); border-radius: 10px;
+  padding: 12px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 4px 14px rgba(124, 92, 252, 0.15);
+}
+.auto-card-title { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: var(--text); }
+.auto-swatches-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.auto-swatch-item label { display: block; font-size: 9.5px; color: var(--text-dim); margin-bottom: 3px; font-family: var(--mono); }
+.swatch-picker-row { display: flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line); padding: 4px 6px; border-radius: 6px; }
+.swatch-picker-row input[type=color] { width: 22px; height: 22px; border-radius: 4px; border: none; background: none; cursor: pointer; padding: 0; }
+.swatch-hex { font-family: var(--mono); font-size: 9.5px; color: var(--text-dim); text-transform: uppercase; }
+
 .color-overrides-box {
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
   padding: 12px; display: flex; flex-direction: column; gap: 10px;
 }
 .override-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; }
-
-.auto-color-bar {
-  display: flex; justify-content: space-between; align-items: center;
-  background: rgba(0,0,0,0.25); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
-}
-.auto-color-preview { display: flex; align-items: center; gap: 8px; }
-.swatch-ring { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
 
 .color-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .picker-item label { display: block; font-size: 9.5px; color: var(--text-dim); margin-bottom: 3px; font-family: var(--mono); }
@@ -819,32 +951,37 @@ textarea { min-height: 70px; line-height: 1.4; }
 .dot-btn { width: 14px; height: 14px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
 .dot-btn:hover { transform: scale(1.25); }
 
-/* Canvas Area */
-.news-canvas-area {
+.toggle-row { display: flex; align-items: center; justify-content: space-between; }
+.switch { width: 38px; height: 22px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px; position: relative; cursor: pointer; }
+.switch.on { background: var(--accent); border-color: var(--accent); }
+.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: left .15s; }
+.switch.on::after { left: 18px; }
+
+.canvas-area {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-  padding: 24px; background: var(--bg); overflow-y: auto; height: calc(100vh - 56px); box-sizing: border-box;
+  padding: 24px 24px 60px; background: var(--bg); overflow-y: auto; height: calc(100vh - 56px); box-sizing: border-box;
 }
 
-.canvas-hint {
-  max-width: 520px; width: 100%; margin-bottom: 14px; background: var(--panel-2);
-  border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 11.5px; color: var(--text); text-align: left;
-}
+.canvas-header-hint { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-bottom: 12px; }
 
-.frame-wrap { max-width: 520px; width: 100%; display: flex; justify-content: center; margin-bottom: 20px; }
-.interactive-canvas {
+.frame-wrap {
+  max-width: 540px; width: 100%; position: relative; display: flex; justify-content: center;
+  align-items: center; margin-bottom: 20px; cursor: grab; user-select: none; touch-action: none;
+}
+.frame-wrap.is-dragging { cursor: grabbing; }
+.frame-wrap canvas {
   width: 100% !important; height: auto !important; border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.6); border: 1px solid var(--line); cursor: grab; touch-action: none;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--line); display: block;
 }
-.interactive-canvas:active { cursor: grabbing; }
 
-.actions { display: flex; gap: 10px; max-width: 520px; width: 100%; }
-.btn { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn.secondary { background: var(--panel); }
+.actions { display: flex; gap: 10px; width: 100%; max-width: 540px; }
+.btn { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; flex: 1; justify-content: center; }
 .btn.tiny { padding: 4px 8px; font-size: 11px; }
+.btn.danger { background: rgba(255,77,77,0.15); color: #ff4d4d; border-color: rgba(255,77,77,0.3); }
 
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--panel-2); border: 1px solid var(--accent); color: var(--text); padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 12.5px; opacity: 0; transform: translateY(20px); transition: all 0.2s; pointer-events: none; z-index: 2000; }
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--panel-2); border: 1px solid var(--accent); color: var(--text); padding: 12px 20px; border-radius: 10px; font-weight: 600; font-size: 13px; opacity: 0; transform: translateY(20px); transition: all 0.25s; pointer-events: none; z-index: 2000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
 .toast.show { opacity: 1; transform: translateY(0); }
-
-.draft-item { background: var(--panel-2); border: 1px solid var(--line); padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; margin-bottom: 4px; }
+.draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 12px; cursor: pointer; }
+.draft-del-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; }
 </style>

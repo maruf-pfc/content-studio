@@ -26,7 +26,14 @@ export interface NewsCardState {
   fontFamily: string;
 }
 
-export function sampleBottomColor(img: HTMLImageElement): string {
+export interface ExtractedPalette {
+  dominant: string; // Average bottom edge color for gradient fade start
+  darkBg: string;   // Darkest sampled tone for text zone background
+  textColor: string; // #FFFFFF or #121019 based on luminance check
+  accent: string;   // Accent color for highlighted headline text
+}
+
+export function samplePhotoPalette(img: HTMLImageElement): ExtractedPalette {
   try {
     const canvas = document.createElement('canvas');
     const sampleWidth = Math.min(img.width, 200);
@@ -34,34 +41,72 @@ export function sampleBottomColor(img: HTMLImageElement): string {
     canvas.width = sampleWidth;
     canvas.height = sampleHeight;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return '#14121A';
+    if (!ctx) {
+      return { dominant: '#14121A', darkBg: '#121019', textColor: '#FFFFFF', accent: '#FFE600' };
+    }
 
     ctx.drawImage(img, 0, 0, sampleWidth, sampleHeight);
-    const stripY = Math.floor(sampleHeight * 0.82);
+    
+    // Sample bottom 15% strip for dominant edge color
+    const stripY = Math.floor(sampleHeight * 0.85);
     const stripH = sampleHeight - stripY;
     const imgData = ctx.getImageData(0, stripY, sampleWidth, stripH);
     const data = imgData.data;
 
     let rSum = 0, gSum = 0, bSum = 0, count = 0;
+    let minLuma = 255;
+    let darkR = 18, darkG = 16, darkB = 25;
+
     for (let i = 0; i < data.length; i += 4) {
-      const alpha = data[i + 3] ?? 0;
-      if (alpha > 50) {
-        rSum += data[i] ?? 0;
-        gSum += data[i + 1] ?? 0;
-        bSum += data[i + 2] ?? 0;
+      const a = data[i + 3] ?? 0;
+      if (a > 50) {
+        const r = data[i] ?? 0;
+        const g = data[i + 1] ?? 0;
+        const b = data[i + 2] ?? 0;
+        rSum += r;
+        gSum += g;
+        bSum += b;
         count++;
+
+        const luma = (r * 299 + g * 587 + b * 114) / 1000;
+        if (luma < minLuma) {
+          minLuma = luma;
+          darkR = Math.max(10, Math.floor(r * 0.45));
+          darkG = Math.max(10, Math.floor(g * 0.45));
+          darkB = Math.max(10, Math.floor(b * 0.45));
+        }
       }
     }
 
-    if (count === 0) return '#14121A';
-    const r = Math.round(rSum / count);
-    const g = Math.round(gSum / count);
-    const b = Math.round(bSum / count);
+    if (count === 0) {
+      return { dominant: '#14121A', darkBg: '#121019', textColor: '#FFFFFF', accent: '#FFE600' };
+    }
 
-    return `rgb(${r}, ${g}, ${b})`;
+    const domR = Math.round(rSum / count);
+    const domG = Math.round(gSum / count);
+    const domB = Math.round(bSum / count);
+
+    const dominant = `rgb(${domR}, ${domG}, ${domB})`;
+    const darkBg = `rgb(${darkR}, ${darkG}, ${darkB})`;
+
+    // Luminance check: (R*299 + G*587 + B*114) / 1000
+    const bgLuma = (darkR * 299 + darkG * 587 + darkB * 114) / 1000;
+    const textColor = bgLuma < 128 ? '#FFFFFF' : '#121019';
+    const accent = bgLuma < 128 ? '#FFE600' : '#FF2E4C';
+
+    return {
+      dominant,
+      darkBg,
+      textColor,
+      accent
+    };
   } catch {
-    return '#14121A';
+    return { dominant: '#14121A', darkBg: '#121019', textColor: '#FFFFFF', accent: '#FFE600' };
   }
+}
+
+export function sampleBottomColor(img: HTMLImageElement): string {
+  return samplePhotoPalette(img).dominant;
 }
 
 export function parseRgb(colorStr: string): { r: number; g: number; b: number } {
@@ -179,9 +224,11 @@ export function renderNewsCardCanvas(
   ctx.fillRect(0, 0, w, h);
 
   // 2. Render Photo Zone with transform (pan/zoom)
-  let sampledEdgeColor = bgColor;
+  let sampledPhotoRgb = parseRgb(bgColor);
+
   if (photoImg) {
-    sampledEdgeColor = state.sampledColorOverride || sampleBottomColor(photoImg);
+    const palette = samplePhotoPalette(photoImg);
+    sampledPhotoRgb = parseRgb(state.sampledColorOverride || palette.dominant);
 
     ctx.save();
     ctx.beginPath();
@@ -223,24 +270,45 @@ export function renderNewsCardCanvas(
     ctx.restore();
   }
 
-  // 3. Render Blended Transition Zone
-  const blendHeight = h * 0.24;
-  const blendStartY = Math.max(0, photoZoneH - blendHeight * 0.6);
-  const blendEndY = Math.min(h - footerH, photoZoneH + blendHeight * 0.4);
+  // 3. Render Multi-Stop Blended Transition Zone Spanning across Seam
+  const blendHeight = photoZoneH * 0.40; // 40% height of photo zone for tall gradual fade
+  const blendStartY = Math.max(0, photoZoneH - blendHeight * 0.75);
+  const blendEndY = Math.min(h - footerH, photoZoneH + blendHeight * 0.25);
+
+  const sampR = sampledPhotoRgb.r;
+  const sampG = sampledPhotoRgb.g;
+  const sampB = sampledPhotoRgb.b;
 
   const bgRgb = parseRgb(bgColor);
-  const { r, g, b } = bgRgb;
+  const bgR = bgRgb.r;
+  const bgG = bgRgb.g;
+  const bgB = bgRgb.b;
+
+  // Optional polish: Subtle blur pass over seam area if photo is present
+  if (photoImg && ctx.filter !== undefined) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, blendStartY, w, photoZoneH - blendStartY);
+    ctx.clip();
+    ctx.filter = 'blur(12px)';
+    ctx.globalAlpha = 0.4;
+    ctx.drawImage(canvas, 0, 0);
+    ctx.restore();
+  }
 
   ctx.save();
   const grad = ctx.createLinearGradient(0, blendStartY, 0, blendEndY);
 
-  // Smooth ease-in-out alpha curve fading photo directly into banner background color
-  grad.addColorStop(0.0, `rgba(${r}, ${g}, ${b}, 0.0)`);
-  grad.addColorStop(0.2, `rgba(${r}, ${g}, ${b}, 0.10)`);
-  grad.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, 0.38)`);
-  grad.addColorStop(0.65, `rgba(${r}, ${g}, ${b}, 0.78)`);
-  grad.addColorStop(0.88, `rgba(${r}, ${g}, ${b}, 0.96)`);
-  grad.addColorStop(1.0, `rgba(${r}, ${g}, ${b}, 1.0)`);
+  // 6 Multi-stop gradient curve:
+  // Stop 0: 100% transparent sampled photo color
+  // Stop 1-3: progressively increasing opacity of sampled photo color over seam
+  // Stop 4-5: smooth transition into opaque text zone background color
+  grad.addColorStop(0.0, `rgba(${sampR}, ${sampG}, ${sampB}, 0.0)`);
+  grad.addColorStop(0.2, `rgba(${sampR}, ${sampG}, ${sampB}, 0.30)`);
+  grad.addColorStop(0.4, `rgba(${sampR}, ${sampG}, ${sampB}, 0.70)`);
+  grad.addColorStop(0.6, `rgba(${sampR}, ${sampG}, ${sampB}, 0.95)`);
+  grad.addColorStop(0.82, `rgba(${bgR}, ${bgG}, ${bgB}, 0.88)`);
+  grad.addColorStop(1.0, `rgba(${bgR}, ${bgG}, ${bgB}, 1.0)`);
 
   ctx.fillStyle = grad;
   ctx.fillRect(0, blendStartY, w, blendEndY - blendStartY + 1);
