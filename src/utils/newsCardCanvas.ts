@@ -271,9 +271,9 @@ export function renderNewsCardCanvas(
   }
 
   // 3. Render Multi-Stop Blended Transition Zone Spanning across Seam
-  const blendHeight = photoZoneH * 0.40; // 40% height of photo zone for tall gradual fade
-  const blendStartY = Math.max(0, photoZoneH - blendHeight * 0.75);
-  const blendEndY = Math.min(h - footerH, photoZoneH + blendHeight * 0.25);
+  const blendHeight = h * 0.14; // Tight 14% canvas height for clean, crisp intersection
+  const blendStartY = Math.max(0, photoZoneH - blendHeight * 0.5);
+  const blendEndY = Math.min(h - footerH, photoZoneH + blendHeight * 0.5);
 
   const sampR = sampledPhotoRgb.r;
   const sampG = sampledPhotoRgb.g;
@@ -283,18 +283,6 @@ export function renderNewsCardCanvas(
   const bgR = bgRgb.r;
   const bgG = bgRgb.g;
   const bgB = bgRgb.b;
-
-  // Optional polish: Subtle blur pass over seam area if photo is present
-  if (photoImg && ctx.filter !== undefined) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, blendStartY, w, photoZoneH - blendStartY);
-    ctx.clip();
-    ctx.filter = 'blur(12px)';
-    ctx.globalAlpha = 0.4;
-    ctx.drawImage(canvas, 0, 0);
-    ctx.restore();
-  }
 
   ctx.save();
   const grad = ctx.createLinearGradient(0, blendStartY, 0, blendEndY);
