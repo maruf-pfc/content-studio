@@ -2,22 +2,21 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { fitFontSize, drawRichLine } from '../utils/textHelper';
 
-/* ---------------- DATA PRESETS ---------------- */
-interface Platform {
-  id: string;
-  label: string;
-  icon: string;
-  ratios: string[];
-  maxChars: number;
-}
+import StudioCard from '../components/StudioCard.vue';
+import PhotoDropzone from '../components/PhotoDropzone.vue';
+import PlatformRatioSelector, { type Platform } from '../components/PlatformRatioSelector.vue';
+import CanvasToolbar from '../components/CanvasToolbar.vue';
+import QuickNavPills from '../components/QuickNavPills.vue';
+import ToastNotification from '../components/ToastNotification.vue';
 
+/* ---------------- DATA PRESETS ---------------- */
 const PLATFORMS: Platform[] = [
-  { id: 'instagram', label: 'Instagram', icon: '◪', ratios: ['1:1', '4:5', '9:16'], maxChars: 2200 },
-  { id: 'facebook', label: 'Facebook', icon: '▣', ratios: ['1:1', '9:16'], maxChars: 63206 },
-  { id: 'linkedin', label: 'LinkedIn', icon: '▤', ratios: ['1:1', '1.91:1'], maxChars: 3000 },
-  { id: 'youtube', label: 'YouTube', icon: '▶', ratios: ['16:9'], maxChars: 5000 },
-  { id: 'tiktok', label: 'TikTok', icon: '♪', ratios: ['9:16'], maxChars: 2200 },
-  { id: 'twitter', label: 'X / Twitter', icon: '𝕏', ratios: ['16:9', '1:1'], maxChars: 280 }
+  { id: 'instagram', label: 'Instagram', icon: '◪', ratios: ['1:1', '4:5', '9:16'] },
+  { id: 'facebook', label: 'Facebook', icon: '▣', ratios: ['1:1', '9:16'] },
+  { id: 'linkedin', label: 'LinkedIn', icon: '▤', ratios: ['1:1', '1.91:1'] },
+  { id: 'youtube', label: 'YouTube', icon: '▶', ratios: ['16:9'] },
+  { id: 'tiktok', label: 'TikTok', icon: '♪', ratios: ['9:16'] },
+  { id: 'twitter', label: 'X / Twitter', icon: '𝕏', ratios: ['16:9', '1:1'] }
 ];
 
 const RATIO_DIMS: Record<string, [number, number]> = {
@@ -87,6 +86,16 @@ const HASHTAG_PRESETS = [
   '#DhakaVibes', '#SameThoughts', '#CreatorEconomy', '#SocialMedia', '#TipsAndTricks'
 ];
 
+const QUICK_NAV_ITEMS = [
+  { id: 'norm-section-ratio', label: '📐 Ratio' },
+  { id: 'norm-section-template', label: '🎯 Template' },
+  { id: 'norm-section-content', label: '📝 Copy' },
+  { id: 'norm-section-theme', label: '🎨 Theme' },
+  { id: 'norm-section-bg', label: '🖼️ Bg Photo' },
+  { id: 'norm-section-watermark', label: '✍️ Caption' },
+  { id: 'norm-section-drafts', label: '📁 Drafts' }
+];
+
 /* ---------------- STATE ---------------- */
 const state = reactive({
   platform: 'instagram',
@@ -153,18 +162,12 @@ const bgImageEl = ref<HTMLImageElement | null>(null);
 const logoImageEl = ref<HTMLImageElement | null>(null);
 
 const mainCanvas = ref<HTMLCanvasElement | null>(null);
-const bgFileInput = ref<HTMLInputElement | null>(null);
-const logoFileInput = ref<HTMLInputElement | null>(null);
 
 const toastMsg = ref('');
 const showToastFlag = ref(false);
 const showBatchModal = ref(false);
 
 /* ---------------- COMPUTED ---------------- */
-const activePlatform = computed(() => {
-  return PLATFORMS.find(p => p.id === state.platform) || PLATFORMS[0];
-});
-
 const currentTheme = computed(() => {
   return THEMES.find(t => t.id === state.theme) || THEMES[0];
 });
@@ -231,9 +234,7 @@ const pushRecentColor = (hex: string) => {
   if (state.recentColors.length > 8) state.recentColors.pop();
 };
 
-const handleBgUpload = (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (!file) return;
+const handleBgUpload = (file: File) => {
   const reader = new FileReader();
   reader.onload = (ev) => {
     const src = ev.target?.result as string;
@@ -252,14 +253,11 @@ const handleBgUpload = (e: Event) => {
 const removeBgImage = () => {
   bgImageSrc.value = null;
   bgImageEl.value = null;
-  if (bgFileInput.value) bgFileInput.value.value = '';
   render();
   showToast('Background photo removed');
 };
 
-const handleLogoUpload = (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (!file) return;
+const handleLogoUpload = (file: File) => {
   const reader = new FileReader();
   reader.onload = (ev) => {
     const src = ev.target?.result as string;
@@ -278,7 +276,6 @@ const handleLogoUpload = (e: Event) => {
 const removeLogoImage = () => {
   logoImageSrc.value = null;
   logoImageEl.value = null;
-  if (logoFileInput.value) logoFileInput.value.value = '';
   render();
   showToast('Logo removed');
 };
@@ -670,50 +667,19 @@ onMounted(() => {
     <!-- SIDEBAR CONTROLS -->
     <aside class="sidebar" aria-label="Editor Controls">
       <!-- Quick Section Jump Chips for Mobile -->
-      <div class="quick-nav-bar" aria-label="Jump to Control Section">
-        <button class="qjump-chip" @click="scrollToSection('norm-section-ratio')">📐 Ratio</button>
-        <button class="qjump-chip" @click="scrollToSection('norm-section-template')">🎯 Template</button>
-        <button class="qjump-chip" @click="scrollToSection('norm-section-content')">📝 Copy</button>
-        <button class="qjump-chip" @click="scrollToSection('norm-section-theme')">🎨 Theme</button>
-        <button class="qjump-chip" @click="scrollToSection('norm-section-bg')">🖼️ Bg Photo</button>
-        <button class="qjump-chip" @click="scrollToSection('norm-section-watermark')">✍️ Caption</button>
-        <button class="qjump-chip" @click="scrollToSection('norm-section-drafts')">📁 Drafts</button>
-      </div>
+      <QuickNavPills :items="QUICK_NAV_ITEMS" @jump="scrollToSection" />
 
       <!-- 1. Platform & Format -->
-      <section class="section" id="norm-section-ratio">
-        <h2 class="section-label">1. Target Platform & Aspect Ratio</h2>
-        
-        <div class="platform-grid">
-          <button 
-            v-for="p in PLATFORMS" 
-            :key="p.id" 
-            class="platform-btn"
-            :class="{ active: p.id === state.platform }"
-            @click="state.platform = p.id; state.ratio = PLATFORMS.find(x => x.id === p.id)?.ratios[0] || '1:1';"
-            :aria-label="`Select platform ${p.label}`"
-          >
-            <span class="pico" aria-hidden="true">{{ p.icon }}</span>{{ p.label }}
-          </button>
-        </div>
-
-        <div class="ratio-row" style="margin-top:10px;">
-          <button 
-            v-for="r in (activePlatform?.ratios || [])" 
-            :key="r"
-            class="ratio-chip"
-            :class="{ active: r === state.ratio }"
-            @click="state.ratio = r"
-            :aria-label="`Select ratio ${r}`"
-          >
-            {{ r }}
-          </button>
-        </div>
-      </section>
+      <StudioCard id="norm-section-ratio" title="1. Target Platform & Aspect Ratio" icon="📐">
+        <PlatformRatioSelector 
+          :platforms="PLATFORMS"
+          v-model:platform="state.platform"
+          v-model:ratio="state.ratio"
+        />
+      </StudioCard>
 
       <!-- 2. Layout Template Selection -->
-      <section class="section" id="norm-section-template">
-        <h2 class="section-label">2. Layout Template</h2>
+      <StudioCard id="norm-section-template" title="2. Layout Template" icon="🎯">
         <div class="template-grid">
           <div 
             v-for="t in TEMPLATES" 
@@ -728,12 +694,10 @@ onMounted(() => {
             <span>{{ t.desc }}</span>
           </div>
         </div>
-      </section>
+      </StudioCard>
 
       <!-- 3. Content Inputs -->
-      <section class="section" id="norm-section-content">
-        <h2 class="section-label">3. Content & Copywriting</h2>
-        
+      <StudioCard id="norm-section-content" title="3. Content & Copywriting" icon="📝">
         <div v-if="state.template === 'stat'">
           <label class="field-label" for="stat-input">Stat / Number Callout</label>
           <input id="stat-input" type="text" v-model="state.statNumber" placeholder="e.g. 10x or 99%">
@@ -769,12 +733,10 @@ onMounted(() => {
             <input id="body-size-range" type="range" min="16" max="60" v-model.number="state.bodyFontSize">
           </div>
         </div>
-      </section>
+      </StudioCard>
 
       <!-- 4. Theme & Typography -->
-      <section class="section" id="norm-section-theme">
-        <h2 class="section-label">4. Theme & Color System</h2>
-        
+      <StudioCard id="norm-section-theme" title="4. Theme & Color System" icon="🎨">
         <div class="theme-cat-tabs">
           <button 
             v-for="cat in ['all', 'dark', 'vibrant', 'light'] as const" 
@@ -866,12 +828,10 @@ onMounted(() => {
           <button class="align-btn" :class="{ active: state.align === 'center' }" @click="state.align = 'center'">Center</button>
           <button class="align-btn" :class="{ active: state.align === 'right' }" @click="state.align = 'right'">Right</button>
         </div>
-      </section>
+      </StudioCard>
 
       <!-- 5. Advanced Backgrounds & Media Overlays -->
-      <section class="section" id="norm-section-bg">
-        <h2 class="section-label">5. Backgrounds & Overlay Media</h2>
-        
+      <StudioCard id="norm-section-bg" title="5. Backgrounds & Overlay Media" icon="🖼️">
         <label class="field-label" for="bg-type-select">Background Style</label>
         <select id="bg-type-select" v-model="state.bgType">
           <option value="solid">Solid Color</option>
@@ -916,13 +876,14 @@ onMounted(() => {
 
         <!-- Custom Background Image -->
         <label class="field-label" style="margin-top:12px;">Custom Background Photo</label>
-        <div class="file-input-box">
-          <input type="file" ref="bgFileInput" accept="image/*" class="drop-file-input" @change="handleBgUpload" aria-label="Upload Background Photo">
-          <button class="btn" style="width:100%; pointer-events:none;">
-            {{ bgImageSrc ? '✓ Change Background Photo' : 'Tap to Upload Background Image' }}
-          </button>
-          <button v-if="bgImageSrc" type="button" class="btn tiny danger" style="position:relative; z-index:10; margin-top:6px; width:100%;" @click.stop.prevent="removeBgImage">Remove Photo</button>
-        </div>
+        <PhotoDropzone 
+          :image-src="bgImageSrc"
+          label="Tap to Upload Background Image"
+          subtext="JPEG/PNG format supported"
+          icon="🖼️"
+          @upload="handleBgUpload"
+          @remove="removeBgImage"
+        />
 
         <div v-if="bgImageSrc" style="margin-top:10px;">
           <div class="slider-field">
@@ -943,19 +904,18 @@ onMounted(() => {
 
         <!-- Brand Logo Overlay -->
         <label class="field-label" style="margin-top:12px;">Brand Watermark Logo</label>
-        <div class="file-input-box">
-          <input type="file" ref="logoFileInput" accept="image/*" class="drop-file-input" @change="handleLogoUpload" aria-label="Upload Logo">
-          <button class="btn" style="width:100%; pointer-events:none;">
-            {{ logoImageSrc ? '✓ Change Brand Logo' : 'Tap to Upload Logo Image' }}
-          </button>
-          <button v-if="logoImageSrc" type="button" class="btn tiny danger" style="position:relative; z-index:10; margin-top:6px; width:100%;" @click.stop.prevent="removeLogoImage">Remove Logo</button>
-        </div>
-      </section>
+        <PhotoDropzone 
+          :image-src="logoImageSrc"
+          label="Tap to Upload Logo Image"
+          subtext="PNG with transparent background"
+          icon="🏅"
+          @upload="handleLogoUpload"
+          @remove="removeLogoImage"
+        />
+      </StudioCard>
 
       <!-- 6. Watermark & Social Captions -->
-      <section class="section" id="norm-section-watermark">
-        <h2 class="section-label">6. Watermark & Caption Tool</h2>
-        
+      <StudioCard id="norm-section-watermark" title="6. Watermark & Caption Tool" icon="✍️">
         <div class="toggle-row">
           <label class="field-label" style="margin:0;">Show Canvas Watermark</label>
           <div class="switch" :class="{ on: state.watermark }" @click="state.watermark = !state.watermark" role="switch" :aria-checked="state.watermark"></div>
@@ -979,11 +939,10 @@ onMounted(() => {
             {{ ht }}
           </span>
         </div>
-      </section>
+      </StudioCard>
 
       <!-- 7. Saved Drafts -->
-      <section class="section" id="norm-section-drafts">
-        <h2 class="section-label">7. Saved Drafts</h2>
+      <StudioCard id="norm-section-drafts" title="7. Saved Drafts" icon="📁">
         <div style="display:flex; gap:8px; margin-bottom:8px;">
           <input type="text" v-model="draftName" placeholder="Draft name..." style="flex:1;" aria-label="Draft Name">
           <button class="btn" @click="saveDraft">Save Draft</button>
@@ -998,23 +957,16 @@ onMounted(() => {
             <button class="draft-del-btn" @click="deleteDraft(name.toString())" aria-label="Delete draft">✕</button>
           </div>
         </div>
-      </section>
+      </StudioCard>
     </aside>
 
     <!-- CANVAS PREVIEW & WORKSTATION -->
     <div class="canvas-area">
-      <!-- Canvas Zoom & Viewport Bar -->
-      <div class="canvas-toolbar">
-        <div class="canvas-header-hint">
-          <span>💡 Real-time Canvas Workstation</span>
-        </div>
-        <div class="zoom-presets">
-          <span class="zoom-label">Preview Zoom:</span>
-          <button class="zoom-chip" :class="{ active: canvasFitMode === 'fit' }" @click="canvasFitMode = 'fit'" aria-label="Fit graphic to screen">🔍 Fit</button>
-          <button class="zoom-chip" :class="{ active: canvasFitMode === '75' }" @click="canvasFitMode = '75'" aria-label="Zoom 75%">75%</button>
-          <button class="zoom-chip" :class="{ active: canvasFitMode === '100' }" @click="canvasFitMode = '100'" aria-label="Zoom 100%">100%</button>
-        </div>
-      </div>
+      <!-- Canvas Zoom Toolbar Component -->
+      <CanvasToolbar 
+        v-model:fitMode="canvasFitMode"
+        hintText="💡 Real-time Canvas Workstation"
+      />
 
       <div 
         class="frame-wrap" 
@@ -1064,10 +1016,8 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Toast system -->
-    <div class="toast" :class="{ show: showToastFlag }" role="status" aria-live="polite">
-      <span>{{ toastMsg }}</span>
-    </div>
+    <!-- Toast Notification Component -->
+    <ToastNotification :show="showToastFlag" :message="toastMsg" />
   </div>
 </template>
 
@@ -1082,34 +1032,16 @@ onMounted(() => {
 .sidebar {
   background: var(--studio-surface);
   border-right: 1px solid var(--studio-border);
-  padding: var(--space-6);
+  padding: var(--space-4);
   overflow-y: auto;
   height: calc(100vh - 60px);
   box-shadow: var(--elevation-1);
 }
 
-.quick-nav-bar {
-  display: none;
-}
-
-.section { margin-bottom: var(--space-6); scroll-margin-top: 70px; }
-.section-label {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--studio-text-muted);
-  margin-bottom: var(--space-3);
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.section-label::after { content: ''; flex: 1; height: 1px; background: var(--studio-border); }
-
-label.field-label { display: block; font-size: var(--text-xs); color: var(--studio-text-secondary); margin: var(--space-3) 0 var(--space-1); font-weight: 600; }
+label.field-label { display: block; font-size: var(--text-xs); color: var(--studio-text-secondary); margin: var(--space-2) 0 var(--space-1); font-weight: 600; }
 
 input[type=text], textarea, select {
-  width: 100%; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border);
+  width: 100%; background: var(--studio-surface); border: 1px solid var(--studio-border);
   color: var(--studio-text-primary); padding: 10px 12px; border-radius: var(--radius-sharp); font-size: var(--text-sm);
   font-family: var(--font-body); resize: vertical; box-sizing: border-box; min-height: var(--min-touch-target);
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -1119,42 +1051,10 @@ input[type=text]:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.2);
 }
 
-.file-input-box { position: relative; width: 100%; }
-.drop-file-input {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  z-index: 5;
-}
-
-.platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
-.platform-btn {
-  min-height: var(--min-touch-target);
-  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp);
-  padding: 8px 4px; cursor: pointer; color: var(--studio-text-secondary); font-size: 11px;
-  font-family: var(--font-mono); text-align: center; transition: all 0.15s;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-}
-.platform-btn:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
-.platform-btn:active { transform: scale(0.97); }
-.platform-btn.active { border-color: var(--studio-accent-primary); color: var(--studio-text-primary); background: rgba(230, 57, 70, 0.15); font-weight: 700; }
-
-.ratio-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
-.ratio-chip {
-  min-height: 38px;
-  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-pill);
-  padding: 6px 14px; font-size: 11.5px; font-family: var(--font-mono); cursor: pointer; color: var(--studio-text-secondary);
-  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
-}
-.ratio-chip:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
-.ratio-chip:active { transform: scale(0.96); }
-.ratio-chip.active { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; font-weight: 700; }
-
 .template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 .tpl-btn {
   min-height: 54px;
-  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
+  background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
   padding: 10px; cursor: pointer; font-size: 12px; color: var(--studio-text-secondary); text-align: left; transition: all 0.15s;
 }
 .tpl-btn:hover { border-color: var(--studio-border-strong); }
@@ -1180,7 +1080,7 @@ input[type=text]:focus, textarea:focus, select:focus {
 
 .palette-card {
   min-height: 54px;
-  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
+  background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
   padding: 8px; cursor: pointer; position: relative; transition: all 0.18s ease;
   display: flex; flex-direction: column; gap: 6px; text-align: left;
 }
@@ -1205,14 +1105,14 @@ input[type=text]:focus, textarea:focus, select:focus {
 }
 
 .color-overrides-box {
-  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
+  background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
   padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);
 }
 .override-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; }
 
 .color-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .picker-item label { display: block; font-size: 9.5px; color: var(--studio-text-secondary); margin-bottom: 3px; font-family: var(--font-mono); }
-.picker-row { display: flex; align-items: center; gap: 4px; background: var(--studio-surface); border: 1px solid var(--studio-border); padding: 3px 5px; border-radius: var(--radius-sharp); min-height: 36px; }
+.picker-row { display: flex; align-items: center; gap: 4px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); padding: 3px 5px; border-radius: var(--radius-sharp); min-height: 36px; }
 .picker-row input[type=color] { width: 22px; height: 22px; border-radius: 4px; border: none; background: none; cursor: pointer; padding: 0; }
 .hex-val { font-family: var(--font-mono); font-size: 9px; color: var(--studio-text-secondary); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
 
@@ -1222,17 +1122,17 @@ input[type=text]:focus, textarea:focus, select:focus {
 .dot-btn:hover { transform: scale(1.25); }
 
 .align-row { display: flex; gap: 6px; }
-.align-btn { flex: 1; min-height: var(--min-touch-target); background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 0; cursor: pointer; color: var(--studio-text-secondary); font-size: 14px; text-align: center; }
+.align-btn { flex: 1; min-height: var(--min-touch-target); background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 0; cursor: pointer; color: var(--studio-text-secondary); font-size: 14px; text-align: center; }
 .align-btn.active { border-color: var(--studio-accent-primary); color: var(--studio-text-primary); }
 
 .toggle-row { display: flex; align-items: center; justify-content: space-between; min-height: var(--min-touch-target); margin-top: 10px; }
-.switch { width: 44px; height: 24px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-pill); position: relative; cursor: pointer; transition: all 0.2s; }
+.switch { width: 44px; height: 24px; background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-pill); position: relative; cursor: pointer; transition: all 0.2s; }
 .switch.on { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); }
 .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: left 0.15s; }
 .switch.on::after { left: 22px; }
 
 .hashtag-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.hchip { min-height: 34px; font-family: var(--font-mono); font-size: 10.5px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); padding: 4px 10px; border-radius: var(--radius-pill); cursor: pointer; color: var(--studio-text-secondary); display: flex; align-items: center; }
+.hchip { min-height: 34px; font-family: var(--font-mono); font-size: 10.5px; background: var(--studio-surface); border: 1px solid var(--studio-border); padding: 4px 10px; border-radius: var(--radius-pill); cursor: pointer; color: var(--studio-text-secondary); display: flex; align-items: center; }
 .hchip:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
 .hchip:active { transform: scale(0.96); }
 
@@ -1240,20 +1140,6 @@ input[type=text]:focus, textarea:focus, select:focus {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
   padding: var(--space-6) var(--space-6) var(--space-12); background: var(--studio-bg); overflow-y: auto; height: calc(100vh - 60px); box-sizing: border-box;
 }
-
-.canvas-toolbar {
-  display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 520px; margin-bottom: var(--space-3); gap: 8px; flex-wrap: wrap;
-}
-.canvas-header-hint { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--studio-text-muted); }
-
-.zoom-presets { display: flex; align-items: center; gap: 4px; background: var(--studio-surface); border: 1px solid var(--studio-border); padding: 3px 6px; border-radius: var(--radius-pill); }
-.zoom-label { font-family: var(--font-mono); font-size: 10px; color: var(--studio-text-muted); margin-right: 2px; }
-.zoom-chip {
-  background: transparent; border: none; color: var(--studio-text-secondary); font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
-  padding: 4px 10px; border-radius: var(--radius-pill); cursor: pointer; transition: all 0.15s; min-height: 28px;
-}
-.zoom-chip:hover { color: var(--studio-text-primary); }
-.zoom-chip.active { background: var(--studio-accent-primary); color: #fff; }
 
 .frame-wrap { max-width: 520px; width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; transition: max-width 0.25s ease, max-height 0.25s ease; }
 .frame-wrap canvas { width: 100% !important; height: auto !important; border-radius: var(--radius-card); box-shadow: var(--elevation-3); border: 1px solid var(--studio-border); display: block; }
@@ -1296,9 +1182,7 @@ input[type=text]:focus, textarea:focus, select:focus {
 .batch-canvas-wrap canvas { width: 100% !important; height: auto !important; border-radius: 6px; display: block; }
 .modal-footer { padding: 16px 24px; border-top: 1px solid var(--studio-border); display: flex; justify-content: flex-end; gap: 12px; }
 
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-accent-primary); color: var(--studio-text-primary); padding: 12px 20px; border-radius: var(--radius-card); font-weight: 700; font-size: var(--text-sm); opacity: 0; transform: translateY(20px); transition: all 0.25s; pointer-events: none; z-index: 2000; box-shadow: var(--elevation-3); }
-.toast.show { opacity: 1; transform: translateY(0); }
-.draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 12px; margin-bottom: 6px; font-size: 12px; cursor: pointer; min-height: 40px; }
+.draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 12px; margin-bottom: 6px; font-size: 12px; cursor: pointer; min-height: 40px; }
 .draft-del-btn { background: none; border: none; color: var(--studio-text-muted); cursor: pointer; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
 
 /* Responsive Mobile Layout Flow (<1024px) */
@@ -1314,10 +1198,6 @@ input[type=text]:focus, textarea:focus, select:focus {
     border-bottom: 1px solid var(--studio-border);
   }
 
-  .canvas-toolbar {
-    max-width: 100%;
-  }
-
   .actions {
     max-width: 100%;
   }
@@ -1331,37 +1211,6 @@ input[type=text]:focus, textarea:focus, select:focus {
     border-right: none;
     padding: var(--space-4) var(--space-3) var(--space-12);
   }
-
-  .quick-nav-bar {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 8px;
-    margin-bottom: var(--space-4);
-    position: sticky;
-    top: 56px;
-    background: var(--studio-surface);
-    z-index: 20;
-    padding-top: 8px;
-    margin-top: -8px;
-  }
-
-  .qjump-chip {
-    background: var(--studio-surface-elevated);
-    border: 1px solid var(--studio-border);
-    color: var(--studio-text-secondary);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 700;
-    padding: 6px 12px;
-    border-radius: var(--radius-pill);
-    cursor: pointer;
-    white-space: nowrap;
-    min-height: 34px;
-    display: flex;
-    align-items: center;
-  }
-  .qjump-chip:hover { color: var(--studio-text-primary); border-color: var(--studio-border-strong); }
 }
 
 @media (max-width: 767px) {
@@ -1389,14 +1238,6 @@ input[type=text]:focus, textarea:focus, select:focus {
 }
 
 @media (max-width: 479px) {
-  .platform-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
-  }
-  .platform-btn {
-    padding: 6px 2px;
-    font-size: 9.5px;
-  }
   .color-picker-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 4px;
