@@ -28,6 +28,14 @@ defineProps<{
   scroll-margin-top: 75px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 479px) {
+  .studio-card {
+    padding: var(--space-3);
+  }
 }
 
 .studio-card:focus-within {

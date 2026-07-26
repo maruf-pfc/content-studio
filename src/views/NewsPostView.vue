@@ -920,7 +920,7 @@ input[type=text]:focus, textarea:focus, select:focus {
 
 /* Canvas Viewport Zoom Modes */
 .frame-wrap.zoom-fit { max-height: min(60vh, 560px); }
-.frame-wrap.zoom-fit canvas { max-height: min(60vh, 560px); width: auto !important; max-width: 100% !important; object-fit: contain; }
+.frame-wrap.zoom-fit canvas { width: 100% !important; max-width: 100% !important; height: auto !important; max-height: min(60vh, 560px) !important; object-fit: contain; }
 .frame-wrap.zoom-75 { max-width: min(405px, 100%); }
 .frame-wrap.zoom-100 { max-width: min(540px, 100%); }
 
