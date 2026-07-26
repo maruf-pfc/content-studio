@@ -15,7 +15,7 @@ const navigateTo = (path: string) => {
       <div class="nav-mark" aria-hidden="true">T</div>
       <div class="nav-titles">
         <div class="nav-name">
-          CONTENT STUDIO
+          <span class="brand-txt">CONTENT STUDIO</span>
           <span class="live-dot" title="Broadcast Mode Active"></span>
         </div>
         <div class="nav-sub">BROADCAST MEDIA WORKSTATION</div>
@@ -29,7 +29,8 @@ const navigateTo = (path: string) => {
         @click="navigateTo('/')"
         aria-label="Normal Post Generator"
       >
-        <span class="tab-icon" aria-hidden="true">📝</span> Normal Post
+        <span class="tab-icon" aria-hidden="true">📝</span>
+        <span class="tab-txt">Normal Post</span>
       </button>
 
       <button 
@@ -38,7 +39,8 @@ const navigateTo = (path: string) => {
         @click="navigateTo('/news')"
         aria-label="News Post Card Generator"
       >
-        <span class="tab-icon" aria-hidden="true">📰</span> News Post
+        <span class="tab-icon" aria-hidden="true">📰</span>
+        <span class="tab-txt">News Post</span>
       </button>
     </nav>
   </header>
@@ -153,6 +155,10 @@ const navigateTo = (path: string) => {
   color: var(--studio-text-primary);
 }
 
+.nav-tab:active {
+  transform: scale(0.96);
+}
+
 .nav-tab.active {
   background: var(--studio-accent-primary);
   color: #FFFFFF;
@@ -164,8 +170,31 @@ const navigateTo = (path: string) => {
 }
 
 @media (max-width: 640px) {
-  .top-nav { padding: 0 var(--space-3); }
+  .top-nav {
+    padding: 0 var(--space-3);
+    padding-top: var(--safe-top);
+    height: calc(56px + var(--safe-top));
+  }
   .nav-sub { display: none; }
-  .nav-tab { min-width: auto; padding: var(--space-2) var(--space-3); font-size: var(--text-xs); }
+  .nav-tab {
+    min-width: auto;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-xs);
+  }
+}
+
+@media (max-width: 400px) {
+  .brand-txt {
+    font-size: 13px;
+  }
+  .nav-mark {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+  .nav-tab {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
 }
 </style>

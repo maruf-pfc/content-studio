@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { fitFontSize, drawRichLine } from '../utils/textHelper';
 
 /* ---------------- DATA PRESETS ---------------- */
@@ -64,10 +64,6 @@ const THEMES: Theme[] = [
   { id: 'amber_flame', name: 'Amber Flame', category: 'vibrant', bg: '#160B05', bg2: '#2A1409', text: '#FFFFFF', accent: '#FF7D3B', fontPair: 'outfit_plus' },
   { id: 'emerald_deep', name: 'Emerald Forest', category: 'dark', bg: '#051A14', bg2: '#0A2E24', text: '#FFFFFF', accent: '#20E298', fontPair: 'syne_space' },
   { id: 'royal_indigo', name: 'Royal Indigo', category: 'dark', bg: '#0D1126', bg2: '#181E40', text: '#FFFFFF', accent: '#5C7CFF', fontPair: 'outfit_plus' }
-];
-
-const PRESET_ACCENTS = [
-  '#7C5CFC', '#C1552E', '#B6FF3C', '#FF8FAB', '#4FD1C5', '#FF2E4C', '#FF7D3B', '#20E298', '#FFFFFF'
 ];
 
 interface FontPairing {
@@ -142,6 +138,7 @@ const state = reactive({
 
 const themeCategoryFilter = ref<'all' | 'dark' | 'vibrant' | 'light'>('all');
 const isMobileDrawerOpen = ref(false);
+const canvasFitMode = ref<'fit' | '75' | '100'>('fit');
 
 type DraftItem = typeof state & {
   bgImageSrc: string | null;
@@ -150,6 +147,7 @@ type DraftItem = typeof state & {
 
 const drafts = ref<Record<string, DraftItem>>({});
 const draftName = ref('');
+
 const bgImageSrc = ref<string | null>(null);
 const logoImageSrc = ref<string | null>(null);
 const bgImageEl = ref<HTMLImageElement | null>(null);
@@ -161,44 +159,58 @@ const logoFileInput = ref<HTMLInputElement | null>(null);
 
 const toastMsg = ref('');
 const showToastFlag = ref(false);
-
 const showBatchModal = ref(false);
-const batchGrid = ref<HTMLDivElement | null>(null);
 
-/* ---------------- COMPUTED PROPERTIES ---------------- */
+/* ---------------- COMPUTED ---------------- */
+const activePlatform = computed(() => {
+  return PLATFORMS.find(p => p.id === state.platform) || PLATFORMS[0];
+});
+
+const currentTheme = computed(() => {
+  return THEMES.find(t => t.id === state.theme) || THEMES[0];
+});
+
 const filteredThemes = computed(() => {
   if (themeCategoryFilter.value === 'all') return THEMES;
   return THEMES.filter(t => t.category === themeCategoryFilter.value);
 });
 
-const parsedCaption = computed(() => {
-  const cap = state.captionText.trim();
-  const tags = state.hashtagsText.trim();
-  
-  let html = cap
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-    
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  html = html.replace(/_(.*?)_/g, '<em>$1</em>');
-  html = html.replace(/`(.*?)`/g, '<code>$1</code>');
-  html = html.replace(/\n/g, '<br>');
-  
-  if (tags) {
-    const escapedTags = tags.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    html += `<br><br><span class="hash">${escapedTags}</span>`;
+const captionWithHashtags = computed(() => {
+  let text = state.captionText.trim();
+  if (state.hashtagsText.trim()) {
+    text += text ? '\n\n' + state.hashtagsText.trim() : state.hashtagsText.trim();
   }
-  
-  return html;
+  return text;
 });
 
-/* ---------------- WATCHERS ---------------- */
-watch(() => state, () => {
+const effectiveColors = computed(() => {
+  const t = currentTheme.value ?? THEMES[0];
+  return {
+    bg: state.customBg || (t ? t.bg : '#14121A'),
+    accent: state.customAccent || (t ? t.accent : '#7C5CFC'),
+    text: state.customText || (t ? t.text : '#F5F3FF')
+  };
+});
+
+/* ---------------- WATCHERS & LIFECYCLE ---------------- */
+watch([state, bgImageSrc, logoImageSrc], () => {
   render();
 }, { deep: true });
+
+watch(isMobileDrawerOpen, (val) => {
+  if (val) {
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = '';
+  }
+});
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') {
+    if (isMobileDrawerOpen.value) isMobileDrawerOpen.value = false;
+    if (showBatchModal.value) showBatchModal.value = false;
+  }
+};
 
 /* ---------------- METHODS ---------------- */
 const showToast = (msg: string) => {
@@ -207,71 +219,32 @@ const showToast = (msg: string) => {
   setTimeout(() => { showToastFlag.value = false; }, 2200);
 };
 
-const selectPlatform = (platformId: string) => {
-  state.platform = platformId;
-  const plat = PLATFORMS.find(p => p.id === platformId);
-  if (plat && plat.ratios.length > 0) {
-    state.ratio = plat.ratios[0] || '1:1';
+const copyCaption = async () => {
+  try {
+    await navigator.clipboard.writeText(captionWithHashtags.value);
+    showToast('Copied caption + hashtags!');
+  } catch {
+    showToast('Failed to copy to clipboard');
   }
-};
-
-const selectRatio = (ratio: string) => {
-  state.ratio = ratio;
-};
-
-const selectTemplate = (templateId: string) => {
-  state.template = templateId;
-};
-
-const selectTheme = (th: Theme) => {
-  state.theme = th.id;
-  state.customAccent = '';
-  state.customBg = '';
-  state.customText = '';
-  state.fontPairing = th.fontPair;
-  
-  state.customBg = th.bg;
-  state.customAccent = th.accent;
-  state.customText = th.text;
-};
-
-const setCustomColor = (type: 'accent' | 'bg' | 'text', value: string) => {
-  if (type === 'accent') {
-    state.customAccent = value;
-  } else if (type === 'bg') {
-    state.customBg = value;
-  } else {
-    state.customText = value;
-  }
-};
-
-const resetCustomColors = () => {
-  state.customBg = '';
-  state.customAccent = '';
-  state.customText = '';
-  showToast('Colors reset to active theme defaults');
-};
-
-const selectAlignment = (align: 'left' | 'center' | 'right') => {
-  state.align = align;
 };
 
 const addHashtag = (tag: string) => {
-  const cur = state.hashtagsText.trim();
-  if (!cur.includes(tag)) {
-    state.hashtagsText = (cur ? cur + ' ' : '') + tag;
-  }
+  if (state.hashtagsText.includes(tag)) return;
+  state.hashtagsText = (state.hashtagsText + ' ' + tag).trim();
 };
 
-// Background Image Upload
-const onBgFileChange = (e: Event) => {
-  const target = e.target as HTMLInputElement;
-  const file = target.files?.[0];
+const pushRecentColor = (hex: string) => {
+  if (!hex || state.recentColors.includes(hex)) return;
+  state.recentColors.unshift(hex);
+  if (state.recentColors.length > 8) state.recentColors.pop();
+};
+
+const handleBgUpload = (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
-  
   const reader = new FileReader();
-  reader.onload = (evt) => {
-    const src = evt.target?.result as string;
+  reader.onload = (ev) => {
+    const src = ev.target?.result as string;
     bgImageSrc.value = src;
     const img = new Image();
     img.onload = () => {
@@ -290,15 +263,12 @@ const removeBgImage = () => {
   render();
 };
 
-// Brand Logo Upload
-const onLogoFileChange = (e: Event) => {
-  const target = e.target as HTMLInputElement;
-  const file = target.files?.[0];
+const handleLogoUpload = (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
-  
   const reader = new FileReader();
-  reader.onload = (evt) => {
-    const src = evt.target?.result as string;
+  reader.onload = (ev) => {
+    const src = ev.target?.result as string;
     logoImageSrc.value = src;
     const img = new Image();
     img.onload = () => {
@@ -310,16 +280,23 @@ const onLogoFileChange = (e: Event) => {
   reader.readAsDataURL(file);
 };
 
-const removeLogo = () => {
+const removeLogoImage = () => {
   logoImageSrc.value = null;
   logoImageEl.value = null;
   if (logoFileInput.value) logoFileInput.value.value = '';
   render();
 };
 
-// Draft Handlers
+const selectTheme = (th: Theme) => {
+  state.theme = th.id;
+  state.fontPairing = th.fontPair;
+  state.customAccent = '';
+  state.customBg = '';
+  state.customText = '';
+};
+
 const loadDrafts = () => {
-  const cached = localStorage.getItem('studio_drafts');
+  const cached = localStorage.getItem('cs_drafts_v2');
   drafts.value = cached ? JSON.parse(cached) : {};
 };
 
@@ -329,149 +306,142 @@ const saveDraft = () => {
     showToast('Enter a draft name first!');
     return;
   }
-  
-  drafts.value[name] = {
+  const item: DraftItem = {
     ...state,
     bgImageSrc: bgImageSrc.value,
     logoImageSrc: logoImageSrc.value
   };
-  localStorage.setItem('studio_drafts', JSON.stringify(drafts.value));
+  drafts.value[name] = item;
+  localStorage.setItem('cs_drafts_v2', JSON.stringify(drafts.value));
   draftName.value = '';
   showToast(`Draft "${name}" saved ✓`);
 };
 
 const deleteDraft = (name: string) => {
   delete drafts.value[name];
-  localStorage.setItem('studio_drafts', JSON.stringify(drafts.value));
+  localStorage.setItem('cs_drafts_v2', JSON.stringify(drafts.value));
   showToast(`Draft "${name}" deleted`);
 };
 
 const selectDraft = (name: string) => {
   const d = drafts.value[name];
   if (!d) return;
-  
+
   Object.assign(state, d);
-  
+
   if (d.bgImageSrc) {
     bgImageSrc.value = d.bgImageSrc;
     const img = new Image();
-    img.onload = () => {
-      bgImageEl.value = img;
-      render();
-    };
+    img.onload = () => { bgImageEl.value = img; render(); };
     img.src = d.bgImageSrc;
   } else {
     bgImageSrc.value = null;
     bgImageEl.value = null;
   }
-  
+
   if (d.logoImageSrc) {
     logoImageSrc.value = d.logoImageSrc;
     const img = new Image();
-    img.onload = () => {
-      logoImageEl.value = img;
-      render();
-    };
+    img.onload = () => { logoImageEl.value = img; render(); };
     img.src = d.logoImageSrc;
   } else {
     logoImageSrc.value = null;
     logoImageEl.value = null;
   }
-  
+
   showToast(`Loaded draft "${name}"`);
 };
 
-// Image Exports
-const downloadPNG = () => {
-  if (!mainCanvas.value) return;
-  const link = document.createElement('a');
-  link.download = `content-studio-${state.platform}-${state.ratio}-${Date.now()}.png`;
-  link.href = mainCanvas.value.toDataURL('image/png');
-  link.click();
-  showToast('PNG Graphic Downloaded!');
-};
-
-const copyImage = async () => {
-  if (!mainCanvas.value) return;
-  try {
-    mainCanvas.value.toBlob(async (blob) => {
-      if (!blob) return;
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      showToast('Copied graphic to clipboard!');
-    }, 'image/png');
-  } catch {
-    showToast('Clipboard copy unsupported — please download');
-  }
-};
-
-const copyCaption = async () => {
-  const cap = state.captionText.trim();
-  const tags = state.hashtagsText.trim();
-  const full = tags ? `${cap}\n\n${tags}` : cap;
-  
-  try {
-    await navigator.clipboard.writeText(full);
-    showToast('Caption text copied!');
-  } catch {
-    showToast('Copy failed — please copy manually');
-  }
-};
-
-/* ---------------- CANVAS ENGINE ---------------- */
-function getThemeDetails() {
-  const th = { ...THEMES.find(t => t.id === state.theme) } as Theme;
-  if (state.customAccent) th.accent = state.customAccent;
-  if (state.customBg) th.bg = state.customBg;
-  if (state.customText) th.text = state.customText;
-  return th;
-}
-
-function getActiveFontPair(): FontPairing {
-  return (FONT_PAIRINGS.find(f => f.id === state.fontPairing) || FONT_PAIRINGS[0]) as FontPairing;
-}
-
-function drawLines(
-  context: CanvasRenderingContext2D,
-  lines: string[],
-  x: number,
-  centerY: number,
-  lineHeight: number,
-  align: 'left' | 'center' | 'right',
-  size: number,
-  fontFamily: string,
-  weight: string,
-  accentColor: string,
-  textColor: string
+/* Canvas Rendering Core Engine */
+function renderGraphic(
+  canvas: HTMLCanvasElement, 
+  ratioKey: string
 ) {
-  const totalHeight = lines.length * lineHeight;
-  let y = centerY - (totalHeight / 2) + (lineHeight / 2);
-  
-  for (const line of lines) {
-    drawRichLine(context, line, x, y, size, fontFamily, weight, accentColor, textColor, align);
-    y += lineHeight;
-  }
-}
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
 
-function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, _platformId: string, isThumbnail = false) {
-  const dims = RATIO_DIMS[ratio] || [1080, 1080];
+  const dims = RATIO_DIMS[ratioKey] || [1080, 1080];
   const w = dims[0];
   const h = dims[1];
+
+  canvas.width = w;
+  canvas.height = h;
+
+  const colors = effectiveColors.value;
+  const font = getActiveFontPair();
+
+  const tempCanvas = document.createElement('canvas');
   tempCanvas.width = w;
   tempCanvas.height = h;
-  
   const tempCtx = tempCanvas.getContext('2d');
   if (!tempCtx) return;
-  const colors = getThemeDetails();
-  const font = getActiveFontPair();
-  const titleText = state.titleText.trim() || 'Your title/hook goes here';
-  const bodyText = state.bodyText.trim();
-  const pad = w * 0.09;
-  
-  // Background Fill
-  tempCtx.fillStyle = colors.bg;
+
+  const pad = w * 0.08;
+
+  // 1. Base Fill & Gradients
+  if (state.bgType === 'gradient') {
+    const angleRad = (state.bgGradientAngle * Math.PI) / 180;
+    const x2 = w / 2 + Math.cos(angleRad) * (w / 2);
+    const y2 = h / 2 + Math.sin(angleRad) * (h / 2);
+    const grad = tempCtx.createLinearGradient(w / 2 - Math.cos(angleRad) * (w / 2), h / 2 - Math.sin(angleRad) * (h / 2), x2, y2);
+    grad.addColorStop(0, colors.bg);
+    grad.addColorStop(1, state.bgGradientColor2 || currentTheme.value?.bg2 || colors.bg);
+    tempCtx.fillStyle = grad;
+  } else if (state.bgType === 'radial') {
+    const radGrad = tempCtx.createRadialGradient(w / 2, h / 2, 50, w / 2, h / 2, Math.max(w, h) / 1.2);
+    radGrad.addColorStop(0, state.bgGradientColor2 || currentTheme.value?.bg2 || colors.accent);
+    radGrad.addColorStop(1, colors.bg);
+    tempCtx.fillStyle = radGrad;
+  } else {
+    tempCtx.fillStyle = colors.bg;
+  }
   tempCtx.fillRect(0, 0, w, h);
 
-  // Background Image
+  // 2. Ambient Glow
+  if (state.ambientGlow && state.bgType === 'solid') {
+    tempCtx.save();
+    const glowGrad = tempCtx.createRadialGradient(w * 0.8, h * 0.2, 0, w * 0.8, h * 0.2, w * 0.6);
+    glowGrad.addColorStop(0, colors.accent + '33');
+    glowGrad.addColorStop(1, 'transparent');
+    tempCtx.fillStyle = glowGrad;
+    tempCtx.fillRect(0, 0, w, h);
+    tempCtx.restore();
+  }
+
+  // 3. Background Patterns
+  if (state.patternType !== 'none') {
+    tempCtx.save();
+    tempCtx.fillStyle = state.bgPatternColor || colors.accent;
+    tempCtx.globalAlpha = state.patternOpacity / 100;
+    const step = Math.max(20, 100 - state.patternDensity);
+
+    if (state.patternType === 'dots') {
+      for (let x = step / 2; x < w; x += step) {
+        for (let y = step / 2; y < h; y += step) {
+          tempCtx.beginPath();
+          tempCtx.arc(x, y, 2.5, 0, Math.PI * 2);
+          tempCtx.fill();
+        }
+      }
+    } else if (state.patternType === 'grid') {
+      tempCtx.strokeStyle = state.bgPatternColor || colors.accent;
+      tempCtx.lineWidth = 1;
+      for (let x = 0; x < w; x += step) {
+        tempCtx.beginPath(); tempCtx.moveTo(x, 0); tempCtx.lineTo(x, h); tempCtx.stroke();
+      }
+      for (let y = 0; y < h; y += step) {
+        tempCtx.beginPath(); tempCtx.moveTo(0, y); tempCtx.lineTo(w, y); tempCtx.stroke();
+      }
+    } else if (state.patternType === 'circles') {
+      tempCtx.strokeStyle = state.bgPatternColor || colors.accent;
+      tempCtx.lineWidth = 2;
+      tempCtx.beginPath(); tempCtx.arc(0, 0, w * 0.35, 0, Math.PI * 2); tempCtx.stroke();
+      tempCtx.beginPath(); tempCtx.arc(w, h, w * 0.45, 0, Math.PI * 2); tempCtx.stroke();
+    }
+    tempCtx.restore();
+  }
+
+  // 4. Custom Background Image
   if (bgImageEl.value) {
     tempCtx.save();
     tempCtx.globalCompositeOperation = (state.bgImageBlend || 'source-over') as GlobalCompositeOperation;
@@ -501,7 +471,7 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, _platformId
     tempCtx.restore();
   }
 
-  // Alignment coordinates
+  // Text Alignment
   const align = state.align;
   tempCtx.textAlign = align;
   tempCtx.textBaseline = 'middle';
@@ -510,100 +480,76 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, _platformId
   if (align === 'left') alignX = pad;
   else if (align === 'right') alignX = w - pad;
   const maxTextWidth = w - pad * 2;
-  
-  // Template layout rendering
+
+  // 5. Template Layout Engine
   if (state.template === 'stat') {
     const heroText = state.statNumber?.trim() || '10x';
     tempCtx.fillStyle = colors.accent;
     const heroSize = w * 0.28;
     tempCtx.font = `900 ${heroSize}px "${font.titleFont}", sans-serif`;
     tempCtx.fillText(heroText, alignX, h * 0.42);
-    
-    tempCtx.fillStyle = colors.text;
-    const labelMaxHeight = h * 0.22;
-    const startSize = state.autoFit ? w * 0.07 : (state.titleFontSize / 1000) * w;
-    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, labelMaxHeight, startSize, font.bodyFont, '600', 1.25, state.autoFit);
-    drawLines(tempCtx, fit.lines, alignX, h * 0.62, fit.size * 1.25, align, fit.size, font.bodyFont, '600', colors.accent, colors.text);
-    
+
+    const titleText = state.titleText?.trim() || '';
+    if (titleText) {
+      const calcSize = state.autoFit ? fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.35, 75, font.bodyFont, '700', 1.3, state.autoFit).size : state.titleFontSize;
+      tempCtx.font = `700 ${calcSize}px "${font.bodyFont}", sans-serif`;
+      drawLines(tempCtx, titleText.split('\n'), alignX, h * 0.68, calcSize, calcSize * 1.3, colors.text, colors.accent, font.bodyFont, '700');
+    }
   } else if (state.template === 'tip') {
-    tempCtx.save();
-    tempCtx.fillStyle = colors.accent;
-    tempCtx.font = `700 ${w * 0.032}px "${font.bodyFont}", sans-serif`;
-    tempCtx.fillText('PRO TIP', alignX, h * 0.14);
-    tempCtx.restore();
+    let currentY = pad * 1.5;
 
-    tempCtx.fillStyle = colors.text;
-    const titleMaxHeight = h * 0.4;
-    const startSize = state.autoFit ? w * 0.075 : (state.titleFontSize / 1000) * w;
-    const fitTitle = fitFontSize(tempCtx, titleText, maxTextWidth, titleMaxHeight, startSize, font.titleFont, '800', 1.15, state.autoFit);
-    drawLines(tempCtx, fitTitle.lines, alignX, h * 0.42, fitTitle.size * 1.15, align, fitTitle.size, font.titleFont, '800', colors.accent, colors.text);
-
-    if (bodyText) {
-      tempCtx.fillStyle = colors.text;
-      tempCtx.save();
-      tempCtx.globalAlpha = 0.75;
-      const bodyMaxHeight = h * 0.22;
-      const bStartSize = state.autoFit ? w * 0.036 : (state.bodyFontSize / 1000) * w;
-      const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '400', 1.35, state.autoFit);
-      drawLines(tempCtx, fitBody.lines, alignX, h * 0.72, fitBody.size * 1.35, align, fitBody.size, font.bodyFont, '400', colors.accent, colors.text);
-      tempCtx.restore();
+    const titleText = state.titleText?.trim() || '';
+    if (titleText) {
+      const calcTitleSize = state.autoFit ? fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.25, 70, font.titleFont, '800', 1.3, state.autoFit).size : state.titleFontSize;
+      tempCtx.font = `800 ${calcTitleSize}px "${font.titleFont}", sans-serif`;
+      const titleLines = titleText.split('\n');
+      drawLines(tempCtx, titleLines, alignX, currentY, calcTitleSize, calcTitleSize * 1.3, colors.text, colors.accent, font.titleFont, '800');
+      currentY += titleLines.length * (calcTitleSize * 1.3) + pad * 0.5;
     }
 
-  } else if (state.template === 'simple') {
-    tempCtx.fillStyle = colors.text;
-    const startSize = state.autoFit ? w * 0.09 : (state.titleFontSize / 1000) * w;
-    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.5, startSize, font.titleFont, '800', 1.15, state.autoFit);
-    drawLines(tempCtx, fit.lines, alignX, h * 0.5, fit.size * 1.15, align, fit.size, font.titleFont, '800', colors.accent, colors.text);
-
+    const bodyText = state.bodyText?.trim() || '';
+    if (bodyText) {
+      const calcBodySize = state.autoFit ? fitFontSize(tempCtx, bodyText, maxTextWidth, h - currentY - pad * 1.5, 42, font.bodyFont, '500', 1.4, state.autoFit).size : state.bodyFontSize;
+      tempCtx.font = `500 ${calcBodySize}px "${font.bodyFont}", sans-serif`;
+      drawLines(tempCtx, bodyText.split('\n'), alignX, currentY, calcBodySize, calcBodySize * 1.4, colors.text, colors.accent, font.bodyFont, '500');
+    }
   } else {
-    // Quote layout (Default)
-    const quoteAlignX = w / 2;
-    tempCtx.save();
-    tempCtx.fillStyle = colors.accent;
-    tempCtx.textAlign = 'center';
-    tempCtx.textBaseline = 'middle';
-    tempCtx.font = `800 ${w * 0.12}px Georgia, serif`;
-    tempCtx.fillText('"', quoteAlignX, h * 0.22);
-    tempCtx.restore();
-
-    tempCtx.fillStyle = colors.text;
-    const startSize = state.autoFit ? w * 0.08 : (state.titleFontSize / 1000) * w;
-    const fit = fitFontSize(tempCtx, titleText, maxTextWidth, h * 0.45, startSize, font.titleFont, '700', 1.2, state.autoFit);
-    drawLines(tempCtx, fit.lines, quoteAlignX, h * 0.5, fit.size * 1.2, 'center', fit.size, font.titleFont, '700', colors.accent, colors.text);
-
-    if (bodyText) {
-      tempCtx.fillStyle = colors.accent;
-      const bodyMaxHeight = h * 0.15;
-      const bStartSize = state.autoFit ? w * 0.03 : (state.bodyFontSize / 1000) * w;
-      const fitBody = fitFontSize(tempCtx, bodyText, maxTextWidth, bodyMaxHeight, bStartSize, font.bodyFont, '600', 1.3, state.autoFit);
-      const authorTextLines = fitBody.lines.map((line, idx) => idx === 0 ? `— ${line}` : `  ${line}`);
-      drawLines(tempCtx, authorTextLines, quoteAlignX, h * 0.78, fitBody.size * 1.3, 'center', fitBody.size, font.bodyFont, '600', colors.accent, colors.text);
+    // Quote and Minimal templates
+    let textToDraw = state.titleText?.trim() || '';
+    if (state.template === 'quote' && textToDraw && !textToDraw.startsWith('“')) {
+      textToDraw = `“${textToDraw}”`;
     }
+
+    const calcSize = state.autoFit 
+      ? fitFontSize(tempCtx, textToDraw, maxTextWidth, h * 0.6, 90, font.titleFont, '800', 1.35, state.autoFit).size
+      : state.titleFontSize;
+
+    tempCtx.font = `800 ${calcSize}px "${font.titleFont}", sans-serif`;
+    const lines = textToDraw.split('\n');
+    const startY = h / 2 - ((lines.length - 1) * (calcSize * 1.35)) / 2;
+    drawLines(tempCtx, lines, alignX, startY, calcSize, calcSize * 1.35, colors.text, colors.accent, font.titleFont, '800');
   }
 
-  // Draw Logo Overlay
-  if (logoImageEl.value && !isThumbnail) {
+  // 6. Brand Logo Overlay
+  if (logoImageEl.value) {
     tempCtx.save();
     tempCtx.globalAlpha = state.logoOpacity / 100;
-    const logoW = logoImageEl.value.width;
-    const logoH = logoImageEl.value.height;
-    const scale = state.logoScale / 100;
-    const targetW = w * 0.18 * scale;
-    const targetH = targetW * (logoH / logoW);
+    const lSize = w * (state.logoScale / 100);
+    const lRatio = logoImageEl.value.width / logoImageEl.value.height;
+    const lw = lSize;
+    const lh = lSize / lRatio;
     
-    let lx = w - targetW - pad;
-    let ly = h - targetH - pad;
+    let lx = pad;
+    let ly = pad;
+    if (state.logoPosition.includes('right')) lx = w - pad - lw;
+    if (state.logoPosition.includes('bottom')) ly = h - pad - lh;
+    if (state.logoPosition === 'top-center') lx = (w - lw) / 2;
     
-    if (state.logoPosition === 'top-left') { lx = pad; ly = pad; }
-    else if (state.logoPosition === 'top-right') { lx = w - targetW - pad; ly = pad; }
-    else if (state.logoPosition === 'bottom-left') { lx = pad; ly = h - targetH - pad; }
-    else if (state.logoPosition === 'center') { lx = w/2 - targetW/2; ly = h/2 - targetH/2; }
-    
-    tempCtx.drawImage(logoImageEl.value, lx, ly, targetW, targetH);
+    tempCtx.drawImage(logoImageEl.value, lx, ly, lw, lh);
     tempCtx.restore();
   }
 
-  // Draw Watermark handle
+  // 7. Watermark Handle
   if (state.watermark) {
     tempCtx.save();
     tempCtx.textAlign = 'center';
@@ -614,12 +560,49 @@ function renderGraphic(tempCanvas: HTMLCanvasElement, ratio: string, _platformId
     tempCtx.fillText(state.watermarkText.trim() || '@TelepathicThoughts', w / 2, h - pad * 0.55);
     tempCtx.restore();
   }
+
+  // Blit final output to visible canvas
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(tempCanvas, 0, 0);
+}
+
+function getActiveFontPair(): FontPairing {
+  return (FONT_PAIRINGS.find(f => f.id === state.fontPairing) || FONT_PAIRINGS[0]) as FontPairing;
+}
+
+function drawLines(
+  context: CanvasRenderingContext2D,
+  lines: string[],
+  x: number,
+  startY: number,
+  fontSize: number,
+  lineHeight: number,
+  defaultColor: string,
+  accentColor: string,
+  fontFamily: string,
+  weight: string = '700'
+) {
+  lines.forEach((line, index) => {
+    const y = startY + index * lineHeight;
+    drawRichLine(
+      context,
+      line,
+      x,
+      y,
+      fontSize,
+      fontFamily,
+      weight,
+      accentColor,
+      defaultColor,
+      state.align
+    );
+  });
 }
 
 const render = () => {
   nextTick(() => {
     if (!mainCanvas.value) return;
-    renderGraphic(mainCanvas.value, state.ratio, state.platform, false);
+    renderGraphic(mainCanvas.value, state.ratio);
   });
 };
 
@@ -630,7 +613,7 @@ const openBatchModal = () => {
     ratios.forEach(ratio => {
       const el = document.getElementById(`batch-canvas-${ratio.replace(':', '-')}`) as HTMLCanvasElement;
       if (el) {
-        renderGraphic(el, ratio, state.platform, true);
+        renderGraphic(el, ratio);
       }
     });
   });
@@ -638,7 +621,7 @@ const openBatchModal = () => {
 
 const downloadBatchItem = (ratio: string) => {
   const tempCanvas = document.createElement('canvas');
-  renderGraphic(tempCanvas, ratio, state.platform, false);
+  renderGraphic(tempCanvas, ratio);
   const link = document.createElement('a');
   link.download = `content-studio-${state.platform}-${ratio}-${Date.now()}.png`;
   link.href = tempCanvas.toDataURL('image/png');
@@ -658,54 +641,83 @@ const downloadAllBatch = () => {
   showToast('Downloading all formats...');
 };
 
+const downloadPNG = () => {
+  if (!mainCanvas.value) return;
+  const link = document.createElement('a');
+  link.download = `graphic-${state.platform}-${state.ratio}-${Date.now()}.png`;
+  link.href = mainCanvas.value.toDataURL('image/png');
+  link.click();
+  showToast('Graphic Downloaded!');
+};
+
+const copyImage = async () => {
+  if (!mainCanvas.value) return;
+  try {
+    mainCanvas.value.toBlob(async (blob) => {
+      if (!blob) return;
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      showToast('Copied graphic to clipboard!');
+    }, 'image/png');
+  } catch {
+    showToast('Clipboard copy unsupported — please download');
+  }
+};
+
 onMounted(() => {
   loadDrafts();
   render();
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  document.body.style.overflow = '';
+  window.removeEventListener('keydown', handleKeyDown);
 });
 </script>
 
 <template>
   <div class="app">
-    <!-- Mobile Backdrop -->
+    <!-- Mobile Sheet Backdrop -->
     <div 
       class="mobile-backdrop" 
       :class="{ open: isMobileDrawerOpen }" 
       @click="isMobileDrawerOpen = false"
     ></div>
 
-    <!-- SIDEBAR CONTROLS -->
-    <aside class="sidebar" :class="{ 'drawer-open': isMobileDrawerOpen }">
-      <div class="mobile-drawer-handle" @click="isMobileDrawerOpen = !isMobileDrawerOpen">
-        <span class="handle-bar"></span>
-        <span class="handle-txt">{{ isMobileDrawerOpen ? 'Close Controls' : 'Tap to Open Controls' }}</span>
+    <!-- SIDEBAR CONTROLS (Desktop & Mobile Bottom Sheet Drawer) -->
+    <aside class="sidebar" :class="{ 'drawer-open': isMobileDrawerOpen }" aria-label="Editor Controls">
+      <div class="mobile-drawer-header">
+        <div class="handle-bar"></div>
+        <div class="drawer-header-title">
+          <span>📝 Normal Studio Controls</span>
+          <button class="drawer-close-btn" @click="isMobileDrawerOpen = false" aria-label="Close controls">✕ Close</button>
+        </div>
       </div>
 
-      <!-- Platform & Ratio -->
+      <!-- 1. Platform & Format -->
       <section class="section">
-        <h2 class="section-label">Platform</h2>
+        <h2 class="section-label">1. Target Platform & Aspect Ratio</h2>
+        
         <div class="platform-grid">
           <button 
             v-for="p in PLATFORMS" 
             :key="p.id" 
             class="platform-btn"
             :class="{ active: p.id === state.platform }"
-            @click="selectPlatform(p.id)"
+            @click="state.platform = p.id; state.ratio = PLATFORMS.find(x => x.id === p.id)?.ratios[0] || '1:1';"
             :aria-label="`Select platform ${p.label}`"
           >
             <span class="pico" aria-hidden="true">{{ p.icon }}</span>{{ p.label }}
           </button>
         </div>
-      </section>
 
-      <section class="section">
-        <h2 class="section-label">Image Ratio</h2>
-        <div class="ratio-row">
+        <div class="ratio-row" style="margin-top:10px;">
           <button 
-            v-for="r in PLATFORMS.find(x => x.id === state.platform)?.ratios" 
+            v-for="r in (activePlatform?.ratios || [])" 
             :key="r"
             class="ratio-chip"
             :class="{ active: r === state.ratio }"
-            @click="selectRatio(r)"
+            @click="state.ratio = r"
             :aria-label="`Select ratio ${r}`"
           >
             {{ r }}
@@ -713,51 +725,70 @@ onMounted(() => {
         </div>
       </section>
 
-      <!-- Template & Fonts -->
+      <!-- 2. Layout Template Selection -->
       <section class="section">
-        <h2 class="section-label">Layout Template</h2>
+        <h2 class="section-label">2. Layout Template</h2>
         <div class="template-grid">
           <div 
             v-for="t in TEMPLATES" 
             :key="t.id"
             class="tpl-btn"
             :class="{ active: t.id === state.template }"
-            @click="selectTemplate(t.id)"
+            @click="state.template = t.id"
             role="button"
             tabindex="0"
           >
-            <strong>{{ t.name }}</strong>{{ t.desc }}
+            <strong>{{ t.name }}</strong>
+            <span>{{ t.desc }}</span>
           </div>
         </div>
       </section>
 
+      <!-- 3. Content Inputs -->
       <section class="section">
-        <h2 class="section-label">Typography</h2>
-        <label class="field-label" for="font-pairing-select">Font Pairing</label>
-        <select id="font-pairing-select" v-model="state.fontPairing">
-          <option v-for="f in FONT_PAIRINGS" :key="f.id" :value="f.id">
-            {{ f.name }}
-          </option>
-        </select>
+        <h2 class="section-label">3. Content & Copywriting</h2>
         
-        <label class="field-label">Alignment</label>
-        <div class="align-row">
-          <button class="align-btn" :class="{ active: state.align === 'left' }" @click="selectAlignment('left')" aria-label="Align left">⯇</button>
-          <button class="align-btn" :class="{ active: state.align === 'center' }" @click="selectAlignment('center')" aria-label="Align center">☰</button>
-          <button class="align-btn" :class="{ active: state.align === 'right' }" @click="selectAlignment('right')" aria-label="Align right">⯈</button>
+        <div v-if="state.template === 'stat'">
+          <label class="field-label" for="stat-input">Stat / Number Callout</label>
+          <input id="stat-input" type="text" v-model="state.statNumber" placeholder="e.g. 10x or 99%">
         </div>
-        
-        <div class="toggle-row">
-          <label class="field-label" style="margin:0;">Auto-fit text size</label>
+
+        <label class="field-label" for="title-input">Headline / Main Text (*word* for accent)</label>
+        <textarea id="title-input" v-model="state.titleText" placeholder="Write main graphic text..." rows="3"></textarea>
+
+        <div v-if="state.template === 'tip'" style="margin-top:10px;">
+          <label class="field-label" for="body-input">Body Bullet Lines</label>
+          <textarea id="body-input" v-model="state.bodyText" placeholder="Bullet line 1&#10;Bullet line 2..." rows="4"></textarea>
+        </div>
+
+        <div class="toggle-row" style="margin-top:10px;">
+          <label class="field-label" style="margin:0;">Auto-fit Canvas Font Sizes</label>
           <div class="switch" :class="{ on: state.autoFit }" @click="state.autoFit = !state.autoFit" role="switch" :aria-checked="state.autoFit"></div>
+        </div>
+
+        <div v-if="!state.autoFit" style="margin-top:10px;">
+          <div class="slider-field">
+            <div class="lbl-row">
+              <label for="title-size-range">Title Font Size</label>
+              <span>{{ state.titleFontSize }}px</span>
+            </div>
+            <input id="title-size-range" type="range" min="30" max="140" v-model.number="state.titleFontSize">
+          </div>
+
+          <div v-if="state.template === 'tip'" class="slider-field" style="margin-top:8px;">
+            <div class="lbl-row">
+              <label for="body-size-range">Body Font Size</label>
+              <span>{{ state.bodyFontSize }}px</span>
+            </div>
+            <input id="body-size-range" type="range" min="16" max="60" v-model.number="state.bodyFontSize">
+          </div>
         </div>
       </section>
 
-      <!-- Professional Theme & Color System -->
+      <!-- 4. Theme & Typography -->
       <section class="section">
-        <h2 class="section-label">Theme & Color System</h2>
-
-        <!-- Filter Category Tabs -->
+        <h2 class="section-label">4. Theme & Color System</h2>
+        
         <div class="theme-cat-tabs">
           <button 
             v-for="cat in ['all', 'dark', 'vibrant', 'light'] as const" 
@@ -770,7 +801,6 @@ onMounted(() => {
           </button>
         </div>
 
-        <!-- Palette Card Grid -->
         <div class="theme-card-grid">
           <div 
             v-for="th in filteredThemes" 
@@ -793,110 +823,189 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Custom Color Overrides Box -->
         <div class="color-overrides-box">
           <div class="override-header">
-            <span>Custom Color Overrides</span>
-            <button class="btn tiny" @click="resetCustomColors">Reset Colors</button>
+            <span>Fine Color Overrides</span>
+            <button class="btn tiny" @click="state.customBg = ''; state.customAccent = ''; state.customText = '';">Reset</button>
           </div>
 
           <div class="color-picker-grid">
             <div class="picker-item">
-              <label>Background</label>
+              <label>Bg</label>
               <div class="picker-row">
-                <input type="color" :value="state.customBg || getThemeDetails().bg" @input="e => setCustomColor('bg', (e.target as HTMLInputElement).value)" aria-label="Custom Background Color">
-                <span class="hex-val">{{ state.customBg || getThemeDetails().bg }}</span>
+                <input type="color" v-model="state.customBg" @change="pushRecentColor(state.customBg)" aria-label="Background Color">
+                <span class="hex-val">{{ effectiveColors.bg }}</span>
               </div>
             </div>
-
             <div class="picker-item">
               <label>Accent</label>
               <div class="picker-row">
-                <input type="color" :value="state.customAccent || getThemeDetails().accent" @input="e => setCustomColor('accent', (e.target as HTMLInputElement).value)" aria-label="Custom Accent Color">
-                <span class="hex-val">{{ state.customAccent || getThemeDetails().accent }}</span>
+                <input type="color" v-model="state.customAccent" @change="pushRecentColor(state.customAccent)" aria-label="Accent Color">
+                <span class="hex-val">{{ effectiveColors.accent }}</span>
               </div>
             </div>
-
             <div class="picker-item">
               <label>Text</label>
               <div class="picker-row">
-                <input type="color" :value="state.customText || getThemeDetails().text" @input="e => setCustomColor('text', (e.target as HTMLInputElement).value)" aria-label="Custom Text Color">
-                <span class="hex-val">{{ state.customText || getThemeDetails().text }}</span>
+                <input type="color" v-model="state.customText" @change="pushRecentColor(state.customText)" aria-label="Text Color">
+                <span class="hex-val">{{ effectiveColors.text }}</span>
               </div>
             </div>
           </div>
 
           <div class="quick-swatches">
-            <span style="font-size:10.5px; color:var(--studio-text-muted);">Quick Accent:</span>
+            <span style="font-size:10.5px; color:var(--studio-text-muted);">Recent:</span>
             <div class="swatch-dots">
               <span 
-                v-for="col in PRESET_ACCENTS" 
+                v-for="col in state.recentColors" 
                 :key="col"
                 class="dot-btn"
                 :style="{ backgroundColor: col }"
-                @click="setCustomColor('accent', col)"
+                @click="state.customAccent = col"
                 role="button"
-                :aria-label="`Select accent color ${col}`"
+                :aria-label="`Select color ${col}`"
               ></span>
             </div>
           </div>
         </div>
+
+        <label class="field-label" for="font-pair-select" style="margin-top:12px;">Font Pairing</label>
+        <select id="font-pair-select" v-model="state.fontPairing">
+          <option v-for="fp in FONT_PAIRINGS" :key="fp.id" :value="fp.id">{{ fp.name }}</option>
+        </select>
+
+        <label class="field-label">Text Alignment</label>
+        <div class="align-row">
+          <button class="align-btn" :class="{ active: state.align === 'left' }" @click="state.align = 'left'">Left</button>
+          <button class="align-btn" :class="{ active: state.align === 'center' }" @click="state.align = 'center'">Center</button>
+          <button class="align-btn" :class="{ active: state.align === 'right' }" @click="state.align = 'right'">Right</button>
+        </div>
       </section>
 
-      <!-- Media Overlays -->
+      <!-- 5. Advanced Backgrounds & Media Overlays -->
       <section class="section">
-        <h2 class="section-label">Media Overlays</h2>
-        <label class="field-label">Background Photo</label>
+        <h2 class="section-label">5. Backgrounds & Overlay Media</h2>
+        
+        <label class="field-label" for="bg-type-select">Background Style</label>
+        <select id="bg-type-select" v-model="state.bgType">
+          <option value="solid">Solid Color</option>
+          <option value="gradient">Linear Gradient</option>
+          <option value="radial">Radial Glow Gradient</option>
+        </select>
+
+        <div v-if="state.bgType !== 'solid'" style="margin-top:10px;">
+          <label class="field-label">Gradient Second Color</label>
+          <input type="color" v-model="state.bgGradientColor2" style="width:100%; height:36px; border-radius:4px; border:none; cursor:pointer;" aria-label="Gradient Second Color">
+          <div v-if="state.bgType === 'gradient'" class="slider-field" style="margin-top:8px;">
+            <div class="lbl-row">
+              <label for="grad-angle-range">Gradient Angle</label>
+              <span>{{ state.bgGradientAngle }}°</span>
+            </div>
+            <input id="grad-angle-range" type="range" min="0" max="360" v-model.number="state.bgGradientAngle">
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <label class="field-label" style="margin:0;">Ambient Corner Glow</label>
+          <div class="switch" :class="{ on: state.ambientGlow }" @click="state.ambientGlow = !state.ambientGlow" role="switch" :aria-checked="state.ambientGlow"></div>
+        </div>
+
+        <label class="field-label" for="pattern-select" style="margin-top:12px;">Geometric Background Pattern</label>
+        <select id="pattern-select" v-model="state.patternType">
+          <option value="none">None</option>
+          <option value="circles">Organic Circles</option>
+          <option value="dots">Dot Matrix Grid</option>
+          <option value="grid">Linear Square Grid</option>
+        </select>
+
+        <div v-if="state.patternType !== 'none'" style="margin-top:10px;">
+          <div class="slider-field">
+            <div class="lbl-row">
+              <label for="pattern-opacity-range">Pattern Opacity</label>
+              <span>{{ state.patternOpacity }}%</span>
+            </div>
+            <input id="pattern-opacity-range" type="range" min="5" max="50" v-model.number="state.patternOpacity">
+          </div>
+        </div>
+
+        <!-- Custom Background Image -->
+        <label class="field-label" style="margin-top:12px;">Custom Background Photo</label>
         <div style="display:flex; gap:8px;">
-          <input type="file" ref="bgFileInput" accept="image/*" style="display:none;" @change="onBgFileChange">
-          <button class="btn" @click="bgFileInput?.click()" style="padding:6px 12px; font-size:12px; flex:1;">Upload Photo</button>
+          <input type="file" ref="bgFileInput" accept="image/*" style="display:none;" @change="handleBgUpload">
+          <button class="btn" @click="bgFileInput?.click()" style="padding:6px 12px; font-size:12px; flex:1;">
+            {{ bgImageSrc ? '✓ Change Photo' : 'Upload Background Image' }}
+          </button>
           <button v-if="bgImageSrc" class="btn tiny danger" @click="removeBgImage">Remove</button>
         </div>
 
-        <label class="field-label" style="margin-top:12px;">Brand Logo Overlay</label>
+        <div v-if="bgImageSrc" style="margin-top:10px;">
+          <div class="slider-field">
+            <div class="lbl-row">
+              <label for="bg-opacity-range">Image Opacity</label>
+              <span>{{ state.bgImageOpacity }}%</span>
+            </div>
+            <input id="bg-opacity-range" type="range" min="5" max="100" v-model.number="state.bgImageOpacity">
+          </div>
+          <div class="slider-field">
+            <div class="lbl-row">
+              <label for="bg-blur-range">Image Blur</label>
+              <span>{{ state.bgImageBlur }}px</span>
+            </div>
+            <input id="bg-blur-range" type="range" min="0" max="20" v-model.number="state.bgImageBlur">
+          </div>
+        </div>
+
+        <!-- Brand Logo Overlay -->
+        <label class="field-label" style="margin-top:12px;">Brand Watermark Logo</label>
         <div style="display:flex; gap:8px;">
-          <input type="file" ref="logoFileInput" accept="image/*" style="display:none;" @change="onLogoFileChange">
-          <button class="btn" @click="logoFileInput?.click()" style="padding:6px 12px; font-size:12px; flex:1;">Upload Logo</button>
-          <button v-if="logoImageSrc" class="btn tiny danger" @click="removeLogo">Remove</button>
+          <input type="file" ref="logoFileInput" accept="image/*" style="display:none;" @change="handleLogoUpload">
+          <button class="btn" @click="logoFileInput?.click()" style="padding:6px 12px; font-size:12px; flex:1;">
+            {{ logoImageSrc ? '✓ Change Logo' : 'Upload Logo' }}
+          </button>
+          <button v-if="logoImageSrc" class="btn tiny danger" @click="removeLogoImage">Remove</button>
         </div>
       </section>
 
-      <!-- Content Input -->
+      <!-- 6. Watermark & Social Captions -->
       <section class="section">
-        <h2 class="section-label">Content</h2>
-        <div v-if="state.template === 'stat'">
-          <label class="field-label" for="stat-input">Hero Stat Number (e.g. 99%, 10x, #1)</label>
-          <input id="stat-input" type="text" v-model="state.statNumber" placeholder="e.g. 10x or 99%">
-        </div>
+        <h2 class="section-label">6. Watermark & Caption Tool</h2>
         
-        <div>
-          <label class="field-label" for="title-input">Title / Hook (*bold accent*)</label>
-          <textarea id="title-input" v-model="state.titleText" placeholder="e.g. যা মনে আছে সেটাই বলি"></textarea>
-
-          <label class="field-label" for="body-input">Body / Subtext (optional)</label>
-          <textarea id="body-input" v-model="state.bodyText" placeholder="Supporting line or leave blank"></textarea>
+        <div class="toggle-row">
+          <label class="field-label" style="margin:0;">Show Canvas Watermark</label>
+          <div class="switch" :class="{ on: state.watermark }" @click="state.watermark = !state.watermark" role="switch" :aria-checked="state.watermark"></div>
         </div>
 
-        <label class="field-label" for="caption-input">Caption (for post)</label>
-        <textarea id="caption-input" v-model="state.captionText" placeholder="Write caption..."></textarea>
+        <input v-if="state.watermark" type="text" v-model="state.watermarkText" placeholder="@YourHandle" style="margin-top:8px;" aria-label="Watermark Text">
 
-        <label class="field-label" for="hashtags-input">Hashtags</label>
-        <textarea id="hashtags-input" v-model="state.hashtagsText" placeholder="#Hashtags"></textarea>
+        <label class="field-label" for="caption-input" style="margin-top:12px;">Social Post Caption</label>
+        <textarea id="caption-input" v-model="state.captionText" placeholder="Write post caption..." rows="3"></textarea>
+
+        <label class="field-label">Hashtag Presets</label>
         <div class="hashtag-chips">
-          <button v-for="tag in HASHTAG_PRESETS" :key="tag" class="hchip" @click="addHashtag(tag)">{{ tag }}</button>
+          <span 
+            v-for="ht in HASHTAG_PRESETS" 
+            :key="ht" 
+            class="hchip"
+            @click="addHashtag(ht)"
+            role="button"
+            :aria-label="`Add hashtag ${ht}`"
+          >
+            {{ ht }}
+          </span>
         </div>
       </section>
 
-      <!-- Saved Drafts -->
+      <!-- 7. Saved Drafts -->
       <section class="section">
-        <h2 class="section-label">Saved Drafts</h2>
+        <h2 class="section-label">7. Saved Drafts</h2>
         <div style="display:flex; gap:8px; margin-bottom:8px;">
           <input type="text" v-model="draftName" placeholder="Draft name..." style="flex:1;" aria-label="Draft Name">
-          <button class="btn" @click="saveDraft">Save</button>
+          <button class="btn" @click="saveDraft">Save Draft</button>
         </div>
+
         <div class="draft-list-container">
           <div v-if="Object.keys(drafts).length === 0" style="font-size:11px; color:var(--studio-text-muted); text-align:center;">
-            No drafts yet — create your first graphic
+            No saved drafts yet
           </div>
           <div v-for="(d, name) in drafts" :key="name" class="draft-item">
             <span class="draft-name" @click="selectDraft(name.toString())">{{ name }}</span>
@@ -906,46 +1015,71 @@ onMounted(() => {
       </section>
     </aside>
 
-    <!-- CANVAS WORKSTATION AREA -->
+    <!-- CANVAS PREVIEW & WORKSTATION -->
     <div class="canvas-area">
-      <!-- Mobile Drawer Open Toggle Bar -->
-      <div class="mobile-drawer-toggle-bar">
-        <button class="btn primary" @click="isMobileDrawerOpen = !isMobileDrawerOpen">
-          ⚡ {{ isMobileDrawerOpen ? 'Close Controls Sheet' : 'Open Controls Drawer' }}
-        </button>
+      <!-- Canvas Zoom & Viewport Bar -->
+      <div class="canvas-toolbar">
+        <div class="canvas-header-hint">
+          <span>💡 Real-time Canvas Workstation</span>
+        </div>
+        <div class="zoom-presets">
+          <span class="zoom-label">Preview Zoom:</span>
+          <button class="zoom-chip" :class="{ active: canvasFitMode === 'fit' }" @click="canvasFitMode = 'fit'" aria-label="Fit graphic to screen">🔍 Fit</button>
+          <button class="zoom-chip" :class="{ active: canvasFitMode === '75' }" @click="canvasFitMode = '75'" aria-label="Zoom 75%">75%</button>
+          <button class="zoom-chip" :class="{ active: canvasFitMode === '100' }" @click="canvasFitMode = '100'" aria-label="Zoom 100%">100%</button>
+        </div>
       </div>
 
-      <div class="frame-wrap" id="frameWrap">
+      <div 
+        class="frame-wrap" 
+        id="normalFrameWrap"
+        :class="['zoom-' + canvasFitMode]"
+      >
         <canvas ref="mainCanvas"></canvas>
       </div>
 
-      <div class="actions">
-        <button class="btn primary" @click="downloadPNG">⬇ Download PNG</button>
+      <div class="actions desktop-actions">
+        <button class="btn primary" @click="downloadPNG">⬇ Download PNG Graphic</button>
         <button class="btn secondary" @click="copyImage">⧉ Copy Image</button>
-        <button class="btn secondary" @click="copyCaption">📋 Copy Caption</button>
+        <button class="btn secondary" @click="openBatchModal">⚡ Batch All Formats</button>
       </div>
 
-      <button class="btn secondary" style="width:100%; max-width:520px; justify-content:center; margin-top:12px;" @click="openBatchModal">
-        ⚡ Multi-Format Batch Export Previews
-      </button>
-
       <div class="caption-preview">
-        <div class="lbl">Ready-to-paste caption</div>
-        <div class="txt" v-html="parsedCaption"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span class="lbl">Social Post Caption & Hashtags</span>
+          <button class="btn tiny" @click="copyCaption">📋 Copy Copywriting</button>
+        </div>
+        <div class="txt">{{ captionWithHashtags }}</div>
       </div>
     </div>
 
-    <!-- BATCH EXPORT MODAL -->
-    <div class="modal-overlay" :class="{ show: showBatchModal }" role="dialog" aria-modal="true">
+    <!-- Mobile Floating Action Bar (Fixed at bottom on <1024px) -->
+    <div class="mobile-dock-bar">
+      <button class="dock-btn primary" @click="isMobileDrawerOpen = true" aria-label="Open Studio Controls">
+        <span class="dock-icon">⚙️</span>
+        <span>Controls</span>
+      </button>
+      <button class="dock-btn secondary" @click="downloadPNG" aria-label="Download Graphic PNG">
+        <span class="dock-icon">⬇</span>
+        <span>Download</span>
+      </button>
+      <button class="dock-btn secondary" @click="copyCaption" aria-label="Copy Caption Copywriting">
+        <span class="dock-icon">📋</span>
+        <span>Caption</span>
+      </button>
+    </div>
+
+    <!-- Batch Export Modal -->
+    <div class="modal-overlay" :class="{ show: showBatchModal }" @click.self="showBatchModal = false" role="dialog" aria-modal="true">
       <div class="modal-container">
         <div class="modal-header">
-          <div class="modal-title">Multi-Format Batch Export Previews</div>
-          <button class="modal-close" @click="showBatchModal = false" aria-label="Close modal">&times;</button>
+          <span class="modal-title">⚡ Multi-Format Batch Export</span>
+          <button class="modal-close" @click="showBatchModal = false" aria-label="Close modal">✕</button>
         </div>
         <div class="modal-body">
-          <div class="batch-grid" ref="batchGrid">
+          <div class="batch-grid">
             <div v-for="(dims, ratioKey) in RATIO_DIMS" :key="ratioKey" class="batch-card">
-              <div class="batch-card-title">{{ ratioKey }} Ratio</div>
+              <span class="batch-card-title">{{ ratioKey }} ({{ dims[0] }}×{{ dims[1] }}px)</span>
               <div class="batch-canvas-wrap">
                 <canvas :id="`batch-canvas-${ratioKey.toString().replace(':', '-')}`"></canvas>
               </div>
@@ -984,7 +1118,7 @@ onMounted(() => {
   box-shadow: var(--elevation-1);
 }
 
-.mobile-drawer-handle, .mobile-backdrop, .mobile-drawer-toggle-bar {
+.mobile-drawer-header, .mobile-backdrop, .mobile-dock-bar {
   display: none;
 }
 
@@ -1008,10 +1142,11 @@ input[type=text], textarea, select {
   width: 100%; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border);
   color: var(--studio-text-primary); padding: 10px 12px; border-radius: var(--radius-sharp); font-size: var(--text-sm);
   font-family: var(--font-body); resize: vertical; box-sizing: border-box; min-height: var(--min-touch-target);
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 input[type=text]:focus, textarea:focus, select:focus {
   border-color: var(--studio-accent-primary);
+  box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.2);
 }
 
 .platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
@@ -1023,16 +1158,18 @@ input[type=text]:focus, textarea:focus, select:focus {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
 }
 .platform-btn:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
+.platform-btn:active { transform: scale(0.97); }
 .platform-btn.active { border-color: var(--studio-accent-primary); color: var(--studio-text-primary); background: rgba(230, 57, 70, 0.15); font-weight: 700; }
 
 .ratio-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .ratio-chip {
-  min-height: 36px;
+  min-height: 38px;
   background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-pill);
   padding: 6px 14px; font-size: 11.5px; font-family: var(--font-mono); cursor: pointer; color: var(--studio-text-secondary);
   display: flex; align-items: center; justify-content: center; transition: all 0.15s;
 }
 .ratio-chip:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
+.ratio-chip:active { transform: scale(0.96); }
 .ratio-chip.active { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; font-weight: 700; }
 
 .template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
@@ -1042,6 +1179,7 @@ input[type=text]:focus, textarea:focus, select:focus {
   padding: 10px; cursor: pointer; font-size: 12px; color: var(--studio-text-secondary); text-align: left; transition: all 0.15s;
 }
 .tpl-btn:hover { border-color: var(--studio-border-strong); }
+.tpl-btn:active { transform: scale(0.98); }
 .tpl-btn strong { display: block; font-size: 12.5px; color: var(--studio-text-primary); margin-bottom: 2px; }
 .tpl-btn.active { border-color: var(--studio-accent-primary); background: rgba(230, 57, 70, 0.12); }
 
@@ -1051,7 +1189,7 @@ input[type=text]:focus, textarea:focus, select:focus {
   border-radius: var(--radius-sharp); border: 1px solid var(--studio-border); margin-bottom: var(--space-3);
 }
 .cat-tab {
-  flex: 1; min-height: 32px; background: transparent; border: none; color: var(--studio-text-secondary);
+  flex: 1; min-height: 34px; background: transparent; border: none; color: var(--studio-text-secondary);
   font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 4px 0;
   border-radius: var(--radius-sharp); cursor: pointer; text-align: center; transition: all 0.15s;
 }
@@ -1068,6 +1206,7 @@ input[type=text]:focus, textarea:focus, select:focus {
   display: flex; flex-direction: column; gap: 6px; text-align: left;
 }
 .palette-card:hover { border-color: var(--studio-accent-primary); transform: translateY(-1px); }
+.palette-card:active { transform: scale(0.98); }
 .palette-card.active { border-color: var(--studio-accent-primary); background: rgba(230, 57, 70, 0.12); box-shadow: 0 0 12px rgba(230, 57, 70, 0.25); }
 
 .palette-bar {
@@ -1100,7 +1239,7 @@ input[type=text]:focus, textarea:focus, select:focus {
 
 .quick-swatches { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
 .swatch-dots { display: flex; gap: 6px; }
-.dot-btn { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
+.dot-btn { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
 .dot-btn:hover { transform: scale(1.25); }
 
 .align-row { display: flex; gap: 6px; }
@@ -1114,16 +1253,37 @@ input[type=text]:focus, textarea:focus, select:focus {
 .switch.on::after { left: 22px; }
 
 .hashtag-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.hchip { min-height: 32px; font-family: var(--font-mono); font-size: 10.5px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); padding: 4px 10px; border-radius: var(--radius-pill); cursor: pointer; color: var(--studio-text-secondary); display: flex; align-items: center; }
+.hchip { min-height: 34px; font-family: var(--font-mono); font-size: 10.5px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); padding: 4px 10px; border-radius: var(--radius-pill); cursor: pointer; color: var(--studio-text-secondary); display: flex; align-items: center; }
 .hchip:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
+.hchip:active { transform: scale(0.96); }
 
 .canvas-area {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
   padding: var(--space-6) var(--space-6) var(--space-12); background: var(--studio-bg); overflow-y: auto; height: calc(100vh - 60px); box-sizing: border-box;
 }
 
-.frame-wrap { max-width: 520px; width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; }
+.canvas-toolbar {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 520px; margin-bottom: var(--space-3); gap: 8px; flex-wrap: wrap;
+}
+.canvas-header-hint { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--studio-text-muted); }
+
+.zoom-presets { display: flex; align-items: center; gap: 4px; background: var(--studio-surface); border: 1px solid var(--studio-border); padding: 3px 6px; border-radius: var(--radius-pill); }
+.zoom-label { font-family: var(--font-mono); font-size: 10px; color: var(--studio-text-muted); margin-right: 2px; }
+.zoom-chip {
+  background: transparent; border: none; color: var(--studio-text-secondary); font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+  padding: 4px 10px; border-radius: var(--radius-pill); cursor: pointer; transition: all 0.15s; min-height: 28px;
+}
+.zoom-chip:hover { color: var(--studio-text-primary); }
+.zoom-chip.active { background: var(--studio-accent-primary); color: #fff; }
+
+.frame-wrap { max-width: 520px; width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; transition: max-width 0.25s ease, max-height 0.25s ease; }
 .frame-wrap canvas { width: 100% !important; height: auto !important; border-radius: var(--radius-card); box-shadow: var(--elevation-3); border: 1px solid var(--studio-border); display: block; }
+
+/* Canvas Viewport Zoom Modes */
+.frame-wrap.zoom-fit { max-height: min(68vh, 620px); }
+.frame-wrap.zoom-fit canvas { max-height: min(68vh, 620px); width: auto !important; max-width: 100%; object-fit: contain; }
+.frame-wrap.zoom-75 { max-width: 390px; }
+.frame-wrap.zoom-100 { max-width: 520px; }
 
 .actions { display: flex; gap: 10px; width: 100%; max-width: 520px; flex-wrap: wrap; }
 .btn {
@@ -1133,6 +1293,7 @@ input[type=text]:focus, textarea:focus, select:focus {
   cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s;
 }
 .btn:hover { border-color: var(--studio-border-strong); }
+.btn:active { transform: scale(0.97); }
 .btn.primary { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; flex: 1; box-shadow: 0 4px 14px rgba(230, 57, 70, 0.35); }
 .btn.secondary { background: var(--studio-surface); border-color: var(--studio-border); }
 .btn.tiny { min-height: 32px; padding: 4px 10px; font-size: 11px; }
@@ -1143,12 +1304,12 @@ input[type=text]:focus, textarea:focus, select:focus {
 .caption-preview .txt { font-size: 13px; line-height: 1.5; color: var(--studio-text-primary); word-break: break-word; }
 
 /* Modal & Toast */
-.modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s; backdrop-filter: blur(4px); }
 .modal-overlay.show { opacity: 1; pointer-events: auto; }
 .modal-container { background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-modal); width: 90%; max-width: 900px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--elevation-3); }
 .modal-header { padding: 16px 24px; border-bottom: 1px solid var(--studio-border); display: flex; justify-content: space-between; align-items: center; }
 .modal-title { font-weight: 800; font-size: 16px; font-family: var(--font-display); }
-.modal-close { background: none; border: none; color: var(--studio-text-muted); font-size: 24px; cursor: pointer; }
+.modal-close { background: none; border: none; color: var(--studio-text-muted); font-size: 24px; cursor: pointer; padding: 4px; }
 .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
 .batch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .batch-card { background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-card); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
@@ -1161,7 +1322,7 @@ input[type=text]:focus, textarea:focus, select:focus {
 .draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 12px; margin-bottom: 6px; font-size: 12px; cursor: pointer; min-height: 40px; }
 .draft-del-btn { background: none; border: none; color: var(--studio-text-muted); cursor: pointer; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
 
-/* Responsive Drawer for Screens < 1024px */
+/* Responsive Mobile Bottom Sheet Drawer & Floating Dock (<1024px) */
 @media (max-width: 1023px) {
   .app {
     grid-template-columns: 1fr;
@@ -1169,45 +1330,104 @@ input[type=text]:focus, textarea:focus, select:focus {
   }
 
   .canvas-area {
-    order: -1;
-    padding: var(--space-4) var(--space-3) var(--space-12);
+    padding: var(--space-4) var(--space-3) calc(80px + var(--safe-bottom));
     height: auto;
     min-height: calc(100vh - 60px);
   }
 
-  .mobile-drawer-toggle-bar {
-    display: block;
-    width: 100%;
-    max-width: 520px;
-    margin-bottom: var(--space-4);
+  .canvas-toolbar {
+    max-width: 100%;
   }
 
+  .actions.desktop-actions {
+    display: flex;
+    max-width: 100%;
+  }
+
+  .caption-preview {
+    max-width: 100%;
+  }
+
+  /* Floating Bottom Mobile Dock */
+  .mobile-dock-bar {
+    display: flex;
+    position: fixed;
+    bottom: max(16px, var(--safe-bottom));
+    left: 16px;
+    right: 16px;
+    z-index: 400;
+    gap: 8px;
+    background: rgba(20, 23, 32, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--studio-border-strong);
+    padding: 8px;
+    border-radius: var(--radius-pill);
+    box-shadow: var(--elevation-3);
+  }
+
+  .dock-btn {
+    flex: 1;
+    min-height: 44px;
+    border: 1px solid var(--studio-border);
+    border-radius: var(--radius-pill);
+    background: var(--studio-surface-elevated);
+    color: var(--studio-text-primary);
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+  .dock-btn:active { transform: scale(0.96); }
+  .dock-btn.primary {
+    background: var(--studio-accent-primary);
+    border-color: var(--studio-accent-primary);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(230, 57, 70, 0.4);
+  }
+
+  /* Slide-up Bottom Sheet Drawer */
   .sidebar {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 80vh;
+    height: 85vh;
     z-index: 500;
     border-radius: var(--radius-modal) var(--radius-modal) 0 0;
     border-top: 1px solid var(--studio-border);
-    transform: translateY(calc(100% - 48px));
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
     box-shadow: var(--elevation-3);
+    padding: var(--space-4) var(--space-4) calc(var(--space-8) + var(--safe-bottom));
   }
 
   .sidebar.drawer-open {
     transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
   }
 
-  .mobile-drawer-handle {
+  .mobile-drawer-header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 8px 0 var(--space-3);
-    cursor: pointer;
+    gap: 8px;
+    padding-bottom: var(--space-3);
+    margin-bottom: var(--space-3);
+    border-bottom: 1px solid var(--studio-border);
+    position: sticky;
+    top: -16px;
+    background: var(--studio-surface);
+    z-index: 10;
+    margin-top: -8px;
   }
 
   .handle-bar {
@@ -1217,20 +1437,39 @@ input[type=text]:focus, textarea:focus, select:focus {
     background: var(--studio-border-strong);
   }
 
-  .handle-txt {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--studio-accent-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+  .drawer-header-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .drawer-header-title span {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    font-weight: 800;
+    color: var(--studio-text-primary);
+  }
+
+  .drawer-close-btn {
+    background: var(--studio-surface-elevated);
+    border: 1px solid var(--studio-border);
+    color: var(--studio-text-secondary);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-xs);
     font-weight: 700;
+    cursor: pointer;
+    min-height: 32px;
   }
 
   .mobile-backdrop {
     display: block;
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 450;
     opacity: 0;
     pointer-events: none;
@@ -1241,5 +1480,55 @@ input[type=text]:focus, textarea:focus, select:focus {
     opacity: 1;
     pointer-events: auto;
   }
+}
+
+/* Mobile Screen Breakpoints (<768px & <480px) */
+@media (max-width: 767px) {
+  input[type=text], textarea, select {
+    font-size: 16px !important; /* Prevents iOS Safari auto-zoom */
+  }
+
+  .modal-container {
+    width: 95%;
+    max-height: 90vh;
+  }
+  .modal-header {
+    padding: 12px 16px;
+  }
+  .modal-body {
+    padding: 16px;
+  }
+  .modal-footer {
+    padding: 12px 16px;
+    flex-direction: column;
+  }
+  .modal-footer .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 479px) {
+  .platform-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .platform-btn {
+    padding: 6px 2px;
+    font-size: 9.5px;
+  }
+  .color-picker-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .picker-item label { font-size: 8.5px; }
+  .hex-val { font-size: 8px; }
+
+  .template-grid, .theme-card-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .actions { flex-direction: column; }
+  .btn { width: 100%; }
 }
 </style>

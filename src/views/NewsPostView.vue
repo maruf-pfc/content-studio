@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { parseWordTokens, toggleWordHighlight } from '../utils/textHelper';
 import { 
   renderNewsCardCanvas, 
@@ -68,6 +68,7 @@ const ratio = ref('1:1');
 const activeThemeId = ref('auto');
 const themeFilter = ref<'all' | 'dark' | 'vibrant' | 'light'>('all');
 const isMobileDrawerOpen = ref(false);
+const canvasFitMode = ref<'fit' | '75' | '100'>('fit');
 
 const newsState = reactive<NewsCardState>({
   headlineText: 'এখানে আপনার সংবাদ *শিরোনাম* লিখুন',
@@ -141,10 +142,24 @@ const wordTokens = computed(() => {
   return parseWordTokens(newsState.headlineText);
 });
 
-/* ---------------- WATCHERS ---------------- */
+/* ---------------- WATCHERS & LIFECYCLE ---------------- */
 watch([newsState, ratio, platform, activeThemeId, photoSrc, logoSrc], () => {
   render();
 }, { deep: true });
+
+watch(isMobileDrawerOpen, (val) => {
+  if (val) {
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = '';
+  }
+});
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && isMobileDrawerOpen.value) {
+    isMobileDrawerOpen.value = false;
+  }
+};
 
 /* ---------------- METHODS ---------------- */
 const showToast = (msg: string) => {
@@ -431,6 +446,12 @@ const render = () => {
 onMounted(() => {
   loadDrafts();
   render();
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  document.body.style.overflow = '';
+  window.removeEventListener('keydown', handleKeyDown);
 });
 </script>
 
@@ -443,11 +464,14 @@ onMounted(() => {
       @click="isMobileDrawerOpen = false"
     ></div>
 
-    <!-- SIDEBAR CONTROLS (Desktop & Mobile Drawer) -->
-    <aside class="sidebar" :class="{ 'drawer-open': isMobileDrawerOpen }">
-      <div class="mobile-drawer-handle" @click="isMobileDrawerOpen = !isMobileDrawerOpen">
-        <span class="handle-bar"></span>
-        <span class="handle-txt">{{ isMobileDrawerOpen ? 'Close Controls' : 'Tap to Open Controls' }}</span>
+    <!-- SIDEBAR CONTROLS (Desktop & Mobile Bottom Sheet Drawer) -->
+    <aside class="sidebar" :class="{ 'drawer-open': isMobileDrawerOpen }" aria-label="News Post Controls">
+      <div class="mobile-drawer-header">
+        <div class="handle-bar"></div>
+        <div class="drawer-header-title">
+          <span>📰 News Studio Controls</span>
+          <button class="drawer-close-btn" @click="isMobileDrawerOpen = false" aria-label="Close controls">✕ Close</button>
+        </div>
       </div>
 
       <div class="mode-title">
@@ -794,21 +818,23 @@ onMounted(() => {
 
     <!-- CANVAS PREVIEW & WORKSTATION -->
     <div class="canvas-area">
-      <!-- Mobile Drawer Open Toggle Bar -->
-      <div class="mobile-drawer-toggle-bar">
-        <button class="btn primary" @click="isMobileDrawerOpen = !isMobileDrawerOpen">
-          ⚡ {{ isMobileDrawerOpen ? 'Close Controls Sheet' : 'Open Controls Drawer' }}
-        </button>
-      </div>
-
-      <div class="canvas-header-hint">
-        <span>💡 Click & Drag canvas to pan photo | Use sidebar slider to zoom</span>
+      <!-- Canvas Zoom & Viewport Bar -->
+      <div class="canvas-toolbar">
+        <div class="canvas-header-hint">
+          <span>💡 Click & Drag canvas to pan photo</span>
+        </div>
+        <div class="zoom-presets">
+          <span class="zoom-label">Preview Zoom:</span>
+          <button class="zoom-chip" :class="{ active: canvasFitMode === 'fit' }" @click="canvasFitMode = 'fit'" aria-label="Fit graphic to screen">🔍 Fit</button>
+          <button class="zoom-chip" :class="{ active: canvasFitMode === '75' }" @click="canvasFitMode = '75'" aria-label="Zoom 75%">75%</button>
+          <button class="zoom-chip" :class="{ active: canvasFitMode === '100' }" @click="canvasFitMode = '100'" aria-label="Zoom 100%">100%</button>
+        </div>
       </div>
 
       <div 
         class="frame-wrap" 
         id="newsFrameWrap"
-        :class="{ 'is-dragging': isDraggingPhoto }"
+        :class="['zoom-' + canvasFitMode, { 'is-dragging': isDraggingPhoto }]"
         @pointerdown="onCanvasPointerDown"
         @pointermove="onCanvasPointerMove"
         @pointerup="onCanvasPointerUp"
@@ -816,10 +842,26 @@ onMounted(() => {
         <canvas ref="mainCanvas"></canvas>
       </div>
 
-      <div class="actions">
+      <div class="actions desktop-actions">
         <button class="btn primary" @click="downloadPNG">⬇ Download PNG Graphic</button>
         <button class="btn secondary" @click="copyImage">⧉ Copy Image</button>
       </div>
+    </div>
+
+    <!-- Mobile Floating Action Bar (Fixed at bottom on <1024px) -->
+    <div class="mobile-dock-bar">
+      <button class="dock-btn primary" @click="isMobileDrawerOpen = true" aria-label="Open Studio Controls">
+        <span class="dock-icon">⚙️</span>
+        <span>Controls</span>
+      </button>
+      <button class="dock-btn secondary" @click="downloadPNG" aria-label="Download Graphic PNG">
+        <span class="dock-icon">⬇</span>
+        <span>Download</span>
+      </button>
+      <button class="dock-btn secondary" @click="copyImage" aria-label="Copy Graphic to Clipboard">
+        <span class="dock-icon">⧉</span>
+        <span>Copy</span>
+      </button>
     </div>
 
     <!-- Toast system -->
@@ -846,7 +888,7 @@ onMounted(() => {
   box-shadow: var(--elevation-1);
 }
 
-.mobile-drawer-handle, .mobile-backdrop, .mobile-drawer-toggle-bar {
+.mobile-drawer-header, .mobile-backdrop, .mobile-dock-bar {
   display: none;
 }
 
@@ -876,10 +918,11 @@ input[type=text], textarea, select {
   width: 100%; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border);
   color: var(--studio-text-primary); padding: 10px 12px; border-radius: var(--radius-sharp); font-size: var(--text-sm);
   font-family: var(--font-body); resize: vertical; box-sizing: border-box; min-height: var(--min-touch-target);
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 input[type=text]:focus, textarea:focus, select:focus {
   border-color: var(--studio-accent-primary);
+  box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.2);
 }
 
 .drop-zone {
@@ -909,16 +952,18 @@ input[type=text]:focus, textarea:focus, select:focus {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
 }
 .platform-btn:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
+.platform-btn:active { transform: scale(0.97); }
 .platform-btn.active { border-color: var(--studio-accent-primary); color: var(--studio-text-primary); background: rgba(230, 57, 70, 0.15); font-weight: 700; }
 
 .ratio-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .ratio-chip {
-  min-height: 36px;
+  min-height: 38px;
   background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-pill);
   padding: 6px 14px; font-size: 11.5px; font-family: var(--font-mono); cursor: pointer; color: var(--studio-text-secondary);
   display: flex; align-items: center; justify-content: center; transition: all 0.15s;
 }
 .ratio-chip:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
+.ratio-chip:active { transform: scale(0.96); }
 .ratio-chip.active { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; font-weight: 700; }
 
 .word-chip-grid { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: 6px; }
@@ -930,6 +975,7 @@ input[type=text]:focus, textarea:focus, select:focus {
   display: flex; align-items: center; justify-content: center;
 }
 .wtoken-chip:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
+.wtoken-chip:active { transform: scale(0.96); }
 .wtoken-chip.highlighted { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; font-weight: 700; }
 
 /* Theme UI */
@@ -938,7 +984,7 @@ input[type=text]:focus, textarea:focus, select:focus {
   border-radius: var(--radius-sharp); border: 1px solid var(--studio-border); margin-bottom: var(--space-3);
 }
 .cat-tab {
-  flex: 1; min-height: 32px; background: transparent; border: none; color: var(--studio-text-secondary);
+  flex: 1; min-height: 34px; background: transparent; border: none; color: var(--studio-text-secondary);
   font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 4px 0;
   border-radius: var(--radius-sharp); cursor: pointer; text-align: center; transition: all 0.15s;
 }
@@ -955,6 +1001,7 @@ input[type=text]:focus, textarea:focus, select:focus {
   display: flex; flex-direction: column; gap: 6px; text-align: left;
 }
 .palette-card:hover { border-color: var(--studio-accent-primary); transform: translateY(-1px); }
+.palette-card:active { transform: scale(0.98); }
 .palette-card.active { border-color: var(--studio-accent-primary); background: rgba(230, 57, 70, 0.12); box-shadow: 0 0 12px rgba(230, 57, 70, 0.25); }
 
 .palette-bar {
@@ -1000,7 +1047,7 @@ input[type=text]:focus, textarea:focus, select:focus {
 
 .quick-swatches { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
 .swatch-dots { display: flex; gap: 6px; }
-.dot-btn { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
+.dot-btn { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
 .dot-btn:hover { transform: scale(1.25); }
 
 .toggle-row { display: flex; align-items: center; justify-content: space-between; min-height: var(--min-touch-target); }
@@ -1014,17 +1061,35 @@ input[type=text]:focus, textarea:focus, select:focus {
   padding: var(--space-6) var(--space-6) var(--space-12); background: var(--studio-bg); overflow-y: auto; height: calc(100vh - 60px); box-sizing: border-box;
 }
 
-.canvas-header-hint { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--studio-text-muted); margin-bottom: var(--space-3); }
+.canvas-toolbar {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 540px; margin-bottom: var(--space-3); gap: 8px; flex-wrap: wrap;
+}
+.canvas-header-hint { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--studio-text-muted); }
+
+.zoom-presets { display: flex; align-items: center; gap: 4px; background: var(--studio-surface); border: 1px solid var(--studio-border); padding: 3px 6px; border-radius: var(--radius-pill); }
+.zoom-label { font-family: var(--font-mono); font-size: 10px; color: var(--studio-text-muted); margin-right: 2px; }
+.zoom-chip {
+  background: transparent; border: none; color: var(--studio-text-secondary); font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+  padding: 4px 10px; border-radius: var(--radius-pill); cursor: pointer; transition: all 0.15s; min-height: 28px;
+}
+.zoom-chip:hover { color: var(--studio-text-primary); }
+.zoom-chip.active { background: var(--studio-accent-primary); color: #fff; }
 
 .frame-wrap {
   max-width: 540px; width: 100%; position: relative; display: flex; justify-content: center;
-  align-items: center; margin-bottom: var(--space-6); cursor: grab; user-select: none; touch-action: none;
+  align-items: center; margin-bottom: var(--space-6); cursor: grab; user-select: none; touch-action: none; transition: max-width 0.25s ease, max-height 0.25s ease;
 }
 .frame-wrap.is-dragging { cursor: grabbing; }
 .frame-wrap canvas {
   width: 100% !important; height: auto !important; border-radius: var(--radius-card);
   box-shadow: var(--elevation-3); border: 1px solid var(--studio-border); display: block;
 }
+
+/* Canvas Viewport Zoom Modes */
+.frame-wrap.zoom-fit { max-height: min(68vh, 620px); }
+.frame-wrap.zoom-fit canvas { max-height: min(68vh, 620px); width: auto !important; max-width: 100%; object-fit: contain; }
+.frame-wrap.zoom-75 { max-width: 405px; }
+.frame-wrap.zoom-100 { max-width: 540px; }
 
 .actions { display: flex; gap: var(--space-3); width: 100%; max-width: 540px; }
 .btn {
@@ -1034,6 +1099,7 @@ input[type=text]:focus, textarea:focus, select:focus {
   cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s;
 }
 .btn:hover { border-color: var(--studio-border-strong); }
+.btn:active { transform: scale(0.97); }
 .btn.primary { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; flex: 1; box-shadow: 0 4px 14px rgba(230, 57, 70, 0.35); }
 .btn.secondary { background: var(--studio-surface); border-color: var(--studio-border); }
 .btn.tiny { min-height: 32px; padding: 4px 10px; font-size: 11px; }
@@ -1044,7 +1110,7 @@ input[type=text]:focus, textarea:focus, select:focus {
 .draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 12px; margin-bottom: 6px; font-size: 12px; cursor: pointer; min-height: 40px; }
 .draft-del-btn { background: none; border: none; color: var(--studio-text-muted); cursor: pointer; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
 
-/* Responsive Drawer for Screens < 1024px */
+/* Responsive Mobile Bottom Sheet Drawer & Floating Dock (<1024px) */
 @media (max-width: 1023px) {
   .news-app {
     grid-template-columns: 1fr;
@@ -1052,45 +1118,100 @@ input[type=text]:focus, textarea:focus, select:focus {
   }
 
   .canvas-area {
-    order: -1;
-    padding: var(--space-4) var(--space-3) var(--space-12);
+    padding: var(--space-4) var(--space-3) calc(80px + var(--safe-bottom));
     height: auto;
     min-height: calc(100vh - 60px);
   }
 
-  .mobile-drawer-toggle-bar {
-    display: block;
-    width: 100%;
-    max-width: 540px;
-    margin-bottom: var(--space-4);
+  .canvas-toolbar {
+    max-width: 100%;
   }
 
+  .actions.desktop-actions {
+    display: flex;
+    max-width: 100%;
+  }
+
+  /* Floating Bottom Mobile Dock */
+  .mobile-dock-bar {
+    display: flex;
+    position: fixed;
+    bottom: max(16px, var(--safe-bottom));
+    left: 16px;
+    right: 16px;
+    z-index: 400;
+    gap: 8px;
+    background: rgba(20, 23, 32, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--studio-border-strong);
+    padding: 8px;
+    border-radius: var(--radius-pill);
+    box-shadow: var(--elevation-3);
+  }
+
+  .dock-btn {
+    flex: 1;
+    min-height: 44px;
+    border: 1px solid var(--studio-border);
+    border-radius: var(--radius-pill);
+    background: var(--studio-surface-elevated);
+    color: var(--studio-text-primary);
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+  .dock-btn:active { transform: scale(0.96); }
+  .dock-btn.primary {
+    background: var(--studio-accent-primary);
+    border-color: var(--studio-accent-primary);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(230, 57, 70, 0.4);
+  }
+
+  /* Slide-up Bottom Sheet Drawer */
   .sidebar {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 80vh;
+    height: 85vh;
     z-index: 500;
     border-radius: var(--radius-modal) var(--radius-modal) 0 0;
     border-top: 1px solid var(--studio-border);
-    transform: translateY(calc(100% - 48px));
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
     box-shadow: var(--elevation-3);
+    padding: var(--space-4) var(--space-4) calc(var(--space-8) + var(--safe-bottom));
   }
 
   .sidebar.drawer-open {
     transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
   }
 
-  .mobile-drawer-handle {
+  .mobile-drawer-header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 8px 0 var(--space-3);
-    cursor: pointer;
+    gap: 8px;
+    padding-bottom: var(--space-3);
+    margin-bottom: var(--space-3);
+    border-bottom: 1px solid var(--studio-border);
+    position: sticky;
+    top: -16px;
+    background: var(--studio-surface);
+    z-index: 10;
+    margin-top: -8px;
   }
 
   .handle-bar {
@@ -1100,20 +1221,39 @@ input[type=text]:focus, textarea:focus, select:focus {
     background: var(--studio-border-strong);
   }
 
-  .handle-txt {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--studio-accent-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+  .drawer-header-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .drawer-header-title span {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    font-weight: 800;
+    color: var(--studio-text-primary);
+  }
+
+  .drawer-close-btn {
+    background: var(--studio-surface-elevated);
+    border: 1px solid var(--studio-border);
+    color: var(--studio-text-secondary);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-xs);
     font-weight: 700;
+    cursor: pointer;
+    min-height: 32px;
   }
 
   .mobile-backdrop {
     display: block;
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 450;
     opacity: 0;
     pointer-events: none;
@@ -1124,5 +1264,37 @@ input[type=text]:focus, textarea:focus, select:focus {
     opacity: 1;
     pointer-events: auto;
   }
+}
+
+/* Mobile Screen Breakpoints (<768px & <480px) */
+@media (max-width: 767px) {
+  input[type=text], textarea, select {
+    font-size: 16px !important; /* Prevents iOS Safari auto-zoom */
+  }
+}
+
+@media (max-width: 479px) {
+  .platform-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .platform-btn {
+    padding: 6px 2px;
+    font-size: 9.5px;
+  }
+  .color-picker-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .picker-item label { font-size: 8.5px; }
+  .hex-val { font-size: 8px; }
+
+  .theme-card-grid, .auto-swatches-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .actions { flex-direction: column; }
+  .btn { width: 100%; }
 }
 </style>
