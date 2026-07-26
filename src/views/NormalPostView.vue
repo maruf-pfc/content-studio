@@ -1141,7 +1141,8 @@ input[type=text]:focus, textarea:focus, select:focus {
   padding: var(--space-6) var(--space-6) var(--space-12); background: var(--studio-bg); overflow-y: auto; height: calc(100vh - 60px); box-sizing: border-box;
 }
 
-.frame-wrap { max-width: 520px; width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; transition: max-width 0.25s ease, max-height 0.25s ease; }
+.frame-wrap { max-width: 520px; width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; touch-action: pan-y; transition: max-width 0.25s ease, max-height 0.25s ease; }
+.frame-wrap.is-dragging { cursor: grabbing; touch-action: none; }
 .frame-wrap canvas { width: 100% !important; height: auto !important; border-radius: var(--radius-card); box-shadow: var(--elevation-3); border: 1px solid var(--studio-border); display: block; }
 
 /* Canvas Viewport Zoom Modes */
@@ -1189,13 +1190,17 @@ input[type=text]:focus, textarea:focus, select:focus {
 @media (max-width: 1023px) {
   .app {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
   }
 
   .canvas-area {
     order: -1;
     padding: var(--space-4) var(--space-3);
     height: auto;
+    overflow-y: visible;
     border-bottom: 1px solid var(--studio-border);
+    touch-action: pan-y;
   }
 
   .actions {
@@ -1208,6 +1213,7 @@ input[type=text]:focus, textarea:focus, select:focus {
 
   .sidebar {
     height: auto;
+    overflow-y: visible;
     border-right: none;
     padding: var(--space-4) var(--space-3) var(--space-12);
   }
