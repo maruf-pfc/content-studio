@@ -1141,15 +1141,15 @@ input[type=text]:focus, textarea:focus, select:focus {
   padding: var(--space-6) var(--space-6) var(--space-12); background: var(--studio-bg); overflow-y: auto; height: calc(100vh - 60px); box-sizing: border-box;
 }
 
-.frame-wrap { max-width: 520px; width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; touch-action: pan-y; transition: max-width 0.25s ease, max-height 0.25s ease; }
+.frame-wrap { max-width: 520px; width: 100%; position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; touch-action: pan-y; transition: max-width 0.25s ease, max-height 0.25s ease; box-sizing: border-box; }
 .frame-wrap.is-dragging { cursor: grabbing; touch-action: none; }
-.frame-wrap canvas { width: 100% !important; height: auto !important; border-radius: var(--radius-card); box-shadow: var(--elevation-3); border: 1px solid var(--studio-border); display: block; }
+.frame-wrap canvas { width: 100% !important; max-width: 100% !important; height: auto !important; border-radius: var(--radius-card); box-shadow: var(--elevation-3); border: 1px solid var(--studio-border); display: block; }
 
 /* Canvas Viewport Zoom Modes */
-.frame-wrap.zoom-fit { max-height: min(68vh, 620px); }
-.frame-wrap.zoom-fit canvas { max-height: min(68vh, 620px); width: auto !important; max-width: 100%; object-fit: contain; }
-.frame-wrap.zoom-75 { max-width: 390px; }
-.frame-wrap.zoom-100 { max-width: 520px; }
+.frame-wrap.zoom-fit { max-height: min(60vh, 560px); }
+.frame-wrap.zoom-fit canvas { max-height: min(60vh, 560px); width: auto !important; max-width: 100% !important; object-fit: contain; }
+.frame-wrap.zoom-75 { max-width: min(390px, 100%); }
+.frame-wrap.zoom-100 { max-width: min(520px, 100%); }
 
 .actions { display: flex; gap: 10px; width: 100%; max-width: 520px; flex-wrap: wrap; }
 .btn {
@@ -1192,12 +1192,15 @@ input[type=text]:focus, textarea:focus, select:focus {
     grid-template-columns: 1fr;
     height: auto;
     min-height: 100vh;
+    overflow-x: hidden;
   }
 
   .canvas-area {
     order: -1;
     padding: var(--space-4) var(--space-3);
     height: auto;
+    width: 100%;
+    box-sizing: border-box;
     overflow-y: visible;
     border-bottom: 1px solid var(--studio-border);
     touch-action: pan-y;
@@ -1213,6 +1216,8 @@ input[type=text]:focus, textarea:focus, select:focus {
 
   .sidebar {
     height: auto;
+    width: 100%;
+    box-sizing: border-box;
     overflow-y: visible;
     border-right: none;
     padding: var(--space-4) var(--space-3) var(--space-12);
@@ -1243,9 +1248,19 @@ input[type=text]:focus, textarea:focus, select:focus {
   }
 }
 
+@media (max-width: 639px) {
+  .actions {
+    flex-direction: column;
+    max-width: 100%;
+  }
+  .actions .btn {
+    width: 100%;
+  }
+}
+
 @media (max-width: 479px) {
   .color-picker-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
   }
   .picker-item label { font-size: 8.5px; }
@@ -1255,8 +1270,5 @@ input[type=text]:focus, textarea:focus, select:focus {
     grid-template-columns: 1fr 1fr;
     gap: 6px;
   }
-
-  .actions { flex-direction: column; }
-  .btn { width: 100%; }
 }
 </style>
