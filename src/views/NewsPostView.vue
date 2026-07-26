@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { parseWordTokens, toggleWordHighlight } from '../utils/textHelper';
 import { 
   renderNewsCardCanvas, 
@@ -67,7 +67,6 @@ const platform = ref('instagram');
 const ratio = ref('1:1');
 const activeThemeId = ref('auto');
 const themeFilter = ref<'all' | 'dark' | 'vibrant' | 'light'>('all');
-const isMobileDrawerOpen = ref(false);
 const canvasFitMode = ref<'fit' | '75' | '100'>('fit');
 
 const newsState = reactive<NewsCardState>({
@@ -147,20 +146,6 @@ watch([newsState, ratio, platform, activeThemeId, photoSrc, logoSrc], () => {
   render();
 }, { deep: true });
 
-watch(isMobileDrawerOpen, (val) => {
-  if (val) {
-    document.body.style.overflow = 'hidden';
-  } else {
-    document.body.style.overflow = '';
-  }
-});
-
-const handleKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape' && isMobileDrawerOpen.value) {
-    isMobileDrawerOpen.value = false;
-  }
-};
-
 /* ---------------- METHODS ---------------- */
 const showToast = (msg: string) => {
   toastMsg.value = msg;
@@ -168,8 +153,18 @@ const showToast = (msg: string) => {
   setTimeout(() => { showToastFlag.value = false; }, 2200);
 };
 
+const scrollToSection = (id: string) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
+
 const handlePhotoUpload = (file: File) => {
-  if (!file.type.startsWith('image/')) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('Please upload a valid image file');
+    return;
+  }
   const reader = new FileReader();
   reader.onload = (e) => {
     const src = e.target?.result as string;
@@ -184,6 +179,7 @@ const handlePhotoUpload = (file: File) => {
       newsState.photoOffsetY = 0;
       newsState.photoScale = 1.0;
       render();
+      showToast('News photo loaded ✓');
     };
     img.src = src;
   };
@@ -208,6 +204,7 @@ const removePhoto = () => {
   extractedPalette.value = null;
   if (photoFileInput.value) photoFileInput.value.value = '';
   render();
+  showToast('Photo removed');
 };
 
 const onLogoFileChange = (e: Event) => {
@@ -221,6 +218,7 @@ const onLogoFileChange = (e: Event) => {
     img.onload = () => {
       logoEl.value = img;
       render();
+      showToast('Logo loaded ✓');
     };
     img.src = src;
   };
@@ -232,6 +230,7 @@ const removeLogo = () => {
   logoEl.value = null;
   if (logoFileInput.value) logoFileInput.value.value = '';
   render();
+  showToast('Logo removed');
 };
 
 /* Interactive Canvas Pan Control */
@@ -446,63 +445,60 @@ const render = () => {
 onMounted(() => {
   loadDrafts();
   render();
-  window.addEventListener('keydown', handleKeyDown);
-});
-
-onUnmounted(() => {
-  document.body.style.overflow = '';
-  window.removeEventListener('keydown', handleKeyDown);
 });
 </script>
 
 <template>
   <div class="news-app">
-    <!-- Mobile Sheet Backdrop -->
-    <div 
-      class="mobile-backdrop" 
-      :class="{ open: isMobileDrawerOpen }" 
-      @click="isMobileDrawerOpen = false"
-    ></div>
-
-    <!-- SIDEBAR CONTROLS (Desktop & Mobile Bottom Sheet Drawer) -->
-    <aside class="sidebar" :class="{ 'drawer-open': isMobileDrawerOpen }" aria-label="News Post Controls">
-      <div class="mobile-drawer-header">
-        <div class="handle-bar"></div>
-        <div class="drawer-header-title">
-          <span>📰 News Studio Controls</span>
-          <button class="drawer-close-btn" @click="isMobileDrawerOpen = false" aria-label="Close controls">✕ Close</button>
-        </div>
-      </div>
-
+    <!-- SIDEBAR CONTROLS -->
+    <aside class="sidebar" aria-label="News Post Controls">
       <div class="mode-title">
         <span>📰 NEWS POST STUDIO</span>
         <span class="mode-badge">Broadcast Newsroom Layout</span>
       </div>
 
+      <!-- Quick Section Jump Chips for Mobile -->
+      <div class="quick-nav-bar" aria-label="Jump to Control Section">
+        <button class="qjump-chip" @click="scrollToSection('section-photo')">📸 Photo</button>
+        <button class="qjump-chip" @click="scrollToSection('section-platform')">📐 Ratio</button>
+        <button class="qjump-chip" @click="scrollToSection('section-headline')">📰 Headline</button>
+        <button class="qjump-chip" @click="scrollToSection('section-theme')">🎨 Theme</button>
+        <button class="qjump-chip" @click="scrollToSection('section-logo')">🏅 Logo</button>
+        <button class="qjump-chip" @click="scrollToSection('section-footer')">✍️ Footer</button>
+        <button class="qjump-chip" @click="scrollToSection('section-drafts')">📁 Drafts</button>
+      </div>
+
       <!-- 1. Photo Zone Upload & Scale -->
-      <section class="section">
+      <section class="section" id="section-photo">
         <h2 class="section-label">1. Photo Zone & Layout</h2>
         
         <label class="field-label" id="photo-upload-label">Upload News Photo</label>
         <div 
           class="drop-zone"
           :class="{ 'drop-active': isDropHover, 'has-file': !!photoSrc }"
+          @dragenter.prevent="isDropHover = true"
           @dragover.prevent="isDropHover = true"
           @dragleave.prevent="isDropHover = false"
           @drop.prevent="onPhotoDrop"
-          aria-labelledby="photo-upload-label"
         >
-          <input type="file" ref="photoFileInput" accept="image/*" style="display:none;" @change="onPhotoFileChange">
-          <div v-if="!photoSrc" class="drop-msg" @click="photoFileInput?.click()" tabindex="0" role="button" aria-label="Upload photo file">
+          <input 
+            type="file" 
+            ref="photoFileInput" 
+            accept="image/*" 
+            class="drop-file-input"
+            @change="onPhotoFileChange"
+            aria-label="Upload news photo file"
+          >
+          <div v-if="!photoSrc" class="drop-msg">
             <span class="drop-icon">📸</span>
-            <strong>Click or Drag Photo Here</strong>
+            <strong>Tap or Drag Photo Here</strong>
             <span class="sub">Auto cover-cropped, zero distortion</span>
           </div>
           <div v-else class="file-loaded-info">
-            <span>✓ Photo Loaded</span>
-            <div style="display:flex; gap:6px;">
-              <button class="btn tiny" @click="photoFileInput?.click()">Change</button>
-              <button class="btn tiny danger" @click="removePhoto">Remove</button>
+            <span class="loaded-txt">✓ Photo Loaded</span>
+            <div class="file-action-btns">
+              <span class="btn tiny">Change</span>
+              <button type="button" class="btn tiny danger" @click.prevent.stop="removePhoto">Remove</button>
             </div>
           </div>
         </div>
@@ -531,7 +527,7 @@ onUnmounted(() => {
       </section>
 
       <!-- 2. Platform & Aspect Ratio -->
-      <section class="section">
+      <section class="section" id="section-platform">
         <h2 class="section-label">2. Platform & Ratio</h2>
         <div class="platform-grid">
           <button 
@@ -561,7 +557,7 @@ onUnmounted(() => {
       </section>
 
       <!-- 3. Headline Text & Word Highlight Editor -->
-      <section class="section">
+      <section class="section" id="section-headline">
         <h2 class="section-label">3. News Headline</h2>
         <label class="field-label" for="headline-input">Headline Text (*word* for accent highlight)</label>
         <textarea id="headline-input" v-model="newsState.headlineText" placeholder="এখানে আপনার সংবাদ শিরোনাম লিখুন..." rows="3"></textarea>
@@ -595,7 +591,7 @@ onUnmounted(() => {
       </section>
 
       <!-- 4. Theme & Colors System -->
-      <section class="section">
+      <section class="section" id="section-theme">
         <h2 class="section-label">4. Theme & Color System</h2>
 
         <!-- Filter Category Tabs -->
@@ -732,7 +728,7 @@ onUnmounted(() => {
       </section>
 
       <!-- 5. Brand Logo Badge Controls -->
-      <section class="section">
+      <section class="section" id="section-logo">
         <h2 class="section-label">5. Brand Logo Badge</h2>
         <div class="toggle-row">
           <label class="field-label" style="margin:0;">Show Logo Badge</label>
@@ -741,12 +737,12 @@ onUnmounted(() => {
 
         <div v-if="newsState.logoVisible" style="margin-top:12px;">
           <label class="field-label">Upload Brand Logo</label>
-          <div style="display:flex; gap:8px;">
-            <input type="file" ref="logoFileInput" accept="image/*" style="display:none;" @change="onLogoFileChange">
-            <button class="btn" @click="logoFileInput?.click()" style="padding:6px 12px; font-size:12px; flex:1;">
-              {{ logoSrc ? '✓ Change Logo' : 'Upload Logo Image' }}
+          <div class="logo-upload-box">
+            <input type="file" ref="logoFileInput" accept="image/*" class="drop-file-input" @change="onLogoFileChange" aria-label="Upload Brand Logo">
+            <button class="btn" style="width:100%; pointer-events:none;">
+              {{ logoSrc ? '✓ Change Logo' : 'Tap to Upload Logo Image' }}
             </button>
-            <button v-if="logoSrc" class="btn tiny danger" @click="removeLogo">Remove</button>
+            <button v-if="logoSrc" type="button" class="btn tiny danger" style="position:relative; z-index:10; margin-top:6px; width:100%;" @click.stop.prevent="removeLogo">Remove Logo</button>
           </div>
 
           <label class="field-label" for="logo-anchor-select">Logo Position Preset</label>
@@ -788,7 +784,7 @@ onUnmounted(() => {
       </section>
 
       <!-- 6. Footer / Copyright Controls -->
-      <section class="section">
+      <section class="section" id="section-footer">
         <h2 class="section-label">6. Footer / Copyright</h2>
         <input type="text" v-model="newsState.copyrightText" placeholder="e.g. © TelepathicThoughts" aria-label="Copyright Text">
         <div style="display:flex; gap:8px; margin-top:8px;">
@@ -798,7 +794,7 @@ onUnmounted(() => {
       </section>
 
       <!-- 7. Saved Drafts -->
-      <section class="section">
+      <section class="section" id="section-drafts">
         <h2 class="section-label">7. Saved News Drafts</h2>
         <div style="display:flex; gap:8px; margin-bottom:8px;">
           <input type="text" v-model="draftName" placeholder="News draft name..." style="flex:1;" aria-label="Draft Name">
@@ -842,26 +838,10 @@ onUnmounted(() => {
         <canvas ref="mainCanvas"></canvas>
       </div>
 
-      <div class="actions desktop-actions">
+      <div class="actions">
         <button class="btn primary" @click="downloadPNG">⬇ Download PNG Graphic</button>
         <button class="btn secondary" @click="copyImage">⧉ Copy Image</button>
       </div>
-    </div>
-
-    <!-- Mobile Floating Action Bar (Fixed at bottom on <1024px) -->
-    <div class="mobile-dock-bar">
-      <button class="dock-btn primary" @click="isMobileDrawerOpen = true" aria-label="Open Studio Controls">
-        <span class="dock-icon">⚙️</span>
-        <span>Controls</span>
-      </button>
-      <button class="dock-btn secondary" @click="downloadPNG" aria-label="Download Graphic PNG">
-        <span class="dock-icon">⬇</span>
-        <span>Download</span>
-      </button>
-      <button class="dock-btn secondary" @click="copyImage" aria-label="Copy Graphic to Clipboard">
-        <span class="dock-icon">⧉</span>
-        <span>Copy</span>
-      </button>
     </div>
 
     <!-- Toast system -->
@@ -888,7 +868,7 @@ onUnmounted(() => {
   box-shadow: var(--elevation-1);
 }
 
-.mobile-drawer-header, .mobile-backdrop, .mobile-dock-bar {
+.quick-nav-bar {
   display: none;
 }
 
@@ -898,7 +878,7 @@ onUnmounted(() => {
 .mode-title span { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 900; color: var(--studio-text-primary); }
 .mode-badge { font-family: var(--font-mono); font-size: 10px; color: var(--studio-accent-primary); letter-spacing: 0.08em; text-transform: uppercase; }
 
-.section { margin-bottom: var(--space-6); }
+.section { margin-bottom: var(--space-6); scroll-margin-top: 70px; }
 .section-label {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -925,18 +905,41 @@ input[type=text]:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.2);
 }
 
+/* 100% Reliable File Dropzone with Overlay File Input */
 .drop-zone {
-  border: 2px dashed var(--studio-border-strong); border-radius: var(--radius-card); padding: var(--space-4);
-  text-align: center; background: var(--studio-surface-elevated); transition: all 0.2s ease; cursor: pointer;
-  min-height: 80px; display: flex; align-items: center; justify-content: center;
+  position: relative;
+  border: 2px dashed var(--studio-border-strong);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  text-align: center;
+  background: var(--studio-surface-elevated);
+  transition: all 0.2s ease;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
+.drop-zone:hover { border-color: var(--studio-accent-primary); }
 .drop-zone.drop-active { border-color: var(--studio-accent-primary); background: rgba(230, 57, 70, 0.12); }
 .drop-zone.has-file { border-style: solid; border-color: var(--studio-border); padding: var(--space-3); }
-.drop-msg { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--studio-text-secondary); }
+
+.drop-file-input {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 5;
+}
+
+.drop-msg { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--studio-text-secondary); pointer-events: none; }
 .drop-icon { font-size: 24px; }
 .sub { font-size: 11px; color: var(--studio-text-muted); }
 
 .file-loaded-info { display: flex; justify-content: space-between; align-items: center; font-size: var(--text-sm); font-weight: 700; color: var(--studio-text-primary); width: 100%; }
+.file-action-btns { display: flex; gap: 6px; position: relative; z-index: 10; }
+
+.logo-upload-box { position: relative; width: 100%; }
 
 .photo-controls { margin-top: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
 .slider-field { display: flex; flex-direction: column; gap: 4px; }
@@ -1110,163 +1113,65 @@ input[type=text]:focus, textarea:focus, select:focus {
 .draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 12px; margin-bottom: 6px; font-size: 12px; cursor: pointer; min-height: 40px; }
 .draft-del-btn { background: none; border: none; color: var(--studio-text-muted); cursor: pointer; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
 
-/* Responsive Mobile Bottom Sheet Drawer & Floating Dock (<1024px) */
+/* Responsive Mobile Layout Flow (<1024px) */
 @media (max-width: 1023px) {
   .news-app {
     grid-template-columns: 1fr;
-    position: relative;
   }
 
   .canvas-area {
-    padding: var(--space-4) var(--space-3) calc(80px + var(--safe-bottom));
+    order: -1;
+    padding: var(--space-4) var(--space-3);
     height: auto;
-    min-height: calc(100vh - 60px);
+    border-bottom: 1px solid var(--studio-border);
   }
 
   .canvas-toolbar {
     max-width: 100%;
   }
 
-  .actions.desktop-actions {
-    display: flex;
+  .actions {
     max-width: 100%;
   }
 
-  /* Floating Bottom Mobile Dock */
-  .mobile-dock-bar {
-    display: flex;
-    position: fixed;
-    bottom: max(16px, var(--safe-bottom));
-    left: 16px;
-    right: 16px;
-    z-index: 400;
-    gap: 8px;
-    background: rgba(20, 23, 32, 0.88);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--studio-border-strong);
-    padding: 8px;
-    border-radius: var(--radius-pill);
-    box-shadow: var(--elevation-3);
-  }
-
-  .dock-btn {
-    flex: 1;
-    min-height: 44px;
-    border: 1px solid var(--studio-border);
-    border-radius: var(--radius-pill);
-    background: var(--studio-surface-elevated);
-    color: var(--studio-text-primary);
-    font-family: var(--font-body);
-    font-size: var(--text-xs);
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: all 0.15s;
-  }
-  .dock-btn:active { transform: scale(0.96); }
-  .dock-btn.primary {
-    background: var(--studio-accent-primary);
-    border-color: var(--studio-accent-primary);
-    color: #ffffff;
-    box-shadow: 0 4px 14px rgba(230, 57, 70, 0.4);
-  }
-
-  /* Slide-up Bottom Sheet Drawer */
   .sidebar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 85vh;
-    z-index: 500;
-    border-radius: var(--radius-modal) var(--radius-modal) 0 0;
-    border-top: 1px solid var(--studio-border);
-    transform: translateY(100%);
-    opacity: 0;
-    pointer-events: none;
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
-    box-shadow: var(--elevation-3);
-    padding: var(--space-4) var(--space-4) calc(var(--space-8) + var(--safe-bottom));
+    height: auto;
+    border-right: none;
+    padding: var(--space-4) var(--space-3) var(--space-12);
   }
 
-  .sidebar.drawer-open {
-    transform: translateY(0);
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .mobile-drawer-header {
+  .quick-nav-bar {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding-bottom: var(--space-3);
-    margin-bottom: var(--space-3);
-    border-bottom: 1px solid var(--studio-border);
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: var(--space-4);
     position: sticky;
-    top: -16px;
+    top: 56px;
     background: var(--studio-surface);
-    z-index: 10;
+    z-index: 20;
+    padding-top: 8px;
     margin-top: -8px;
   }
 
-  .handle-bar {
-    width: 40px;
-    height: 4px;
-    border-radius: var(--radius-pill);
-    background: var(--studio-border-strong);
-  }
-
-  .drawer-header-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-  }
-
-  .drawer-header-title span {
-    font-family: var(--font-display);
-    font-size: var(--text-base);
-    font-weight: 800;
-    color: var(--studio-text-primary);
-  }
-
-  .drawer-close-btn {
+  .qjump-chip {
     background: var(--studio-surface-elevated);
     border: 1px solid var(--studio-border);
     color: var(--studio-text-secondary);
-    padding: 4px 12px;
-    border-radius: var(--radius-pill);
-    font-size: var(--text-xs);
+    font-family: var(--font-mono);
+    font-size: 11px;
     font-weight: 700;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
     cursor: pointer;
-    min-height: 32px;
+    white-space: nowrap;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
   }
-
-  .mobile-backdrop {
-    display: block;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    z-index: 450;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
-  }
-
-  .mobile-backdrop.open {
-    opacity: 1;
-    pointer-events: auto;
-  }
+  .qjump-chip:hover { color: var(--studio-text-primary); border-color: var(--studio-border-strong); }
 }
 
-/* Mobile Screen Breakpoints (<768px & <480px) */
 @media (max-width: 767px) {
   input[type=text], textarea, select {
     font-size: 16px !important; /* Prevents iOS Safari auto-zoom */

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { fitFontSize, drawRichLine } from '../utils/textHelper';
 
 /* ---------------- DATA PRESETS ---------------- */
@@ -137,7 +137,6 @@ const state = reactive({
 });
 
 const themeCategoryFilter = ref<'all' | 'dark' | 'vibrant' | 'light'>('all');
-const isMobileDrawerOpen = ref(false);
 const canvasFitMode = ref<'fit' | '75' | '100'>('fit');
 
 type DraftItem = typeof state & {
@@ -184,7 +183,8 @@ const captionWithHashtags = computed(() => {
 });
 
 const effectiveColors = computed(() => {
-  const t = currentTheme.value ?? THEMES[0];
+  const fallback = THEMES[0];
+  const t = currentTheme.value ?? fallback;
   return {
     bg: state.customBg || (t ? t.bg : '#14121A'),
     accent: state.customAccent || (t ? t.accent : '#7C5CFC'),
@@ -197,26 +197,18 @@ watch([state, bgImageSrc, logoImageSrc], () => {
   render();
 }, { deep: true });
 
-watch(isMobileDrawerOpen, (val) => {
-  if (val) {
-    document.body.style.overflow = 'hidden';
-  } else {
-    document.body.style.overflow = '';
-  }
-});
-
-const handleKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') {
-    if (isMobileDrawerOpen.value) isMobileDrawerOpen.value = false;
-    if (showBatchModal.value) showBatchModal.value = false;
-  }
-};
-
 /* ---------------- METHODS ---------------- */
 const showToast = (msg: string) => {
   toastMsg.value = msg;
   showToastFlag.value = true;
   setTimeout(() => { showToastFlag.value = false; }, 2200);
+};
+
+const scrollToSection = (id: string) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 };
 
 const copyCaption = async () => {
@@ -250,6 +242,7 @@ const handleBgUpload = (e: Event) => {
     img.onload = () => {
       bgImageEl.value = img;
       render();
+      showToast('Background photo loaded ✓');
     };
     img.src = src;
   };
@@ -261,6 +254,7 @@ const removeBgImage = () => {
   bgImageEl.value = null;
   if (bgFileInput.value) bgFileInput.value.value = '';
   render();
+  showToast('Background photo removed');
 };
 
 const handleLogoUpload = (e: Event) => {
@@ -274,6 +268,7 @@ const handleLogoUpload = (e: Event) => {
     img.onload = () => {
       logoImageEl.value = img;
       render();
+      showToast('Logo loaded ✓');
     };
     img.src = src;
   };
@@ -285,6 +280,7 @@ const removeLogoImage = () => {
   logoImageEl.value = null;
   if (logoFileInput.value) logoFileInput.value.value = '';
   render();
+  showToast('Logo removed');
 };
 
 const selectTheme = (th: Theme) => {
@@ -666,36 +662,26 @@ const copyImage = async () => {
 onMounted(() => {
   loadDrafts();
   render();
-  window.addEventListener('keydown', handleKeyDown);
-});
-
-onUnmounted(() => {
-  document.body.style.overflow = '';
-  window.removeEventListener('keydown', handleKeyDown);
 });
 </script>
 
 <template>
   <div class="app">
-    <!-- Mobile Sheet Backdrop -->
-    <div 
-      class="mobile-backdrop" 
-      :class="{ open: isMobileDrawerOpen }" 
-      @click="isMobileDrawerOpen = false"
-    ></div>
-
-    <!-- SIDEBAR CONTROLS (Desktop & Mobile Bottom Sheet Drawer) -->
-    <aside class="sidebar" :class="{ 'drawer-open': isMobileDrawerOpen }" aria-label="Editor Controls">
-      <div class="mobile-drawer-header">
-        <div class="handle-bar"></div>
-        <div class="drawer-header-title">
-          <span>📝 Normal Studio Controls</span>
-          <button class="drawer-close-btn" @click="isMobileDrawerOpen = false" aria-label="Close controls">✕ Close</button>
-        </div>
+    <!-- SIDEBAR CONTROLS -->
+    <aside class="sidebar" aria-label="Editor Controls">
+      <!-- Quick Section Jump Chips for Mobile -->
+      <div class="quick-nav-bar" aria-label="Jump to Control Section">
+        <button class="qjump-chip" @click="scrollToSection('norm-section-ratio')">📐 Ratio</button>
+        <button class="qjump-chip" @click="scrollToSection('norm-section-template')">🎯 Template</button>
+        <button class="qjump-chip" @click="scrollToSection('norm-section-content')">📝 Copy</button>
+        <button class="qjump-chip" @click="scrollToSection('norm-section-theme')">🎨 Theme</button>
+        <button class="qjump-chip" @click="scrollToSection('norm-section-bg')">🖼️ Bg Photo</button>
+        <button class="qjump-chip" @click="scrollToSection('norm-section-watermark')">✍️ Caption</button>
+        <button class="qjump-chip" @click="scrollToSection('norm-section-drafts')">📁 Drafts</button>
       </div>
 
       <!-- 1. Platform & Format -->
-      <section class="section">
+      <section class="section" id="norm-section-ratio">
         <h2 class="section-label">1. Target Platform & Aspect Ratio</h2>
         
         <div class="platform-grid">
@@ -726,7 +712,7 @@ onUnmounted(() => {
       </section>
 
       <!-- 2. Layout Template Selection -->
-      <section class="section">
+      <section class="section" id="norm-section-template">
         <h2 class="section-label">2. Layout Template</h2>
         <div class="template-grid">
           <div 
@@ -745,7 +731,7 @@ onUnmounted(() => {
       </section>
 
       <!-- 3. Content Inputs -->
-      <section class="section">
+      <section class="section" id="norm-section-content">
         <h2 class="section-label">3. Content & Copywriting</h2>
         
         <div v-if="state.template === 'stat'">
@@ -786,7 +772,7 @@ onUnmounted(() => {
       </section>
 
       <!-- 4. Theme & Typography -->
-      <section class="section">
+      <section class="section" id="norm-section-theme">
         <h2 class="section-label">4. Theme & Color System</h2>
         
         <div class="theme-cat-tabs">
@@ -883,7 +869,7 @@ onUnmounted(() => {
       </section>
 
       <!-- 5. Advanced Backgrounds & Media Overlays -->
-      <section class="section">
+      <section class="section" id="norm-section-bg">
         <h2 class="section-label">5. Backgrounds & Overlay Media</h2>
         
         <label class="field-label" for="bg-type-select">Background Style</label>
@@ -930,12 +916,12 @@ onUnmounted(() => {
 
         <!-- Custom Background Image -->
         <label class="field-label" style="margin-top:12px;">Custom Background Photo</label>
-        <div style="display:flex; gap:8px;">
-          <input type="file" ref="bgFileInput" accept="image/*" style="display:none;" @change="handleBgUpload">
-          <button class="btn" @click="bgFileInput?.click()" style="padding:6px 12px; font-size:12px; flex:1;">
-            {{ bgImageSrc ? '✓ Change Photo' : 'Upload Background Image' }}
+        <div class="file-input-box">
+          <input type="file" ref="bgFileInput" accept="image/*" class="drop-file-input" @change="handleBgUpload" aria-label="Upload Background Photo">
+          <button class="btn" style="width:100%; pointer-events:none;">
+            {{ bgImageSrc ? '✓ Change Background Photo' : 'Tap to Upload Background Image' }}
           </button>
-          <button v-if="bgImageSrc" class="btn tiny danger" @click="removeBgImage">Remove</button>
+          <button v-if="bgImageSrc" type="button" class="btn tiny danger" style="position:relative; z-index:10; margin-top:6px; width:100%;" @click.stop.prevent="removeBgImage">Remove Photo</button>
         </div>
 
         <div v-if="bgImageSrc" style="margin-top:10px;">
@@ -957,17 +943,17 @@ onUnmounted(() => {
 
         <!-- Brand Logo Overlay -->
         <label class="field-label" style="margin-top:12px;">Brand Watermark Logo</label>
-        <div style="display:flex; gap:8px;">
-          <input type="file" ref="logoFileInput" accept="image/*" style="display:none;" @change="handleLogoUpload">
-          <button class="btn" @click="logoFileInput?.click()" style="padding:6px 12px; font-size:12px; flex:1;">
-            {{ logoImageSrc ? '✓ Change Logo' : 'Upload Logo' }}
+        <div class="file-input-box">
+          <input type="file" ref="logoFileInput" accept="image/*" class="drop-file-input" @change="handleLogoUpload" aria-label="Upload Logo">
+          <button class="btn" style="width:100%; pointer-events:none;">
+            {{ logoImageSrc ? '✓ Change Brand Logo' : 'Tap to Upload Logo Image' }}
           </button>
-          <button v-if="logoImageSrc" class="btn tiny danger" @click="removeLogoImage">Remove</button>
+          <button v-if="logoImageSrc" type="button" class="btn tiny danger" style="position:relative; z-index:10; margin-top:6px; width:100%;" @click.stop.prevent="removeLogoImage">Remove Logo</button>
         </div>
       </section>
 
       <!-- 6. Watermark & Social Captions -->
-      <section class="section">
+      <section class="section" id="norm-section-watermark">
         <h2 class="section-label">6. Watermark & Caption Tool</h2>
         
         <div class="toggle-row">
@@ -996,7 +982,7 @@ onUnmounted(() => {
       </section>
 
       <!-- 7. Saved Drafts -->
-      <section class="section">
+      <section class="section" id="norm-section-drafts">
         <h2 class="section-label">7. Saved Drafts</h2>
         <div style="display:flex; gap:8px; margin-bottom:8px;">
           <input type="text" v-model="draftName" placeholder="Draft name..." style="flex:1;" aria-label="Draft Name">
@@ -1038,7 +1024,7 @@ onUnmounted(() => {
         <canvas ref="mainCanvas"></canvas>
       </div>
 
-      <div class="actions desktop-actions">
+      <div class="actions">
         <button class="btn primary" @click="downloadPNG">⬇ Download PNG Graphic</button>
         <button class="btn secondary" @click="copyImage">⧉ Copy Image</button>
         <button class="btn secondary" @click="openBatchModal">⚡ Batch All Formats</button>
@@ -1051,22 +1037,6 @@ onUnmounted(() => {
         </div>
         <div class="txt">{{ captionWithHashtags }}</div>
       </div>
-    </div>
-
-    <!-- Mobile Floating Action Bar (Fixed at bottom on <1024px) -->
-    <div class="mobile-dock-bar">
-      <button class="dock-btn primary" @click="isMobileDrawerOpen = true" aria-label="Open Studio Controls">
-        <span class="dock-icon">⚙️</span>
-        <span>Controls</span>
-      </button>
-      <button class="dock-btn secondary" @click="downloadPNG" aria-label="Download Graphic PNG">
-        <span class="dock-icon">⬇</span>
-        <span>Download</span>
-      </button>
-      <button class="dock-btn secondary" @click="copyCaption" aria-label="Copy Caption Copywriting">
-        <span class="dock-icon">📋</span>
-        <span>Caption</span>
-      </button>
     </div>
 
     <!-- Batch Export Modal -->
@@ -1118,11 +1088,11 @@ onUnmounted(() => {
   box-shadow: var(--elevation-1);
 }
 
-.mobile-drawer-header, .mobile-backdrop, .mobile-dock-bar {
+.quick-nav-bar {
   display: none;
 }
 
-.section { margin-bottom: var(--space-6); }
+.section { margin-bottom: var(--space-6); scroll-margin-top: 70px; }
 .section-label {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -1147,6 +1117,15 @@ input[type=text], textarea, select {
 input[type=text]:focus, textarea:focus, select:focus {
   border-color: var(--studio-accent-primary);
   box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.2);
+}
+
+.file-input-box { position: relative; width: 100%; }
+.drop-file-input {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 5;
 }
 
 .platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
@@ -1322,25 +1301,24 @@ input[type=text]:focus, textarea:focus, select:focus {
 .draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 12px; margin-bottom: 6px; font-size: 12px; cursor: pointer; min-height: 40px; }
 .draft-del-btn { background: none; border: none; color: var(--studio-text-muted); cursor: pointer; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
 
-/* Responsive Mobile Bottom Sheet Drawer & Floating Dock (<1024px) */
+/* Responsive Mobile Layout Flow (<1024px) */
 @media (max-width: 1023px) {
   .app {
     grid-template-columns: 1fr;
-    position: relative;
   }
 
   .canvas-area {
-    padding: var(--space-4) var(--space-3) calc(80px + var(--safe-bottom));
+    order: -1;
+    padding: var(--space-4) var(--space-3);
     height: auto;
-    min-height: calc(100vh - 60px);
+    border-bottom: 1px solid var(--studio-border);
   }
 
   .canvas-toolbar {
     max-width: 100%;
   }
 
-  .actions.desktop-actions {
-    display: flex;
+  .actions {
     max-width: 100%;
   }
 
@@ -1348,141 +1326,44 @@ input[type=text]:focus, textarea:focus, select:focus {
     max-width: 100%;
   }
 
-  /* Floating Bottom Mobile Dock */
-  .mobile-dock-bar {
-    display: flex;
-    position: fixed;
-    bottom: max(16px, var(--safe-bottom));
-    left: 16px;
-    right: 16px;
-    z-index: 400;
-    gap: 8px;
-    background: rgba(20, 23, 32, 0.88);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--studio-border-strong);
-    padding: 8px;
-    border-radius: var(--radius-pill);
-    box-shadow: var(--elevation-3);
-  }
-
-  .dock-btn {
-    flex: 1;
-    min-height: 44px;
-    border: 1px solid var(--studio-border);
-    border-radius: var(--radius-pill);
-    background: var(--studio-surface-elevated);
-    color: var(--studio-text-primary);
-    font-family: var(--font-body);
-    font-size: var(--text-xs);
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: all 0.15s;
-  }
-  .dock-btn:active { transform: scale(0.96); }
-  .dock-btn.primary {
-    background: var(--studio-accent-primary);
-    border-color: var(--studio-accent-primary);
-    color: #ffffff;
-    box-shadow: 0 4px 14px rgba(230, 57, 70, 0.4);
-  }
-
-  /* Slide-up Bottom Sheet Drawer */
   .sidebar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 85vh;
-    z-index: 500;
-    border-radius: var(--radius-modal) var(--radius-modal) 0 0;
-    border-top: 1px solid var(--studio-border);
-    transform: translateY(100%);
-    opacity: 0;
-    pointer-events: none;
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
-    box-shadow: var(--elevation-3);
-    padding: var(--space-4) var(--space-4) calc(var(--space-8) + var(--safe-bottom));
+    height: auto;
+    border-right: none;
+    padding: var(--space-4) var(--space-3) var(--space-12);
   }
 
-  .sidebar.drawer-open {
-    transform: translateY(0);
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .mobile-drawer-header {
+  .quick-nav-bar {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding-bottom: var(--space-3);
-    margin-bottom: var(--space-3);
-    border-bottom: 1px solid var(--studio-border);
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: var(--space-4);
     position: sticky;
-    top: -16px;
+    top: 56px;
     background: var(--studio-surface);
-    z-index: 10;
+    z-index: 20;
+    padding-top: 8px;
     margin-top: -8px;
   }
 
-  .handle-bar {
-    width: 40px;
-    height: 4px;
-    border-radius: var(--radius-pill);
-    background: var(--studio-border-strong);
-  }
-
-  .drawer-header-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-  }
-
-  .drawer-header-title span {
-    font-family: var(--font-display);
-    font-size: var(--text-base);
-    font-weight: 800;
-    color: var(--studio-text-primary);
-  }
-
-  .drawer-close-btn {
+  .qjump-chip {
     background: var(--studio-surface-elevated);
     border: 1px solid var(--studio-border);
     color: var(--studio-text-secondary);
-    padding: 4px 12px;
-    border-radius: var(--radius-pill);
-    font-size: var(--text-xs);
+    font-family: var(--font-mono);
+    font-size: 11px;
     font-weight: 700;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
     cursor: pointer;
-    min-height: 32px;
+    white-space: nowrap;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
   }
-
-  .mobile-backdrop {
-    display: block;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    z-index: 450;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
-  }
-
-  .mobile-backdrop.open {
-    opacity: 1;
-    pointer-events: auto;
-  }
+  .qjump-chip:hover { color: var(--studio-text-primary); border-color: var(--studio-border-strong); }
 }
 
-/* Mobile Screen Breakpoints (<768px & <480px) */
 @media (max-width: 767px) {
   input[type=text], textarea, select {
     font-size: 16px !important; /* Prevents iOS Safari auto-zoom */
