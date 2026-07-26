@@ -1192,7 +1192,10 @@ input[type=text]:focus, textarea:focus, select:focus {
     grid-template-columns: 1fr;
     height: auto;
     min-height: 100vh;
+    width: 100%;
+    max-width: 100vw;
     overflow-x: hidden;
+    box-sizing: border-box;
   }
 
   .canvas-area {
@@ -1200,24 +1203,32 @@ input[type=text]:focus, textarea:focus, select:focus {
     padding: var(--space-4) var(--space-3);
     height: auto;
     width: 100%;
+    max-width: 100vw;
     box-sizing: border-box;
+    overflow-x: hidden;
     overflow-y: visible;
     border-bottom: 1px solid var(--studio-border);
     touch-action: pan-y;
   }
 
   .actions {
+    width: 100%;
     max-width: 100%;
+    box-sizing: border-box;
   }
 
   .caption-preview {
+    width: 100%;
     max-width: 100%;
+    box-sizing: border-box;
   }
 
   .sidebar {
     height: auto;
     width: 100%;
+    max-width: 100vw;
     box-sizing: border-box;
+    overflow-x: hidden;
     overflow-y: visible;
     border-right: none;
     padding: var(--space-4) var(--space-3) var(--space-12);

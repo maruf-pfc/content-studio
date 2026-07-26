@@ -32,15 +32,22 @@ import TopNav from './components/TopNav.vue';
 
 .studio-root {
   min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
   display: flex;
   flex-direction: column;
   background: var(--studio-bg);
   color: var(--studio-text-primary);
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .studio-main {
   flex: 1;
   width: 100%;
+  max-width: 100vw;
   position: relative;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 </style>

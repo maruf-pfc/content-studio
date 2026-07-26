@@ -169,32 +169,34 @@ const navigateTo = (path: string) => {
   font-size: 15px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .top-nav {
-    padding: 0 var(--space-3);
+    padding: 0 var(--space-2);
     padding-top: var(--safe-top);
     height: calc(56px + var(--safe-top));
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .nav-brand {
+    gap: var(--space-2);
+    padding: 2px 4px;
   }
   .nav-sub { display: none; }
+  .brand-txt { font-size: 13px; }
+  .nav-mark { width: 30px; height: 30px; font-size: 14px; }
+  .nav-tabs { padding: 2px; }
   .nav-tab {
     min-width: auto;
-    padding: var(--space-2) var(--space-3);
-    font-size: var(--text-xs);
+    padding: 4px 8px;
+    font-size: 11px;
+    min-height: 36px;
+    gap: 4px;
   }
 }
 
-@media (max-width: 400px) {
-  .brand-txt {
-    font-size: 13px;
-  }
-  .nav-mark {
-    width: 30px;
-    height: 30px;
-    font-size: 14px;
-  }
-  .nav-tab {
-    padding: 4px 8px;
-    font-size: 11px;
-  }
+@media (max-width: 360px) {
+  .brand-txt { display: none; }
 }
 </style>
