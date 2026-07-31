@@ -15,7 +15,7 @@ const navigateTo = (path: string) => {
       <div class="nav-mark" aria-hidden="true">T</div>
       <div class="nav-titles">
         <div class="nav-name">
-          CONTENT STUDIO
+          <span class="brand-txt">CONTENT STUDIO</span>
           <span class="live-dot" title="Broadcast Mode Active"></span>
         </div>
         <div class="nav-sub">BROADCAST MEDIA WORKSTATION</div>
@@ -29,7 +29,8 @@ const navigateTo = (path: string) => {
         @click="navigateTo('/')"
         aria-label="Normal Post Generator"
       >
-        <span class="tab-icon" aria-hidden="true">📝</span> Normal Post
+        <span class="tab-icon" aria-hidden="true">📝</span>
+        <span class="tab-txt">Normal Post</span>
       </button>
 
       <button 
@@ -38,7 +39,8 @@ const navigateTo = (path: string) => {
         @click="navigateTo('/news')"
         aria-label="News Post Card Generator"
       >
-        <span class="tab-icon" aria-hidden="true">📰</span> News Post
+        <span class="tab-icon" aria-hidden="true">📰</span>
+        <span class="tab-txt">News Post</span>
       </button>
     </nav>
   </header>
@@ -153,6 +155,10 @@ const navigateTo = (path: string) => {
   color: var(--studio-text-primary);
 }
 
+.nav-tab:active {
+  transform: scale(0.96);
+}
+
 .nav-tab.active {
   background: var(--studio-accent-primary);
   color: #FFFFFF;
@@ -163,9 +169,34 @@ const navigateTo = (path: string) => {
   font-size: 15px;
 }
 
-@media (max-width: 640px) {
-  .top-nav { padding: 0 var(--space-3); }
+@media (max-width: 767px) {
+  .top-nav {
+    padding: 0 var(--space-2);
+    padding-top: var(--safe-top);
+    height: calc(56px + var(--safe-top));
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .nav-brand {
+    gap: var(--space-2);
+    padding: 2px 4px;
+  }
   .nav-sub { display: none; }
-  .nav-tab { min-width: auto; padding: var(--space-2) var(--space-3); font-size: var(--text-xs); }
+  .brand-txt { font-size: 13px; }
+  .nav-mark { width: 30px; height: 30px; font-size: 14px; }
+  .nav-tabs { padding: 2px; }
+  .nav-tab {
+    min-width: auto;
+    padding: 4px 8px;
+    font-size: 11px;
+    min-height: 36px;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 360px) {
+  .brand-txt { display: none; }
 }
 </style>

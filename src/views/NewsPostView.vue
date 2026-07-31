@@ -8,14 +8,14 @@ import {
   type ExtractedPalette 
 } from '../utils/newsCardCanvas';
 
-/* ---------------- DATA PRESETS ---------------- */
-interface Platform {
-  id: string;
-  label: string;
-  icon: string;
-  ratios: string[];
-}
+import StudioCard from '../components/StudioCard.vue';
+import PhotoDropzone from '../components/PhotoDropzone.vue';
+import PlatformRatioSelector, { type Platform } from '../components/PlatformRatioSelector.vue';
+import CanvasToolbar from '../components/CanvasToolbar.vue';
+import QuickNavPills from '../components/QuickNavPills.vue';
+import ToastNotification from '../components/ToastNotification.vue';
 
+/* ---------------- DATA PRESETS ---------------- */
 const PLATFORMS: Platform[] = [
   { id: 'instagram', label: 'Instagram', icon: '◪', ratios: ['1:1', '4:5', '9:16'] },
   { id: 'facebook', label: 'Facebook', icon: '▣', ratios: ['1:1', '9:16', '16:9'] },
@@ -62,12 +62,22 @@ const PRESET_ACCENTS = [
   '#FFE600', '#FF2E4C', '#00E5FF', '#20E298', '#FF7D3B', '#F72585', '#1BE7D4', '#5C7CFF', '#FFFFFF'
 ];
 
+const QUICK_NAV_ITEMS = [
+  { id: 'section-photo', label: '📸 Photo' },
+  { id: 'section-platform', label: '📐 Ratio' },
+  { id: 'section-headline', label: '📰 Headline' },
+  { id: 'section-theme', label: '🎨 Theme' },
+  { id: 'section-logo', label: '🏅 Logo' },
+  { id: 'section-footer', label: '✍️ Footer' },
+  { id: 'section-drafts', label: '📁 Drafts' }
+];
+
 /* ---------------- STATE ---------------- */
 const platform = ref('instagram');
 const ratio = ref('1:1');
 const activeThemeId = ref('auto');
 const themeFilter = ref<'all' | 'dark' | 'vibrant' | 'light'>('all');
-const isMobileDrawerOpen = ref(false);
+const canvasFitMode = ref<'fit' | '75' | '100'>('fit');
 
 const newsState = reactive<NewsCardState>({
   headlineText: 'এখানে আপনার সংবাদ *শিরোনাম* লিখুন',
@@ -103,13 +113,10 @@ const photoEl = ref<HTMLImageElement | null>(null);
 const logoEl = ref<HTMLImageElement | null>(null);
 
 const mainCanvas = ref<HTMLCanvasElement | null>(null);
-const photoFileInput = ref<HTMLInputElement | null>(null);
-const logoFileInput = ref<HTMLInputElement | null>(null);
 
 const isDraggingPhoto = ref(false);
 const dragStartPointer = { x: 0, y: 0 };
 const dragStartOffset = { x: 0, y: 0 };
-const isDropHover = ref(false);
 
 const autoSampledColor = ref('#14121A');
 const extractedPalette = ref<ExtractedPalette | null>(null);
@@ -141,7 +148,7 @@ const wordTokens = computed(() => {
   return parseWordTokens(newsState.headlineText);
 });
 
-/* ---------------- WATCHERS ---------------- */
+/* ---------------- WATCHERS & LIFECYCLE ---------------- */
 watch([newsState, ratio, platform, activeThemeId, photoSrc, logoSrc], () => {
   render();
 }, { deep: true });
@@ -153,8 +160,14 @@ const showToast = (msg: string) => {
   setTimeout(() => { showToastFlag.value = false; }, 2200);
 };
 
+const scrollToSection = (id: string) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
+
 const handlePhotoUpload = (file: File) => {
-  if (!file.type.startsWith('image/')) return;
   const reader = new FileReader();
   reader.onload = (e) => {
     const src = e.target?.result as string;
@@ -169,21 +182,11 @@ const handlePhotoUpload = (file: File) => {
       newsState.photoOffsetY = 0;
       newsState.photoScale = 1.0;
       render();
+      showToast('News photo loaded ✓');
     };
     img.src = src;
   };
   reader.readAsDataURL(file);
-};
-
-const onPhotoFileChange = (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (file) handlePhotoUpload(file);
-};
-
-const onPhotoDrop = (e: DragEvent) => {
-  isDropHover.value = false;
-  const file = e.dataTransfer?.files?.[0];
-  if (file) handlePhotoUpload(file);
 };
 
 const removePhoto = () => {
@@ -191,13 +194,11 @@ const removePhoto = () => {
   photoEl.value = null;
   autoSampledColor.value = '#14121A';
   extractedPalette.value = null;
-  if (photoFileInput.value) photoFileInput.value.value = '';
   render();
+  showToast('Photo removed');
 };
 
-const onLogoFileChange = (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (!file) return;
+const handleLogoUpload = (file: File) => {
   const reader = new FileReader();
   reader.onload = (e) => {
     const src = e.target?.result as string;
@@ -206,6 +207,7 @@ const onLogoFileChange = (e: Event) => {
     img.onload = () => {
       logoEl.value = img;
       render();
+      showToast('Logo loaded ✓');
     };
     img.src = src;
   };
@@ -215,8 +217,8 @@ const onLogoFileChange = (e: Event) => {
 const removeLogo = () => {
   logoSrc.value = null;
   logoEl.value = null;
-  if (logoFileInput.value) logoFileInput.value.value = '';
   render();
+  showToast('Logo removed');
 };
 
 /* Interactive Canvas Pan Control */
@@ -436,52 +438,26 @@ onMounted(() => {
 
 <template>
   <div class="news-app">
-    <!-- Mobile Sheet Backdrop -->
-    <div 
-      class="mobile-backdrop" 
-      :class="{ open: isMobileDrawerOpen }" 
-      @click="isMobileDrawerOpen = false"
-    ></div>
-
-    <!-- SIDEBAR CONTROLS (Desktop & Mobile Drawer) -->
-    <aside class="sidebar" :class="{ 'drawer-open': isMobileDrawerOpen }">
-      <div class="mobile-drawer-handle" @click="isMobileDrawerOpen = !isMobileDrawerOpen">
-        <span class="handle-bar"></span>
-        <span class="handle-txt">{{ isMobileDrawerOpen ? 'Close Controls' : 'Tap to Open Controls' }}</span>
-      </div>
-
+    <!-- SIDEBAR CONTROLS -->
+    <aside class="sidebar" aria-label="News Post Controls">
       <div class="mode-title">
         <span>📰 NEWS POST STUDIO</span>
         <span class="mode-badge">Broadcast Newsroom Layout</span>
       </div>
 
+      <!-- Quick Section Jump Chips for Mobile -->
+      <QuickNavPills :items="QUICK_NAV_ITEMS" @jump="scrollToSection" />
+
       <!-- 1. Photo Zone Upload & Scale -->
-      <section class="section">
-        <h2 class="section-label">1. Photo Zone & Layout</h2>
-        
-        <label class="field-label" id="photo-upload-label">Upload News Photo</label>
-        <div 
-          class="drop-zone"
-          :class="{ 'drop-active': isDropHover, 'has-file': !!photoSrc }"
-          @dragover.prevent="isDropHover = true"
-          @dragleave.prevent="isDropHover = false"
-          @drop.prevent="onPhotoDrop"
-          aria-labelledby="photo-upload-label"
-        >
-          <input type="file" ref="photoFileInput" accept="image/*" style="display:none;" @change="onPhotoFileChange">
-          <div v-if="!photoSrc" class="drop-msg" @click="photoFileInput?.click()" tabindex="0" role="button" aria-label="Upload photo file">
-            <span class="drop-icon">📸</span>
-            <strong>Click or Drag Photo Here</strong>
-            <span class="sub">Auto cover-cropped, zero distortion</span>
-          </div>
-          <div v-else class="file-loaded-info">
-            <span>✓ Photo Loaded</span>
-            <div style="display:flex; gap:6px;">
-              <button class="btn tiny" @click="photoFileInput?.click()">Change</button>
-              <button class="btn tiny danger" @click="removePhoto">Remove</button>
-            </div>
-          </div>
-        </div>
+      <StudioCard id="section-photo" title="1. Photo Zone & Layout" icon="📸">
+        <label class="field-label">Upload News Photo</label>
+        <PhotoDropzone 
+          :image-src="photoSrc"
+          label="Tap or Drag Photo Here"
+          subtext="Auto cover-cropped, zero distortion"
+          @upload="handlePhotoUpload"
+          @remove="removePhoto"
+        />
 
         <div v-if="photoSrc" class="photo-controls">
           <div class="slider-field">
@@ -504,41 +480,19 @@ onMounted(() => {
             ↺ Reset Photo Pan/Zoom Position
           </button>
         </div>
-      </section>
+      </StudioCard>
 
       <!-- 2. Platform & Aspect Ratio -->
-      <section class="section">
-        <h2 class="section-label">2. Platform & Ratio</h2>
-        <div class="platform-grid">
-          <button 
-            v-for="p in PLATFORMS" 
-            :key="p.id" 
-            class="platform-btn"
-            :class="{ active: p.id === platform }"
-            @click="platform = p.id; ratio = PLATFORMS.find(x => x.id === p.id)?.ratios[0] || '1:1';"
-            :aria-label="`Select platform ${p.label}`"
-          >
-            <span class="pico" aria-hidden="true">{{ p.icon }}</span>{{ p.label }}
-          </button>
-        </div>
-
-        <div class="ratio-row" style="margin-top:10px;">
-          <button 
-            v-for="r in PLATFORMS.find(x => x.id === platform)?.ratios" 
-            :key="r"
-            class="ratio-chip"
-            :class="{ active: r === ratio }"
-            @click="ratio = r"
-            :aria-label="`Select ratio ${r}`"
-          >
-            {{ r }}
-          </button>
-        </div>
-      </section>
+      <StudioCard id="section-platform" title="2. Platform & Ratio" icon="📐">
+        <PlatformRatioSelector 
+          :platforms="PLATFORMS"
+          v-model:platform="platform"
+          v-model:ratio="ratio"
+        />
+      </StudioCard>
 
       <!-- 3. Headline Text & Word Highlight Editor -->
-      <section class="section">
-        <h2 class="section-label">3. News Headline</h2>
+      <StudioCard id="section-headline" title="3. News Headline" icon="📰">
         <label class="field-label" for="headline-input">Headline Text (*word* for accent highlight)</label>
         <textarea id="headline-input" v-model="newsState.headlineText" placeholder="এখানে আপনার সংবাদ শিরোনাম লিখুন..." rows="3"></textarea>
 
@@ -568,12 +522,10 @@ onMounted(() => {
           </div>
           <input id="headline-size-range" type="range" min="30" max="120" v-model.number="newsState.titleFontSize">
         </div>
-      </section>
+      </StudioCard>
 
       <!-- 4. Theme & Colors System -->
-      <section class="section">
-        <h2 class="section-label">4. Theme & Color System</h2>
-
+      <StudioCard id="section-theme" title="4. Theme & Color System" icon="🎨">
         <!-- Filter Category Tabs -->
         <div class="theme-cat-tabs">
           <button 
@@ -705,11 +657,10 @@ onMounted(() => {
             </div>
           </div>
         </div>
-      </section>
+      </StudioCard>
 
       <!-- 5. Brand Logo Badge Controls -->
-      <section class="section">
-        <h2 class="section-label">5. Brand Logo Badge</h2>
+      <StudioCard id="section-logo" title="5. Brand Logo Badge" icon="🏅">
         <div class="toggle-row">
           <label class="field-label" style="margin:0;">Show Logo Badge</label>
           <div class="switch" :class="{ on: newsState.logoVisible }" @click="newsState.logoVisible = !newsState.logoVisible" role="switch" :aria-checked="newsState.logoVisible"></div>
@@ -717,15 +668,16 @@ onMounted(() => {
 
         <div v-if="newsState.logoVisible" style="margin-top:12px;">
           <label class="field-label">Upload Brand Logo</label>
-          <div style="display:flex; gap:8px;">
-            <input type="file" ref="logoFileInput" accept="image/*" style="display:none;" @change="onLogoFileChange">
-            <button class="btn" @click="logoFileInput?.click()" style="padding:6px 12px; font-size:12px; flex:1;">
-              {{ logoSrc ? '✓ Change Logo' : 'Upload Logo Image' }}
-            </button>
-            <button v-if="logoSrc" class="btn tiny danger" @click="removeLogo">Remove</button>
-          </div>
+          <PhotoDropzone 
+            :image-src="logoSrc"
+            label="Tap to Upload Logo"
+            subtext="PNG with transparent background recommended"
+            icon="🏅"
+            @upload="handleLogoUpload"
+            @remove="removeLogo"
+          />
 
-          <label class="field-label" for="logo-anchor-select">Logo Position Preset</label>
+          <label class="field-label" for="logo-anchor-select" style="margin-top:12px;">Logo Position Preset</label>
           <select id="logo-anchor-select" v-model="newsState.logoAnchor">
             <option value="seam-center">Center Seam (Reference Style)</option>
             <option value="seam-left">Left Seam</option>
@@ -761,21 +713,19 @@ onMounted(() => {
             <input id="logo-offset-y" type="range" min="-200" max="200" v-model.number="newsState.logoOffsetY">
           </div>
         </div>
-      </section>
+      </StudioCard>
 
       <!-- 6. Footer / Copyright Controls -->
-      <section class="section">
-        <h2 class="section-label">6. Footer / Copyright</h2>
+      <StudioCard id="section-footer" title="6. Footer / Copyright" icon="✍️">
         <input type="text" v-model="newsState.copyrightText" placeholder="e.g. © TelepathicThoughts" aria-label="Copyright Text">
         <div style="display:flex; gap:8px; margin-top:8px;">
           <button class="btn tiny" @click="autofillCopyrightHandle">Use Handle</button>
           <button class="btn tiny" @click="autofillDate">Append Date</button>
         </div>
-      </section>
+      </StudioCard>
 
       <!-- 7. Saved Drafts -->
-      <section class="section">
-        <h2 class="section-label">7. Saved News Drafts</h2>
+      <StudioCard id="section-drafts" title="7. Saved News Drafts" icon="📁">
         <div style="display:flex; gap:8px; margin-bottom:8px;">
           <input type="text" v-model="draftName" placeholder="News draft name..." style="flex:1;" aria-label="Draft Name">
           <button class="btn" @click="saveDraft">Save Draft</button>
@@ -789,26 +739,21 @@ onMounted(() => {
             <button class="draft-del-btn" @click="deleteDraft(name.toString())" aria-label="Delete draft">✕</button>
           </div>
         </div>
-      </section>
+      </StudioCard>
     </aside>
 
     <!-- CANVAS PREVIEW & WORKSTATION -->
     <div class="canvas-area">
-      <!-- Mobile Drawer Open Toggle Bar -->
-      <div class="mobile-drawer-toggle-bar">
-        <button class="btn primary" @click="isMobileDrawerOpen = !isMobileDrawerOpen">
-          ⚡ {{ isMobileDrawerOpen ? 'Close Controls Sheet' : 'Open Controls Drawer' }}
-        </button>
-      </div>
-
-      <div class="canvas-header-hint">
-        <span>💡 Click & Drag canvas to pan photo | Use sidebar slider to zoom</span>
-      </div>
+      <!-- Canvas Zoom Toolbar Component -->
+      <CanvasToolbar 
+        v-model:fitMode="canvasFitMode"
+        hintText="💡 Click & Drag canvas to pan photo"
+      />
 
       <div 
         class="frame-wrap" 
         id="newsFrameWrap"
-        :class="{ 'is-dragging': isDraggingPhoto }"
+        :class="['zoom-' + canvasFitMode, { 'is-dragging': isDraggingPhoto }]"
         @pointerdown="onCanvasPointerDown"
         @pointermove="onCanvasPointerMove"
         @pointerup="onCanvasPointerUp"
@@ -822,10 +767,8 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Toast system -->
-    <div class="toast" :class="{ show: showToastFlag }" role="status" aria-live="polite">
-      <span>{{ toastMsg }}</span>
-    </div>
+    <!-- Toast Notification Component -->
+    <ToastNotification :show="showToastFlag" :message="toastMsg" />
   </div>
 </template>
 
@@ -840,96 +783,46 @@ onMounted(() => {
 .sidebar {
   background: var(--studio-surface);
   border-right: 1px solid var(--studio-border);
-  padding: var(--space-6);
+  padding: var(--space-4);
   overflow-y: auto;
   height: calc(100vh - 60px);
   box-shadow: var(--elevation-1);
 }
 
-.mobile-drawer-handle, .mobile-backdrop, .mobile-drawer-toggle-bar {
-  display: none;
-}
-
 .mode-title {
-  display: flex; flex-direction: column; gap: 4px; margin-bottom: var(--space-6);
+  display: flex; flex-direction: column; gap: 4px; margin-bottom: var(--space-4);
 }
 .mode-title span { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 900; color: var(--studio-text-primary); }
 .mode-badge { font-family: var(--font-mono); font-size: 10px; color: var(--studio-accent-primary); letter-spacing: 0.08em; text-transform: uppercase; }
 
-.section { margin-bottom: var(--space-6); }
-.section-label {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--studio-text-muted);
-  margin-bottom: var(--space-3);
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.section-label::after { content: ''; flex: 1; height: 1px; background: var(--studio-border); }
-
-label.field-label { display: block; font-size: var(--text-xs); color: var(--studio-text-secondary); margin: var(--space-3) 0 var(--space-1); font-weight: 600; }
+label.field-label { display: block; font-size: var(--text-xs); color: var(--studio-text-secondary); margin: var(--space-2) 0 var(--space-1); font-weight: 600; }
 
 input[type=text], textarea, select {
-  width: 100%; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border);
+  width: 100%; background: var(--studio-surface); border: 1px solid var(--studio-border);
   color: var(--studio-text-primary); padding: 10px 12px; border-radius: var(--radius-sharp); font-size: var(--text-sm);
   font-family: var(--font-body); resize: vertical; box-sizing: border-box; min-height: var(--min-touch-target);
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 input[type=text]:focus, textarea:focus, select:focus {
   border-color: var(--studio-accent-primary);
+  box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.2);
 }
-
-.drop-zone {
-  border: 2px dashed var(--studio-border-strong); border-radius: var(--radius-card); padding: var(--space-4);
-  text-align: center; background: var(--studio-surface-elevated); transition: all 0.2s ease; cursor: pointer;
-  min-height: 80px; display: flex; align-items: center; justify-content: center;
-}
-.drop-zone.drop-active { border-color: var(--studio-accent-primary); background: rgba(230, 57, 70, 0.12); }
-.drop-zone.has-file { border-style: solid; border-color: var(--studio-border); padding: var(--space-3); }
-.drop-msg { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--studio-text-secondary); }
-.drop-icon { font-size: 24px; }
-.sub { font-size: 11px; color: var(--studio-text-muted); }
-
-.file-loaded-info { display: flex; justify-content: space-between; align-items: center; font-size: var(--text-sm); font-weight: 700; color: var(--studio-text-primary); width: 100%; }
 
 .photo-controls { margin-top: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
 .slider-field { display: flex; flex-direction: column; gap: 4px; }
 .lbl-row { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--studio-text-secondary); font-family: var(--font-mono); }
 .slider-field input[type=range] { width: 100%; cursor: pointer; min-height: 32px; accent-color: var(--studio-accent-primary); }
 
-.platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
-.platform-btn {
-  min-height: var(--min-touch-target);
-  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp);
-  padding: 8px 4px; cursor: pointer; color: var(--studio-text-secondary); font-size: 11px;
-  font-family: var(--font-mono); text-align: center; transition: all 0.15s;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-}
-.platform-btn:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
-.platform-btn.active { border-color: var(--studio-accent-primary); color: var(--studio-text-primary); background: rgba(230, 57, 70, 0.15); font-weight: 700; }
-
-.ratio-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
-.ratio-chip {
-  min-height: 36px;
-  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-pill);
-  padding: 6px 14px; font-size: 11.5px; font-family: var(--font-mono); cursor: pointer; color: var(--studio-text-secondary);
-  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
-}
-.ratio-chip:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
-.ratio-chip.active { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; font-weight: 700; }
-
 .word-chip-grid { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: 6px; }
 .wtoken-chip {
   min-height: 36px;
-  font-family: var(--font-body); font-size: var(--text-xs); background: var(--studio-surface-elevated);
+  font-family: var(--font-body); font-size: var(--text-xs); background: var(--studio-surface);
   border: 1px solid var(--studio-border); padding: 6px 12px; border-radius: var(--radius-sharp);
   cursor: pointer; color: var(--studio-text-secondary); transition: all 0.15s;
   display: flex; align-items: center; justify-content: center;
 }
 .wtoken-chip:hover { border-color: var(--studio-border-strong); color: var(--studio-text-primary); }
+.wtoken-chip:active { transform: scale(0.96); }
 .wtoken-chip.highlighted { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; font-weight: 700; }
 
 /* Theme UI */
@@ -938,7 +831,7 @@ input[type=text]:focus, textarea:focus, select:focus {
   border-radius: var(--radius-sharp); border: 1px solid var(--studio-border); margin-bottom: var(--space-3);
 }
 .cat-tab {
-  flex: 1; min-height: 32px; background: transparent; border: none; color: var(--studio-text-secondary);
+  flex: 1; min-height: 34px; background: transparent; border: none; color: var(--studio-text-secondary);
   font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 4px 0;
   border-radius: var(--radius-sharp); cursor: pointer; text-align: center; transition: all 0.15s;
 }
@@ -950,11 +843,12 @@ input[type=text]:focus, textarea:focus, select:focus {
 
 .palette-card {
   min-height: 54px;
-  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
+  background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
   padding: 8px; cursor: pointer; position: relative; transition: all 0.18s ease;
   display: flex; flex-direction: column; gap: 6px; text-align: left;
 }
 .palette-card:hover { border-color: var(--studio-accent-primary); transform: translateY(-1px); }
+.palette-card:active { transform: scale(0.98); }
 .palette-card.active { border-color: var(--studio-accent-primary); background: rgba(230, 57, 70, 0.12); box-shadow: 0 0 12px rgba(230, 57, 70, 0.25); }
 
 .palette-bar {
@@ -975,36 +869,36 @@ input[type=text]:focus, textarea:focus, select:focus {
 
 /* Auto Extracted Palette Card */
 .auto-palette-card {
-  background: var(--studio-surface-elevated); border: 1px solid var(--studio-accent-primary); border-radius: var(--radius-card);
+  background: var(--studio-surface); border: 1px solid var(--studio-accent-primary); border-radius: var(--radius-card);
   padding: var(--space-3); margin-bottom: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);
   box-shadow: 0 4px 14px rgba(230, 57, 70, 0.15);
 }
 .auto-card-title { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: var(--studio-text-primary); }
 .auto-swatches-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 .auto-swatch-item label { display: block; font-size: 9.5px; color: var(--studio-text-secondary); margin-bottom: 3px; font-family: var(--font-mono); }
-.swatch-picker-row { display: flex; align-items: center; gap: 6px; background: var(--studio-surface); border: 1px solid var(--studio-border); padding: 4px 6px; border-radius: var(--radius-sharp); min-height: 36px; }
+.swatch-picker-row { display: flex; align-items: center; gap: 6px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); padding: 4px 6px; border-radius: var(--radius-sharp); min-height: 36px; }
 .swatch-picker-row input[type=color] { width: 24px; height: 24px; border-radius: 4px; border: none; background: none; cursor: pointer; padding: 0; }
 .swatch-hex { font-family: var(--font-mono); font-size: 9.5px; color: var(--studio-text-secondary); text-transform: uppercase; }
 
 .color-overrides-box {
-  background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
+  background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-card);
   padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);
 }
 .override-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; }
 
 .color-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .picker-item label { display: block; font-size: 9.5px; color: var(--studio-text-secondary); margin-bottom: 3px; font-family: var(--font-mono); }
-.picker-row { display: flex; align-items: center; gap: 4px; background: var(--studio-surface); border: 1px solid var(--studio-border); padding: 3px 5px; border-radius: var(--radius-sharp); min-height: 36px; }
+.picker-row { display: flex; align-items: center; gap: 4px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); padding: 3px 5px; border-radius: var(--radius-sharp); min-height: 36px; }
 .picker-row input[type=color] { width: 22px; height: 22px; border-radius: 4px; border: none; background: none; cursor: pointer; padding: 0; }
 .hex-val { font-family: var(--font-mono); font-size: 9px; color: var(--studio-text-secondary); text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
 
 .quick-swatches { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
 .swatch-dots { display: flex; gap: 6px; }
-.dot-btn { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
+.dot-btn { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.15s; }
 .dot-btn:hover { transform: scale(1.25); }
 
 .toggle-row { display: flex; align-items: center; justify-content: space-between; min-height: var(--min-touch-target); }
-.switch { width: 44px; height: 24px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-pill); position: relative; cursor: pointer; transition: all 0.2s; }
+.switch { width: 44px; height: 24px; background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-pill); position: relative; cursor: pointer; transition: all 0.2s; }
 .switch.on { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); }
 .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: left 0.15s; }
 .switch.on::after { left: 22px; }
@@ -1014,17 +908,21 @@ input[type=text]:focus, textarea:focus, select:focus {
   padding: var(--space-6) var(--space-6) var(--space-12); background: var(--studio-bg); overflow-y: auto; height: calc(100vh - 60px); box-sizing: border-box;
 }
 
-.canvas-header-hint { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--studio-text-muted); margin-bottom: var(--space-3); }
-
 .frame-wrap {
   max-width: 540px; width: 100%; position: relative; display: flex; justify-content: center;
-  align-items: center; margin-bottom: var(--space-6); cursor: grab; user-select: none; touch-action: none;
+  align-items: center; margin-bottom: var(--space-6); cursor: grab; user-select: none; touch-action: pan-y; transition: max-width 0.25s ease, max-height 0.25s ease; box-sizing: border-box;
 }
-.frame-wrap.is-dragging { cursor: grabbing; }
+.frame-wrap.is-dragging { cursor: grabbing; touch-action: none; }
 .frame-wrap canvas {
-  width: 100% !important; height: auto !important; border-radius: var(--radius-card);
+  width: 100% !important; max-width: 100% !important; height: auto !important; border-radius: var(--radius-card);
   box-shadow: var(--elevation-3); border: 1px solid var(--studio-border); display: block;
 }
+
+/* Canvas Viewport Zoom Modes */
+.frame-wrap.zoom-fit { max-height: min(60vh, 560px); }
+.frame-wrap.zoom-fit canvas { width: 100% !important; max-width: 100% !important; height: auto !important; max-height: min(60vh, 560px) !important; object-fit: contain; }
+.frame-wrap.zoom-75 { max-width: min(405px, 100%); }
+.frame-wrap.zoom-100 { max-width: min(540px, 100%); }
 
 .actions { display: flex; gap: var(--space-3); width: 100%; max-width: 540px; }
 .btn {
@@ -1034,95 +932,85 @@ input[type=text]:focus, textarea:focus, select:focus {
   cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s;
 }
 .btn:hover { border-color: var(--studio-border-strong); }
+.btn:active { transform: scale(0.97); }
 .btn.primary { background: var(--studio-accent-primary); border-color: var(--studio-accent-primary); color: #fff; flex: 1; box-shadow: 0 4px 14px rgba(230, 57, 70, 0.35); }
 .btn.secondary { background: var(--studio-surface); border-color: var(--studio-border); }
 .btn.tiny { min-height: 32px; padding: 4px 10px; font-size: 11px; }
 .btn.danger { background: rgba(255,77,77,0.15); color: #ff4d4d; border-color: rgba(255,77,77,0.3); }
 
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--studio-surface-elevated); border: 1px solid var(--studio-accent-primary); color: var(--studio-text-primary); padding: 12px 20px; border-radius: var(--radius-card); font-weight: 700; font-size: var(--text-sm); opacity: 0; transform: translateY(20px); transition: all 0.25s; pointer-events: none; z-index: 2000; box-shadow: var(--elevation-3); }
-.toast.show { opacity: 1; transform: translateY(0); }
-.draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--studio-surface-elevated); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 12px; margin-bottom: 6px; font-size: 12px; cursor: pointer; min-height: 40px; }
+.draft-item { display: flex; justify-content: space-between; align-items: center; background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--radius-sharp); padding: 8px 12px; margin-bottom: 6px; font-size: 12px; cursor: pointer; min-height: 40px; }
 .draft-del-btn { background: none; border: none; color: var(--studio-text-muted); cursor: pointer; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
 
-/* Responsive Drawer for Screens < 1024px */
+/* Responsive Mobile Layout Flow (<1024px) */
 @media (max-width: 1023px) {
   .news-app {
     grid-template-columns: 1fr;
-    position: relative;
+    height: auto;
+    min-height: 100vh;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
 
   .canvas-area {
     order: -1;
-    padding: var(--space-4) var(--space-3) var(--space-12);
+    padding: var(--space-4) var(--space-3);
     height: auto;
-    min-height: calc(100vh - 60px);
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: visible;
+    border-bottom: 1px solid var(--studio-border);
+    touch-action: pan-y;
   }
 
-  .mobile-drawer-toggle-bar {
-    display: block;
+  .actions {
     width: 100%;
-    max-width: 540px;
-    margin-bottom: var(--space-4);
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .sidebar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 80vh;
-    z-index: 500;
-    border-radius: var(--radius-modal) var(--radius-modal) 0 0;
-    border-top: 1px solid var(--studio-border);
-    transform: translateY(calc(100% - 48px));
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: var(--elevation-3);
+    height: auto;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: visible;
+    border-right: none;
+    padding: var(--space-4) var(--space-3) var(--space-12);
   }
+}
 
-  .sidebar.drawer-open {
-    transform: translateY(0);
-  }
-
-  .mobile-drawer-handle {
-    display: flex;
+@media (max-width: 639px) {
+  .actions {
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    max-width: 100%;
+  }
+  .actions .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  input[type=text], textarea, select {
+    font-size: 16px !important; /* Prevents iOS Safari auto-zoom */
+  }
+}
+
+@media (max-width: 479px) {
+  .color-picker-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
-    padding: 8px 0 var(--space-3);
-    cursor: pointer;
   }
+  .picker-item label { font-size: 8.5px; }
+  .hex-val { font-size: 8px; }
 
-  .handle-bar {
-    width: 40px;
-    height: 4px;
-    border-radius: var(--radius-pill);
-    background: var(--studio-border-strong);
-  }
-
-  .handle-txt {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--studio-accent-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-weight: 700;
-  }
-
-  .mobile-backdrop {
-    display: block;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    z-index: 450;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
-  }
-
-  .mobile-backdrop.open {
-    opacity: 1;
-    pointer-events: auto;
+  .theme-card-grid, .auto-swatches-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
   }
 }
 </style>
