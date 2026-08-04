@@ -1,70 +1,67 @@
-# PR: System-Level Design Rebuild, Dedicated News Post Mode, Auto Photo Palette Extraction & Accessibility
+# PR: System-Level Rebuild, Modular Architecture, Mobile Responsiveness & Direct Vercel Routing
 
-## 📌 Summary of Changes
+## 📌 Pull Request Overview
 
-This Pull Request delivers a comprehensive system-level rebuild of **Content Studio**, transforming it into a high-performance **Broadcast Newsroom & Social Media Graphic Studio**.
-
----
-
-### 📰 1. Dedicated News Post Studio Mode (`/news`)
-- **News Card Layout Pipeline**: Built specifically for repurposing news/event photos into branded Bangladeshi news cards (Channel 24, Jamuna TV, Daily Campus style).
-- **Auto Theme Mode (Default)**: Automatically extracts a live 4-color palette from uploaded photos via canvas pixel sampling (`samplePhotoPalette`), providing a live sidebar swatch preview card with individual color overrides.
-- **Automated Luminance Contrast**: Uses `(R*299 + G*587 + B*114)/1000 >= 128` luminance threshold to automatically pick pure white or dark text for 100% text readability.
-- **6-Stop Multi-Stage Seam Blend**: Multi-stop linear gradient spanning across the photo seam into the text banner zone, eliminating hard cuts or dark shadow bands.
-- **Interactive Word Token Chips**: Clickable chip badges allowing creators to toggle `*accent highlighted*` headline words effortlessly.
-- **Brand Logo Badge**: Positionable circular logo badge with 8 anchor points (`seam-center`, `top-left`, etc.) and fine X/Y offset sliders.
-- **Copyright Footer Strip**: Footer strip with 1-click **Use Handle** and **Append Date** auto-fill tools, featuring dynamic luminance contrast for white backgrounds.
+This PR delivers a major architectural upgrade to **Content Studio**, incorporating a modular component refactor, 100% touch-responsive mobile layouts, bulletproof file dropzone overlays, smooth 8-stop power-curve gradient dissolve mechanics, and Vercel Single Page Application (SPA) direct routing configuration.
 
 ---
 
-### 🎨 2. System Design Token Architecture (`src/assets/tokens.css`)
-- **Broadcast Newsroom Aesthetic**: Replaced generic purple/cream AI tells with a dark tactical console theme (`#0B0D12` / `#141720`) with broadcast red (`#E63946`) and amber (`#FFB703`) active highlights.
-- **Typography Scale**: **Outfit** (Headlines) + **Plus Jakarta Sans** (Body) + **JetBrains Mono** (Technical/Data).
-- **Radius Scale**: `4px` sharp inputs, `10px` surface cards, `16px` dialog drawers, and `9999px` pills.
-- **Mobile-First Responsive Control Drawer**: On screens `<1024px`, the control sidebar reflows into a bottom sheet drawer, keeping the live canvas workstation centered and full width.
-- **Accessibility & Touch Standards**: Minimum `44×44px` touch targets for all interactive controls, visible focus rings (`:focus-visible`), keyboard navigation, ARIA landmarks, and `#main-content` skip links.
-- **SEO Infrastructure**: Open Graph, Twitter Card tags, `sitemap.xml`, and `robots.txt`.
+## 🚀 Key Improvements & Features
+
+### 🧩 1. Modular Component Refactor (`src/components/`)
+Extracted 6 modular Single File Components (SFCs) to streamline view code and improve maintainability:
+- **[StudioCard.vue](file:///home/maruf/Documents/GitHub/Hobby%20Projects/content-studio/src/components/StudioCard.vue)**: Structured section container card with custom category icons, dark surface elevation, focus-within glow effects, and smooth scroll offsets (`scroll-margin-top: 75px`).
+- **[PhotoDropzone.vue](file:///home/maruf/Documents/GitHub/Hobby%20Projects/content-studio/src/components/PhotoDropzone.vue)**: 100% overlay transparent file input (`position: absolute; inset: 0; opacity: 0; z-index: 5; cursor: pointer;`) for instant native photo picker activation on all mobile and desktop browsers.
+- **[PlatformRatioSelector.vue](file:///home/maruf/Documents/GitHub/Hobby%20Projects/content-studio/src/components/PlatformRatioSelector.vue)**: Multi-platform selector (Instagram, Facebook, LinkedIn, YouTube, TikTok, X/Twitter) with responsive ratio chips.
+- **[CanvasToolbar.vue](file:///home/maruf/Documents/GitHub/Hobby%20Projects/content-studio/src/components/CanvasToolbar.vue)**: Real-time workstation header hint & viewport zoom preset controls (`🔍 Fit Screen`, `75%`, `100%`).
+- **[QuickNavPills.vue](file:///home/maruf/Documents/GitHub/Hobby%20Projects/content-studio/src/components/QuickNavPills.vue)**: Sticky quick-jump chips bar for 1-tap mobile navigation to control sections.
+- **[ToastNotification.vue](file:///home/maruf/Documents/GitHub/Hobby%20Projects/content-studio/src/components/ToastNotification.vue)**: Accessible fixed toast status popup.
 
 ---
 
-### ⚡ 3. Quality & Testing
-- **Linting & Code Quality**: 0 errors with `bun run lint` (`oxlint` & `eslint`).
-- **TypeScript Type-Check**: 0 errors with `vue-tsc --build`.
-- **Unit Test Suite**: 8/8 unit tests passing with Vitest (`bun test:unit`).
-- **Production Bundle**: Successfully built with Vite in ~500ms.
+### 📱 2. Mobile-First Responsiveness & Layout Flow
+- **Natural Mobile Scrolling Flow**: Replaced floating dock popups with a natural vertical layout on mobile (`<1024px`). The canvas preview workstation sits at the top of the viewport followed by export action buttons and structured control cards.
+- **Horizontal Overflow Elimination**: Enforced `width: 100%; max-width: 100vw; overflow-x: hidden; box-sizing: border-box;` across containers (`html`, `body`, `.studio-root`, `.studio-main`, `.top-nav`, `.news-app`, `.canvas-area`, `.sidebar`).
+- **Canvas Viewport Fit**: Clamped canvas preview styling to `width: 100% !important; max-width: 100% !important; height: auto !important; max-height: min(60vh, 560px) !important;` so canvas graphics never cause horizontal scrollbars or push elements off-screen.
+- **Touch-Scroll Fix**: Updated canvas touch handling to `touch-action: pan-y;` (switching to `touch-action: none;` only during active photo dragging), enabling smooth vertical page swiping.
+- **Fluid TopNav Header**: Compacted mobile navbar header padding and tab dimensions to fit all phone viewports (320px–430px) without content clipping.
 
 ---
 
-## 🧪 How to Test
-
-1. **Checkout & Install**:
-   ```sh
-   git fetch origin
-   bun install
-   ```
-
-2. **Run Dev Server**:
-   ```sh
-   bun dev
-   ```
-   Navigate between **Normal Post** (`/`) and **News Post** (`/news`).
-
-3. **Verify News Post Auto Palette**:
-   Upload any photo in News Post mode and observe the live auto-extracted 4-color palette swatches in the sidebar.
-
-4. **Verify Mobile Drawer**:
-   Resize viewport below `1024px` and tap `⚡ Open Controls Drawer`.
-
-5. **Run Lint & Tests**:
-   ```sh
-   bun run lint
-   bun run build
-   bun test:unit
-   ```
+### 🖼️ 3. News Card 8-Stop Power-Curve Gradient Dissolve
+- **Smooth Intersection Dissolve**: Replaced linear alpha stops in `src/utils/newsCardCanvas.ts` with an 8-stop power-curve ease-in-out alpha dissolve (`0.0 -> 0.04 -> 0.16 -> 0.38 -> 0.64 -> 0.85 -> 0.96 -> 1.0`) of the exact banner background color.
+- **Zero Seam Lines**: Spans across the photo seam area (`blendStartY = photoZoneH - blendHeight * 0.70` to `blendEndY = photoZoneH + blendHeight * 0.40`), completely eliminating hard falloff lines, flat color blocks, or harsh mid-gray color shifts.
 
 ---
 
-## 📷 Screenshots & Verification
-- ✅ **Clean Lint**: `Found 0 warnings and 0 errors.`
-- ✅ **Unit Tests**: `8 pass, 0 fail (Ran 8 tests)`
-- ✅ **Type Check & Build**: `built in ~500ms`
+### 🌐 4. Direct Vercel SPA Routing Configuration
+- **Vercel Rewrite Rules (`vercel.json`)**: Added SPA routing rules (`"source": "/(.*)", "destination": "/index.html"`) so navigating directly to `https://content-studioo.vercel.app/news` (or refreshing on `/news`) loads cleanly without 404 route errors.
+- **Cloudflare / Netlify Fallback (`public/_redirects`)**: Added `/* /index.html 200` rule for cross-platform hosting support.
+
+---
+
+## 🧪 Verification & Quality Assurance
+
+- **Linting (`bun run lint`)**: 0 warnings & 0 errors across `oxlint` and `eslint`.
+- **Type Checking (`vue-tsc --build`)**: 0 type errors.
+- **Unit Tests (`bun test:unit`)**: 8/8 tests passing.
+- **Production Build (`bun run build`)**: Vite production bundle compiled in ~780ms.
+
+---
+
+## 📋 Pull Request Template Details
+
+```markdown
+### PR Title
+`refactor: modular components, mobile responsive overhaul & vercel SPA routing`
+
+### PR Description
+This PR refactors Content Studio into a modular component architecture (`StudioCard`, `PhotoDropzone`, `PlatformRatioSelector`, `CanvasToolbar`, `QuickNavPills`, `ToastNotification`), overhauls mobile responsiveness with fluid viewports & touch-scrolling, fixes the news card photo intersection gradient falloff, and adds `vercel.json` SPA rewrite rules for direct `/news` routing.
+
+#### Changes:
+- 🧩 **Modular SFCs**: Extracted 6 reusable components into `src/components/`.
+- 📱 **Mobile Responsiveness**: Fixed horizontal overflow, compact TopNav, and set `touch-action: pan-y` for smooth mobile scrolling.
+- 🖼️ **News Gradient Dissolve**: Upgraded canvas seam dissolve to an 8-stop quadratic power curve.
+- 🌐 **Vercel Direct Navigation**: Added `vercel.json` and `public/_redirects` to enable direct page loads on `/news`.
+- ⚡ **Clean Build**: Passed all `oxlint`, `eslint`, `vue-tsc`, `vite build`, and `bun test:unit` checks.
+```
