@@ -224,12 +224,7 @@ export function renderNewsCardCanvas(
   ctx.fillRect(0, 0, w, h);
 
   // 2. Render Photo Zone with transform (pan/zoom)
-  let sampledPhotoRgb = parseRgb(bgColor);
-
   if (photoImg) {
-    const palette = samplePhotoPalette(photoImg);
-    sampledPhotoRgb = parseRgb(state.sampledColorOverride || palette.dominant);
-
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, w, photoZoneH);
@@ -270,14 +265,10 @@ export function renderNewsCardCanvas(
     ctx.restore();
   }
 
-  // 3. Render Multi-Stop Blended Transition Zone Spanning across Seam
-  const blendHeight = h * 0.14; // Tight 14% canvas height for clean, crisp intersection
-  const blendStartY = Math.max(0, photoZoneH - blendHeight * 0.5);
-  const blendEndY = Math.min(h - footerH, photoZoneH + blendHeight * 0.5);
-
-  const sampR = sampledPhotoRgb.r;
-  const sampG = sampledPhotoRgb.g;
-  const sampB = sampledPhotoRgb.b;
+  // 3. Render Smooth 8-Stop Blended Dissolve Transition Zone Spanning across Seam
+  const blendHeight = photoZoneH * 0.50; // Smooth 50% photo height transition area
+  const blendStartY = Math.max(0, photoZoneH - blendHeight * 0.70); // Starts smoothly inside photo zone
+  const blendEndY = Math.min(h - footerH, photoZoneH + blendHeight * 0.40); // Extends into text zone
 
   const bgRgb = parseRgb(bgColor);
   const bgR = bgRgb.r;
@@ -287,22 +278,22 @@ export function renderNewsCardCanvas(
   ctx.save();
   const grad = ctx.createLinearGradient(0, blendStartY, 0, blendEndY);
 
-  // 6 Multi-stop gradient curve:
-  // Stop 0: 100% transparent sampled photo color
-  // Stop 1-3: progressively increasing opacity of sampled photo color over seam
-  // Stop 4-5: smooth transition into opaque text zone background color
-  grad.addColorStop(0.0, `rgba(${sampR}, ${sampG}, ${sampB}, 0.0)`);
-  grad.addColorStop(0.2, `rgba(${sampR}, ${sampG}, ${sampB}, 0.30)`);
-  grad.addColorStop(0.4, `rgba(${sampR}, ${sampG}, ${sampB}, 0.70)`);
-  grad.addColorStop(0.6, `rgba(${sampR}, ${sampG}, ${sampB}, 0.95)`);
-  grad.addColorStop(0.82, `rgba(${bgR}, ${bgG}, ${bgB}, 0.88)`);
-  grad.addColorStop(1.0, `rgba(${bgR}, ${bgG}, ${bgB}, 1.0)`);
+  // Smooth quadratic/cubic ease-in-out alpha dissolve of exact background color:
+  // Eliminates hard edges, flat color blocks, and abrupt falloff lines
+  grad.addColorStop(0.0,  `rgba(${bgR}, ${bgG}, ${bgB}, 0.0)`);
+  grad.addColorStop(0.15, `rgba(${bgR}, ${bgG}, ${bgB}, 0.04)`);
+  grad.addColorStop(0.30, `rgba(${bgR}, ${bgG}, ${bgB}, 0.16)`);
+  grad.addColorStop(0.45, `rgba(${bgR}, ${bgG}, ${bgB}, 0.38)`);
+  grad.addColorStop(0.60, `rgba(${bgR}, ${bgG}, ${bgB}, 0.64)`);
+  grad.addColorStop(0.75, `rgba(${bgR}, ${bgG}, ${bgB}, 0.85)`);
+  grad.addColorStop(0.90, `rgba(${bgR}, ${bgG}, ${bgB}, 0.96)`);
+  grad.addColorStop(1.0,  `rgba(${bgR}, ${bgG}, ${bgB}, 1.0)`);
 
   ctx.fillStyle = grad;
-  ctx.fillRect(0, blendStartY, w, blendEndY - blendStartY + 1);
+  ctx.fillRect(0, blendStartY, w, blendEndY - blendStartY + 2);
   ctx.restore();
 
-  // Solid fill below blend
+  // Solid fill below blend for text zone
   ctx.fillStyle = bgColor;
   ctx.fillRect(0, Math.floor(blendEndY), w, h - blendEndY);
 
